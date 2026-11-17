@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en-CA">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <title>Your gift certificate — In2Skin, Bolton</title>
+    <meta name="description" content="Your In2Skin gift certificate — the receipt is the certificate." />
+    <link rel="stylesheet" href="/assets/site.css" />
+  </head>
+  <body>
+    <header class="site">
+      <div class="wrap header-in">
+        <a class="brand" href="/" aria-label="In2Skin — home"><span class="brand-text"><span class="wordmark">In2Skin</span><span class="tagline">Aesthetics · Bolton</span></span></a>
+      </div>
+    </header>
+    <main class="wrap" style="max-width:640px; padding:48px 20px 80px;">
+      <div class="book-step on" style="text-align:center;">
+        <h1 id="giftTitle" style="font-family:'Cormorant Garamond',serif; font-size:2rem; margin-bottom:8px;">Your gift is on its way…</h1>
+        <p id="giftMsg" style="color:var(--ink-soft);">Fetching your certificate code — one moment.</p>
+        <div id="giftDetail"></div>
+        <p id="giftActions" style="margin-top:28px;"></p>
+        <p style="margin-top:16px;"><a class="btn btn-ghost" href="/">Back to In2Skin</a></p>
+      </div>
+    </main>
+    <script>
+      (function(){
+        var params = new URLSearchParams(location.search);
+        var sid = params.get("session_id");
+        var title = document.getElementById("giftTitle");
+        var msg = document.getElementById("giftMsg");
+        var detail = document.getElementById("giftDetail");
+        var actions = document.getElementById("giftActions");
+        function money(c){ return "$" + (c/100).toFixed(2).replace(/\.00$/, ""); }
+        if (!sid){ title.textContent = "No gift found"; msg.textContent = "This page needs a gift reference. If you just paid, the certificate code was emailed to the recipient."; return; }
+        fetch("/api/gift-status?session_id=" + encodeURIComponent(sid))
+          .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+          .then(function(res){
+            if (!res.ok || !res.j.paid){
+              title.textContent = "Payment not confirmed yet";
+              msg.textContent = "Your payment has not come through yet. If you just paid, give it a moment — the certificate code will be emailed to the recipient when it clears.";
+              return;
+            }
+            var g = res.j;
+            title.textContent = "Your gift is on its way.";
+            msg.textContent = "A " + money(g.amountCents) + " In2Skin gift certificate for " + g.recipientName + " — the code below was also emailed to them at " + g.recipientEmail + ".";
+            detail.innerHTML = '<div class="gift-code">' + g.code + '</div>'
+              + '<p style="color:var(--ink-soft);">This receipt <strong>is</strong> the certificate — print it or save it. The code never expires, and any balance left after a visit stays on the code.</p>';
+            actions.innerHTML = '<button class="btn btn-book btn-big" onclick="window.print()">Print Certificate</button>';
+          })
+          .catch(function(){
+            title.textContent = "Could not confirm yet";
+            msg.textContent = "We could not reach the gift service. If you just paid, the certificate code will be emailed to the recipient when the payment clears.";
+          });
+      })();
+    </script>
+  </body>
+</html>

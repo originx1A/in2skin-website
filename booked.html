@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en-CA">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <title>Booking confirmed — In2Skin, Bolton</title>
+    <meta name="description" content="Your In2Skin booking confirmation." />
+    <link rel="stylesheet" href="/assets/site.css" />
+  </head>
+  <body>
+    <header class="site">
+      <div class="wrap header-in">
+        <a class="brand" href="/" aria-label="In2Skin — home"><span class="brand-text"><span class="wordmark">In2Skin</span><span class="tagline">Aesthetics · Bolton</span></span></a>
+      </div>
+    </header>
+    <main class="wrap" style="max-width:640px; padding:48px 20px 80px;">
+      <div class="book-step on" style="text-align:center;">
+        <div id="bookedIcon" style="font-size:2.4rem;">✓</div>
+        <h1 id="bookedTitle" style="font-family:'Cormorant Garamond',serif; font-size:2rem; margin-bottom:8px;">Confirming your booking…</h1>
+        <p id="bookedMsg" style="color:var(--ink-soft);">Checking your payment — one moment.</p>
+        <div id="bookedDetail" style="text-align:left; max-width:480px; margin:20px auto 0;"></div>
+        <p style="margin-top:28px;"><a class="btn btn-book" href="/">Back to In2Skin</a></p>
+      </div>
+    </main>
+    <script>
+      (function(){
+        var params = new URLSearchParams(location.search);
+        var sid = params.get("session_id");
+        var title = document.getElementById("bookedTitle");
+        var msg = document.getElementById("bookedMsg");
+        var detail = document.getElementById("bookedDetail");
+        function money(c){ return "$" + (c/100).toFixed(2).replace(/\.00$/, ""); }
+        function fmtDate(s){
+          var p = s.split("-");
+          return new Date(+p[0], +p[1]-1, +p[2]).toLocaleDateString("en-CA", { weekday:"long", month:"long", day:"numeric", year:"numeric" });
+        }
+        if (!sid){ title.textContent = "No booking found"; msg.textContent = "This page needs a booking reference. If you just paid, your confirmation email is on its way."; return; }
+        fetch("/api/booking-status?session_id=" + encodeURIComponent(sid))
+          .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+          .then(function(res){
+            if (!res.ok || !res.j.paid){
+              title.textContent = "Payment not confirmed yet";
+              msg.textContent = "Your payment has not come through yet. If you just paid, give it a moment — your confirmation email will arrive when it clears. If you cancelled, your time was not held; please book again.";
+              return;
+            }
+            var b = res.j.booking;
+            title.textContent = "You are booked in" + (b.name ? ", " + b.name.split(" ")[0] : "") + ".";
+            msg.textContent = "Your confirmation email is on its way to " + b.email + ".";
+            detail.innerHTML = '<div class="summary-box"><dl>'
+              + '<dt>Treatment</dt><dd>' + b.serviceName + '</dd>'
+              + '<dt>When</dt><dd>' + fmtDate(b.date) + ' at ' + b.time + (b.type === "after" ? ' (Private Hours)' : '') + '</dd>'
+              + '<dt>Where</dt><dd>In2Skin · Bolton, Ontario</dd>'
+              + '<dt>Paid</dt><dd>' + money(b.amountPaidCents) + (b.giftAppliedCents ? ' (includes ' + money(b.giftAppliedCents) + ' from your gift certificate)' : '') + ' — shows as IN2SKIN on your statement</dd>'
+              + '</dl></div>'
+              + '<p style="color:var(--ink-soft);">Need to move your appointment? Please call at least 24 hours ahead and we will find you a new time — there is no charge to reschedule.</p>';
+          })
+          .catch(function(){
+            title.textContent = "Could not confirm yet";
+            msg.textContent = "We could not reach the booking service. If you just paid, your confirmation email will arrive when the payment clears.";
+          });
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en-CA">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Studio dashboard — In2Skin</title>
+    <link rel="stylesheet" href="/assets/site.css" />
+    <script src="/assets/qrcode.min.js"></script>
+  </head>
+  <body>
+    <header class="site">
+      <div class="wrap header-in">
+        <a class="brand" href="/" aria-label="In2Skin — home"><span class="brand-text"><span class="wordmark">In2Skin</span><span class="tagline">Aesthetics · Bolton</span></span></a>
+        <button class="btn btn-ghost" id="signOut" type="button">Sign out</button>
+      </div>
+    </header>
+    <main class="wrap" style="max-width:860px; padding:32px 20px 80px;">
+      <h1 style="font-family:'Cormorant Garamond',serif; font-size:2rem; margin-bottom:4px;">Studio dashboard</h1>
+      <p class="sub" id="dashSub">Signed in — loading today…</p>
+      <div id="dashMsg" style="min-height:1.4em; color:#7A3B2E; margin-bottom:10px;"></div>
+
+      <section style="margin-top:24px;">
+        <h2 style="font-size:1.4rem;">Today's payments at a glance</h2>
+        <p><label for="payDate">Day</label> <input id="payDate" type="date" style="font-family:inherit; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink);" /></p>
+        <div id="paySummary" class="summary-box" style="margin-top:12px;"></div>
+        <div id="payList" style="margin-top:12px;"></div>
+      </section>
+
+      <section style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;">Calendar — all bookings</h2>
+        <p><label for="calFrom">From</label> <input id="calFrom" type="date" style="font-family:inherit; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink);" />
+        <label for="calTo">to</label> <input id="calTo" type="date" style="font-family:inherit; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink);" />
+        <button class="btn btn-book" id="calLoad" type="button">Show</button></p>
+        <div id="calList" style="margin-top:12px;"></div>
+      </section>
+
+      <section style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;">Pay on the spot</h2>
+        <p class="sub">Enter what is owed — the client pays on their own phone by text, email, or QR code.</p>
+        <form id="spotForm">
+          <div class="form-2col">
+            <div class="field"><label for="spAmount">Amount owed (CAD $)</label><input id="spAmount" type="number" min="1" step="0.01" inputmode="decimal" placeholder="e.g. 65" /></div>
+            <div class="field"><label for="spName">Client's name</label><input id="spName" type="text" placeholder="e.g. Alex Taylor" /></div>
+          </div>
+          <div class="field"><label for="spLabel">What is this payment for?</label><input id="spLabel" type="text" placeholder="e.g. Classic Facial" /></div>
+          <div class="field"><label for="spGift">Gift certificate code (optional)</label><input id="spGift" type="text" placeholder="e.g. IN2SKIN-ABC123" /></div>
+          <div class="field"><label for="spMethod">Share the link by</label>
+            <select id="spMethod"><option value="qr">QR code — show on this phone</option><option value="text">Text — to the client's mobile</option><option value="email">Email — to the client's email</option></select></div>
+          <div class="field" id="spContactWrap"><label for="spContact">Client's mobile number</label><input id="spContact" type="tel" placeholder="e.g. (905) 555-0100" /></div>
+          <div class="err" id="spErr"></div>
+          <button type="submit" class="btn btn-call btn-big">Create Payment Link →</button>
+        </form>
+        <div id="spotResult" style="margin-top:20px;"></div>
+      </section>
+    </main>
+    <script>
+      (function(){
+        var msg = document.getElementById("dashMsg");
+        function money(c){ return "$" + (c/100).toFixed(2).replace(/\.00$/, ""); }
+        function todayKey(){ var d = new Date(); return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+        function fmtDate(s){ var p = s.split("-"); return new Date(+p[0], +p[1]-1, +p[2]).toLocaleDateString("en-CA", { weekday:"long", month:"long", day:"numeric" }); }
+
+        fetch("/api/admin/session").then(function(r){ return r.json(); }).then(function(j){
+          if (!j.signedIn){ window.location.href = "/admin/"; return; }
+          document.getElementById("dashSub").textContent = "Signed in as " + (j.email || "studio") + " — today's payments and bookings below.";
+        }).catch(function(){ window.location.href = "/admin/"; });
+
+        document.getElementById("signOut").addEventListener("click", function(){
+          fetch("/api/admin/session", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ action:"logout" }) })
+            .then(function(){ window.location.href = "/admin/"; });
+        });
+
+        var payDate = document.getElementById("payDate");
+        payDate.value = todayKey();
+        function loadPayments(){
+          fetch("/api/admin/payments?date=" + payDate.value)
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ msg.textContent = res.j.error || "Could not load payments."; return; }
+              var j = res.j;
+              document.getElementById("paySummary").innerHTML = '<dl><dt>' + fmtDate(j.date) + '</dt><dd>Total paid: <strong>' + j.total + '</strong> (' + (j.paySpot.length + j.bookings.length) + ' payments)</dd></dl>';
+              var rows = [];
+              j.paySpot.forEach(function(p){ rows.push('<div class="after-item"><div><strong>' + money(p.amountCents) + '</strong> — ' + (p.serviceLabel || "In2Skin visit") + ' · ' + (p.clientName || "Client") + ' · pay on the spot</div></div>'); });
+              j.bookings.forEach(function(b){ rows.push('<div class="after-item"><div><strong>' + money(b.amountPaidCents || 0) + '</strong> — ' + b.serviceName + ' · ' + (b.guestName || b.name || "Client") + ' · ' + b.time + ' · online booking' + (b.giftAppliedCents ? ' · ' + money(b.giftAppliedCents) + ' from gift code' : '') + '</div></div>'); });
+              document.getElementById("payList").innerHTML = rows.length ? rows.join("") : "<p style='color:var(--ink-soft);'>No payments recorded for this day yet.</p>";
+            })
+            .catch(function(){ msg.textContent = "Could not load payments — check your connection."; });
+        }
+        payDate.addEventListener("change", loadPayments);
+        loadPayments();
+
+        var calFrom = document.getElementById("calFrom");
+        var calTo = document.getElementById("calTo");
+        calFrom.value = todayKey();
+        var to = new Date(); to.setDate(to.getDate() + 30);
+        calTo.value = to.getFullYear() + "-" + String(to.getMonth()+1).padStart(2,"0") + "-" + String(to.getDate()).padStart(2,"0");
+        function loadCal(){
+          fetch("/api/admin/bookings?from=" + calFrom.value + "&to=" + calTo.value)
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ msg.textContent = res.j.error || "Could not load bookings."; return; }
+              var rows = res.j.bookings.map(function(b){
+                return '<div class="after-item"><div><strong>' + fmtDate(b.date) + ' · ' + b.time + '</strong> — ' + b.serviceName
+                  + ' · ' + (b.guestName || b.name) + ' · ' + b.phone + ' · ' + b.email
+                  + ' · <em>' + b.status + '</em>' + (b.type === "after" ? ' · Private Hours' : '')
+                  + (b.giftCode ? ' · gift ' + b.giftCode : '') + '</div></div>';
+              });
+              document.getElementById("calList").innerHTML = rows.length ? rows.join("") : "<p style='color:var(--ink-soft);'>No bookings in this range.</p>";
+            })
+            .catch(function(){ msg.textContent = "Could not load bookings — check your connection."; });
+        }
+        document.getElementById("calLoad").addEventListener("click", loadCal);
+        loadCal();
+
+        var methodSel = document.getElementById("spMethod");
+        var contactWrap = document.getElementById("spContactWrap");
+        function syncContact(){
+          if (methodSel.value === "qr"){ contactWrap.style.display = "none"; }
+          else {
+            contactWrap.style.display = "";
+            contactWrap.querySelector("label").textContent = methodSel.value === "email" ? "Client's email" : "Client's mobile number";
+            document.getElementById("spContact").type = methodSel.value === "email" ? "email" : "tel";
+          }
+        }
+        methodSel.addEventListener("change", syncContact);
+        syncContact();
+
+        document.getElementById("spotForm").addEventListener("submit", function(ev){
+          ev.preventDefault();
+          var err = document.getElementById("spErr");
+          var amt = parseFloat(document.getElementById("spAmount").value);
+          var name = document.getElementById("spName").value.trim();
+          var contact = document.getElementById("spContact").value.trim();
+          if (!amt || amt < 1){ err.textContent = "Please enter the amount owed — $1 or more."; return; }
+          if (!name){ err.textContent = "Please add the client's name."; return; }
+          err.textContent = "";
+          fetch("/api/pay-spot", { method:"POST", headers:{ "Content-Type":"application/json" },
+            body: JSON.stringify({ amount: amt, clientName: name, contact: contact, method: methodSel.value,
+              serviceLabel: document.getElementById("spLabel").value.trim() || "In2Skin visit",
+              giftCode: document.getElementById("spGift").value.trim() }) })
+          .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+          .then(function(res){
+            var out = document.getElementById("spotResult");
+            if (!res.ok){ err.textContent = res.j.error || "Something went wrong — please try again."; return; }
+            if (res.j.paid){
+              out.innerHTML = '<div class="book-step on" style="text-align:center;"><h3>Covered by the gift certificate</h3><p style="color:var(--ink-soft);">No payment link needed — the gift code covered the full ' + money(Math.round(amt*100)) + '.</p></div>';
+              loadPayments();
+              return;
+            }
+            var qr = "";
+            if (typeof qrcode !== "undefined"){
+              var q = qrcode(0, "M"); q.addData(res.j.url); q.make();
+              var count = q.getModuleCount(), quiet = 4, cell = 8, size = (count + quiet*2)*cell, rects = "";
+              for (var r = 0; r < count; r++) for (var c = 0; c < count; c++)
+                if (q.isDark(r, c)) rects += '<rect x="' + ((c+quiet)*cell) + '" y="' + ((r+quiet)*cell) + '" width="' + cell + '" height="' + cell + '"/>';
+              qr = '<svg viewBox="0 0 ' + size + ' ' + size + '" style="max-width:280px; width:100%; height:auto; background:#fff; border-radius:8px;" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="QR code for the payment link"><rect width="' + size + '" height="' + size + '" fill="#FFFFFF"/><g fill="#1E241B">' + rects + '</g></svg>';
+            }
+            out.innerHTML = '<div class="book-step on" style="text-align:center;"><h3>Payment link ready — ' + money(Math.round(amt*100)) + '</h3>'
+              + (res.j.sms === "not_configured" ? '<p style="color:var(--ink-soft);">Automatic texting is not set up yet — please text the link below to the client from the studio phone.</p>' : '')
+              + '<div class="pay-qr-box">' + qr + '</div>'
+              + '<div class="pay-link">' + res.j.url + '</div>'
+              + '<p><a class="btn btn-book" href="' + res.j.url + '" target="_blank" rel="noopener">Open the pay page →</a></p></div>';
+            loadPayments();
+          })
+          .catch(function(){ err.textContent = "Could not reach the payment service — check your connection and try again."; });
+        });
+      })();
+    </script>
+  </body>
+</html>

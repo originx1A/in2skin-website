@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en-CA">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <title>Pay In2Skin — Bolton, Ontario</title>
+    <meta name="description" content="Secure payment for your In2Skin visit in Bolton, Ontario." />
+    <link rel="stylesheet" href="/assets/site.css" />
+  </head>
+  <body>
+    <header class="site">
+      <div class="wrap header-in">
+        <a class="brand" href="/" aria-label="In2Skin — home"><span class="brand-text"><span class="wordmark">In2Skin</span><span class="tagline">Aesthetics · Bolton</span></span></a>
+      </div>
+    </header>
+    <main class="wrap" style="max-width:640px; padding:48px 20px 80px;">
+      <div class="book-step on" id="payBox" style="text-align:center;">
+        <h1 style="font-family:'Cormorant Garamond',serif; font-size:2rem; margin-bottom:8px;">Pay In2Skin</h1>
+        <p id="payMsg" style="color:var(--ink-soft);">Opening your secure payment link…</p>
+        <div id="payDetail"></div>
+        <p id="payFallback" style="margin-top:20px;"></p>
+      </div>
+      <p style="text-align:center; color:var(--ink-soft); font-size:.9rem; margin-top:24px;">Secure payment by Stripe · The charge shows as <strong>IN2SKIN</strong> on your card statement.<br />Plain Interac-only debit cards cannot be charged by card — please pay by e-transfer at the studio instead.</p>
+    </main>
+    <script>
+      (function(){
+        var params = new URLSearchParams(location.search);
+        var id = params.get("id");
+        var box = document.getElementById("payBox");
+        var msg = document.getElementById("payMsg");
+        var detail = document.getElementById("payDetail");
+        var fallback = document.getElementById("payFallback");
+        function money(c){ return "$" + (c/100).toFixed(2).replace(/\.00$/, ""); }
+        if (!id){
+          msg.textContent = "This payment link needs a payment reference. Please ask the studio to send you a fresh link.";
+          return;
+        }
+        fetch("/api/pay-link?id=" + encodeURIComponent(id))
+          .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+          .then(function(res){
+            if (!res.ok){ msg.textContent = res.j.error || "That payment link could not be found. Please ask the studio to send a fresh one."; return; }
+            var j = res.j;
+            if (j.paid){
+              msg.textContent = "This payment is already paid — thank you.";
+              detail.innerHTML = "<p><strong>" + money(j.amountCents) + "</strong> · " + j.serviceLabel + "</p>";
+              return;
+            }
+            if (!j.stripeUrl){ msg.textContent = "That payment link is not ready yet. Please ask the studio to send it again."; return; }
+            msg.textContent = "Opening secure checkout…";
+            detail.innerHTML = "<p><strong>" + money(j.dueCents) + "</strong> · " + j.serviceLabel + "</p><p style='color:var(--ink-soft);'>Paying as " + j.clientName + "</p>";
+            fallback.innerHTML = '<a class="btn btn-book btn-big" href="' + j.stripeUrl + '">Pay ' + money(j.dueCents) + ' securely →</a>';
+            setTimeout(function(){ window.location.href = j.stripeUrl; }, 1200);
+          })
+          .catch(function(){ msg.textContent = "Could not load this payment link — please check your connection and try again."; });
+      })();
+    </script>
+  </body>
+</html>

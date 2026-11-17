@@ -1,0 +1,95 @@
+// POST /api/stripe-webhook — verify the Stripe signature, then:
+//   booking checkout -> mark the booking paid, deduct any gift balance once,
+//                      send the confirmation email.
+//   gift checkout    -> issue the gift code, email the certificate + receipt.
+//   pay-spot link    -> mark the pay link paid, record the payment.
+// Raw body is required for signature verification.
+const { getStripe } = require("../lib/stripe");
+const { kvGet, kvSet } = require("../lib/kv");
+const { sendEmail } = require("../lib/email");
+const { money } = require("../lib/schedule");
+const {
+  SITE_URL, getBooking, deductGift, sendBookingConfirmation,
+  ensureGiftCode, sendGiftCertificate, sendGiftReceipt,
+  recordPayment, newId,
+} = require("../lib/bookings");
+
+module.exports = async (req, res) => {
+  const stripe = getStripe();
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!secret) return res.status(503).json({ error: "STRIPE_WEBHOOK_SECRET is not set." });
+
+  let event;
+  try {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const raw = Buffer.concat(chunks);
+    const sig = req.headers["stripe-signature"];
+    event = stripe.webhooks.constructEvent(raw, sig, secret);
+  } catch (err) {
+    console.error("[webhook] signature verification failed:", err.message);
+    return res.status(400).json({ error: "Invalid signature." });
+  }
+
+  try {
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+      const meta = session.metadata || {};
+      if (meta.type === "booking" && meta.bookingId) {
+        const booking = await getBooking(meta.bookingId);
+        if (booking && booking.status !== "paid") {
+          booking.status = "paid";
+          booking.amountPaidCents = session.amount_total || booking.amountCents;
+          booking.stripePaymentIntentId = session.payment_intent || null;
+          await deductGift(booking);
+          await kvSet(`booking:${booking.id}`, booking);
+        }
+        if (booking) await sendBookingConfirmation(booking);
+      } else if (meta.type === "gift") {
+        const gift = await ensureGiftCode(session);
+        await sendGiftCertificate(gift);
+        await sendGiftReceipt(gift);
+      } else if (meta.type === "payspot" && meta.paylinkId) {
+        const rec = await kvGet(`paylink:${meta.paylinkId}`);
+        if (rec) {
+          if (meta.giftCode && meta.giftAppliedCents && !rec.giftDeducted) {
+            const { getGift } = require("../lib/bookings");
+            const gift = await getGift(meta.giftCode);
+            if (gift) {
+              gift.balanceCents = Math.max(0, gift.balanceCents - Number(meta.giftAppliedCents));
+              await kvSet(`gift:${gift.code}`, gift);
+            }
+            rec.giftDeducted = true;
+          }
+          rec.paid = true;
+          rec.paidAt = new Date().toISOString();
+          await kvSet(`paylink:${rec.id}`, rec);
+          await recordPayment({
+            id: newId("pay"),
+            kind: "pay-spot",
+            amountCents: session.amount_total || rec.dueCents,
+            clientName: rec.clientName,
+            serviceLabel: rec.serviceLabel,
+            method: "card",
+            paylinkId: rec.id,
+            checkoutSessionId: session.id,
+            createdAt: new Date().toISOString(),
+          });
+          if (rec.contact && rec.contact.includes("@")) {
+            await sendEmail({
+              to: rec.contact,
+              subject: `Your In2Skin receipt — ${money(session.amount_total || rec.dueCents)} paid`,
+              html: `<h2 style="font-family:Georgia,serif;color:#2F4A2C;">Paid — thank you</h2><p>Hi ${String(rec.clientName || "").split(" ")[0] || "there"},</p><p>Your payment of <strong>${money(session.amount_total || rec.dueCents)}</strong> for <strong>${rec.serviceLabel}</strong> at In2Skin is confirmed. The charge shows as <strong>IN2SKIN</strong> on your card statement.</p><p>— In2Skin, Bolton</p>`,
+            });
+          }
+        }
+      }
+    }
+    return res.status(200).json({ received: true });
+  } catch (err) {
+    console.error("[webhook] handler error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+module.exports.config = { api: { bodyParser: false } };
