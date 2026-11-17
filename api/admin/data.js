@@ -43,11 +43,14 @@
 //   → mark a caller message read / unread.
 // POST /api/admin/data { view:"messages", action:"delete", id }
 //   → delete a caller message.
+// POST /api/admin/data { view:"codes", action:"delete", code }
+//   → delete a gift certificate / voucher for good (record, index entry,
+//     checkout-session link). The remaining balance is gone.
 // Signed in only. Merged because Vercel Hobby allows 12 serverless
 // functions per deployment.
 const { requireAdmin } = require("../../lib/auth");
 const {
-  listBookingsRange, listBookingsForDate, listPayments, listGifts,
+  listBookingsRange, listBookingsForDate, listPayments, listGifts, deleteGift,
   giftDisplayStatus, getBooking, markBookingOutcome, saveBooking,
   cancelBooking, moveBooking, buildBooking, createBookingCheckout, createPayLink,
   sendBookingConfirmation, sendWalkInConfirmation, sendHoldEmail, finalizePaidBooking,
@@ -150,6 +153,11 @@ module.exports = async (req, res) => {
       if (b.view === "messages" && b.action === "delete") {
         const ok = await deleteMessage(b.id);
         if (!ok) return res.status(404).json({ error: "Message not found." });
+        return res.status(200).json({ ok: true });
+      }
+      if (b.view === "codes" && b.action === "delete") {
+        const ok = await deleteGift(b.code);
+        if (!ok) return res.status(404).json({ error: "That code is already gone." });
         return res.status(200).json({ ok: true });
       }
       if (b.view === "bookings" && b.action === "walk-in") {

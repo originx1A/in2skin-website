@@ -504,6 +504,18 @@ async function run() {
   check("unknown paylink -> 404", res.statusCode, 404);
   retrieveOverride = null;
 
+  // ---------- 15. gift code delete ----------
+  const delGift = await bookingsLib.ensureGiftCode(voucherSession("cs_admin_del", "Classic Facial — $65", 6500, "gift"));
+  check("codes lists the new gift", (await bookingsLib.listGifts()).some((g) => g.code === delGift.code), true);
+  res = await callAdmin({ view: "codes", action: "delete", code: delGift.code });
+  check("delete code -> 200", res.statusCode, 200);
+  check("gift gone after delete", await bookingsLib.getGift(delGift.code), null);
+  check("gift off the index after delete", (await bookingsLib.listGifts()).some((g) => g.code === delGift.code), false);
+  res = await callAdmin({ view: "codes", action: "delete", code: delGift.code });
+  check("delete missing code -> 404", res.statusCode, 404);
+  res = await callAdmin({ view: "codes", action: "delete", code: "NOPE-0000" });
+  check("delete bad code -> 404", res.statusCode, 404);
+
   console.log(`admin tests: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }

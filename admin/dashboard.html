@@ -132,7 +132,7 @@
 
       <section style="margin-top:36px;">
         <h2 style="font-size:1.4rem;">Gift certificates &amp; treatment vouchers</h2>
-        <p class="sub">Every code — who bought it, who holds it now, what was spent and where, and what is left. A voucher dies when its full total is used and the treatment is marked complete; a no-show puts the value back on the voucher.</p>
+        <p class="sub">Every code — who bought it, who holds it now, what was spent and where, and what is left. A voucher dies when its full total is used and the treatment is marked complete; a no-show puts the value back on the voucher. Delete removes a code for good.</p>
         <div id="codeList" style="margin-top:12px;">Loading codes…</div>
       </section>
 
@@ -516,13 +516,20 @@
                   + '<br/>Original <strong>' + money(g.originalCents) + '</strong> · Spent ' + money(spent) + ' · Balance left <strong>' + money(g.balanceCents) + '</strong> · Status: <strong>' + g.status + '</strong>'
                   + (g.suggestedUseBy ? '<br/><span style="color:var(--ink-soft);">Suggested use by ' + g.suggestedUseBy + ' — the dollar value never expires.</span>' : '')
                   + (uses ? '<br/><span style="color:var(--ink-soft);">Uses: ' + uses + '</span>' : '')
-                  + '</div></div>';
+                  + '</div><div style="margin-top:8px;"><button class="btn btn-ghost btn-book-sm" type="button" data-code-del="' + g.code + '">Delete</button></div></div>';
               });
               document.getElementById("codeList").innerHTML = rows.length ? rows.join("") : "<p style='color:var(--ink-soft);'>No gift certificates or vouchers yet.</p>";
             })
             .catch(function(){ document.getElementById("codeList").textContent = "Could not load codes — check your connection."; });
         }
         loadCodes();
+        document.getElementById("codeList").addEventListener("click", function(ev){
+          var delBtn = ev.target.closest("[data-code-del]");
+          if (!delBtn) return;
+          if (!confirm("Delete this code? Its remaining balance will be gone for good.")) return;
+          postAdmin({ view:"codes", action:"delete", code: delBtn.getAttribute("data-code-del") })
+            .then(function(){ loadCodes(); });
+        });
 
         // ---- call answering hours ----
         var callSettings = null;
