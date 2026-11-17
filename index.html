@@ -2,7 +2,7 @@
 <html lang="en-CA">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="color-scheme" content="light" />
     <link rel="icon" href="data:," />
     <title>Facials in Bolton | In2Skin — Aesthetics Bolton, Serving Toronto &amp; the GTA</title>
@@ -862,9 +862,16 @@
     var TIMES = ["9:00 AM","10:00 AM","11:00 AM","12:30 PM","1:30 PM","2:30 PM","3:30 PM","4:30 PM","5:30 PM"];
     var TIMES_MORNING = ["7:00 AM","7:45 AM","8:30 AM"];
     var TIMES_EVENING = ["7:00 PM","7:45 PM","8:30 PM"];
+    /* Parse a YYYY-MM-DD day as LOCAL midnight. new Date("2026-11-21")
+       is UTC midnight — the previous evening in Toronto, so the weekday
+       comes out wrong. The wizard stores booking.date as YYYY-MM-DD now
+       (it used to be toDateString, which the /api/book backend rejects —
+       parseDateLocal only accepts ISO — so website bookings could never
+       complete; this also fixes that). */
+    function parseDay(s){ var p = String(s || "").split("-"); return new Date(+p[0], (+p[1] || 1) - 1, +p[2] || 1); }
     function timesFor(){
       if (booking.type !== "after") return TIMES;
-      if (booking.date && new Date(booking.date).getDay() === 0) return TIMES_MORNING.concat(TIMES, TIMES_EVENING); /* Sundays: all day */
+      if (booking.date && parseDay(booking.date).getDay() === 0) return TIMES_MORNING.concat(TIMES, TIMES_EVENING); /* Sundays: all day */
       return TIMES_MORNING.concat(TIMES_EVENING); /* weekdays: early morning + evening */
     }
 
@@ -873,13 +880,13 @@
        all times if the service cannot be reached. */
     function refreshAvailability(){
       if (booking.step !== 2 || !booking.date || !booking.service) return;
-      var d = new Date(booking.date);
+      var d = parseDay(booking.date);
       var dateStr = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
       fetch("/api/availability?date=" + dateStr + "&service=" + encodeURIComponent(booking.service) + "&type=" + booking.type + "&addons=" + encodeURIComponent((booking.addons || []).join(",")))
         .then(function(r){ return r.ok ? r.json() : null; })
         .then(function(j){
           if (!j || !j.times) return;
-          document.querySelectorAll(".time-chip").forEach(function(chip){
+          document.querySelectorAll(".slot").forEach(function(chip){
             var t = chip.getAttribute("data-pick-time");
             var tag = chip.querySelector(".booked-tag");
             if (j.times.indexOf(t) < 0){
@@ -903,33 +910,47 @@
     var availRange = null, availRangeKey = "";
     function availKey(){ return (booking.service || "") + "|" + (booking.addons || []).join(","); }
     function dateKeyOf(d){ return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
-    function dateStatusFor(dateKeyStr){
-      if (!availRange || availRangeKey !== availKey()) return null;
-      var d = new Date(dateKeyStr); if (isNaN(d.getTime())) return null;
-      var rec = availRange[dateKeyOf(d)]; if (!rec) return null;
+    /* Booking window (Tony Nov 17, 2026): bookings open tomorrow and run
+       60 days out — the same window buildBooking enforces server-side. */
+    function winStart(){ var d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + 1); return d; }
+    function winEnd(){ var d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + 60); return d; }
+    /* Displayed month of the calendar grid — { y, m } (m 0-based). Starts
+       on the picked day's month, else the first bookable month. It stays
+       put while the person picks — only the ‹ › buttons move it. */
+    var calMonth = null;
+    function calMonthInit(){
+      if (calMonth) return calMonth;
+      var d = booking.date ? parseDay(booking.date) : winStart();
+      calMonth = { y: d.getFullYear(), m: d.getMonth() };
+      return calMonth;
+    }
+    function calMonthKey(){ var c = calMonthInit(); return c.y + "-" + c.m; }
+    function dateStatusFor(isoStr){
+      if (!availRange || availRangeKey !== availKey() + "|" + calMonthKey()) return null;
+      var rec = availRange[isoStr]; if (!rec) return null;
       var c = rec[booking.type === "after" ? "after" : "regular"]; if (!c) return null;
       if (c.free <= 0) return "full";
       if (c.free <= 2) return "few";
       return "open";
     }
     function paintDateStatuses(){
-      if (!availRange || availRangeKey !== availKey()) return;
-      document.querySelectorAll(".date-chip").forEach(function(chip){
-        var st = dateStatusFor(chip.getAttribute("data-pick-date"));
-        chip.classList.remove("st-open", "st-few", "st-full");
+      if (!availRange || availRangeKey !== availKey() + "|" + calMonthKey()) return;
+      document.querySelectorAll(".cal-day").forEach(function(cell){
+        var st = dateStatusFor(cell.getAttribute("data-date-key"));
+        cell.classList.remove("st-open", "st-few", "st-full");
         if (!st) return;
-        chip.classList.add("st-" + st);
-        if (st === "full") chip.disabled = true;
+        cell.classList.add("st-" + st);
+        if (st === "full") cell.disabled = true;
       });
     }
     function fetchAvailRange(){
       if (booking.step !== 2 || !booking.service) return;
-      var key = availKey();
+      var key = availKey() + "|" + calMonthKey();
       if (availRange && availRangeKey === key){ paintDateStatuses(); return; }
       availRange = null; availRangeKey = "";
-      var days = nextDays(14);
-      var from = dateKeyOf(days[0]), to = dateKeyOf(days[days.length - 1]);
-      fetch("/api/availability?from=" + from + "&to=" + to + "&service=" + encodeURIComponent(booking.service) + "&addons=" + encodeURIComponent((booking.addons || []).join(",")))
+      var c = calMonthInit();
+      var from = new Date(c.y, c.m, 1), to = new Date(c.y, c.m + 1, 0);
+      fetch("/api/availability?from=" + dateKeyOf(from) + "&to=" + dateKeyOf(to) + "&service=" + encodeURIComponent(booking.service) + "&addons=" + encodeURIComponent((booking.addons || []).join(",")))
         .then(function(r){ return r.ok ? r.json() : null; })
         .then(function(j){
           if (!j || !j.dates) return;
@@ -941,16 +962,6 @@
           else paintDateStatuses();
         })
         .catch(function(){ /* dates stay unmarked — times still work */ });
-    }
-
-    function nextDays(n){
-      var out = [], d = new Date();
-      d.setDate(d.getDate() + 1); /* bookings from tomorrow in this preview */
-      while (out.length < n){
-        out.push(new Date(d));
-        d.setDate(d.getDate() + 1);
-      }
-      return out;
     }
     function fmtDate(d){
       return d.toLocaleDateString("en-CA", { weekday:"long", month:"long", day:"numeric", year:"numeric" });
@@ -1009,21 +1020,41 @@
           '<div class="err" id="bookErr"></div></div>';
       }
       else if (booking.step === 2){
-        var days = nextDays(14);
         var s = currentService();
-        var dObj2 = booking.date ? new Date(booking.date) : null;
+        var dObj2 = booking.date ? parseDay(booking.date) : null;
         var modeLabel = booking.type === "after" ? "Private Hours (+$15)" : "Regular Hours";
+        /* Month calendar (Tony Nov 17, 2026): a real month grid — weekday
+           header, one cell per day, ‹ › across the booking window
+           (tomorrow → 60 days). Days outside the window are greyed out,
+           never tappable. Tap a day and its time slots open below. */
+        var cm = calMonthInit();
+        var ws = winStart(), we = winEnd();
+        var first = new Date(cm.y, cm.m, 1);
+        var last = new Date(cm.y, cm.m + 1, 0);
+        var monthName = first.toLocaleDateString("en-CA", { month:"long", year:"numeric" });
+        var prevOff = (cm.y === ws.getFullYear() && cm.m === ws.getMonth());
+        var nextOff = (cm.y === we.getFullYear() && cm.m === we.getMonth());
+        var cells = "";
+        var dow = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+        for (var p = 0; p < first.getDay(); p++) cells += '<span class="cal-pad" aria-hidden="true"></span>';
+        for (var day = 1; day <= last.getDate(); day++){
+          var dd = new Date(cm.y, cm.m, day);
+          var iso = dateKeyOf(dd);
+          var inWin = dd >= ws && dd <= we;
+          cells += '<button type="button" class="cal-day' + (booking.date === iso ? " sel" : "") + '"' + (inWin ? '' : ' disabled') + ' data-pick-date="' + iso + '" data-date-key="' + iso + '"' + (inWin ? '' : ' aria-disabled="true"') + '>' +
+            '<span class="num">' + day + '</span><span class="dot" aria-hidden="true"></span></button>';
+        }
         body = '<div class="book-step on"><h3>Choose a day &amp; time</h3>' +
           '<p class="book-summary">' + bookingAddonTotalText() + ' — <button type="button" class="linklike" id="changeTreatment">Change</button></p>' +
-          '<h3 style="font-size:1.3rem; margin:18px 0 4px;">Pick a day</h3>' +
-          '<div class="date-row" role="group" aria-label="Choose a day">' + days.map(function(d){
-            var key = d.toDateString();
-            return '<button type="button" class="date-chip' + (booking.date===key ? " sel" : "") + '" data-pick-date="' + key + '" data-date-key="' + key + '">' +
-              '<span class="dow">' + d.toLocaleDateString("en-CA",{weekday:"short"}) + '</span>' +
-              '<span class="dnum">' + d.getDate() + '</span>' +
-              '<span class="mon">' + d.toLocaleDateString("en-CA",{month:"short"}) + '</span>' +
-              '<span class="dot" aria-hidden="true"></span></button>';
-          }).join("") + '</div>' +
+          '<div class="cal" role="group" aria-label="Choose a day">' +
+            '<div class="cal-head">' +
+              '<button type="button" class="cal-nav" id="calPrev" aria-label="Previous month"' + (prevOff ? ' disabled' : '') + '>‹</button>' +
+              '<div class="cal-title" aria-live="polite">' + monthName + '</div>' +
+              '<button type="button" class="cal-nav" id="calNext" aria-label="Next month"' + (nextOff ? ' disabled' : '') + '>›</button>' +
+            '</div>' +
+            '<div class="cal-week" aria-hidden="true">' + dow.map(function(w){ return '<span>' + w + '</span>'; }).join("") + '</div>' +
+            '<div class="cal-grid">' + cells + '</div>' +
+          '</div>' +
           '<p class="fine avail-legend" style="margin-top:8px;"><span class="dot open"></span> Open &nbsp;<span class="dot few"></span> Few left &nbsp;<span class="dot full"></span> Fully booked</p>' +
           '<h3 style="font-size:1.3rem; margin:22px 0 4px;">Regular hours, or Private Hours?</h3>' +
           '<div class="pick-grid">' +
@@ -1034,8 +1065,8 @@
           '</div>' +
           (dObj2 ?
             '<h3 id="timesHead" style="font-size:1.3rem; margin:20px 0 4px;">Available times — ' + fmtShort(dObj2) + ' · ' + modeLabel + '</h3>' +
-            '<div class="time-grid">' + timesFor().map(function(t){
-              return '<button type="button" class="time-chip' + (booking.time===t ? " sel" : "") + '" data-pick-time="' + t + '">' + t + '</button>';
+            '<div class="slot-grid">' + timesFor().map(function(t){
+              return '<button type="button" class="slot' + (booking.time===t ? " sel" : "") + '" data-pick-time="' + t + '">' + t + '</button>';
             }).join("") + '</div>'
           :
             '<p class="sub" style="margin-top:20px;">Pick a day above to see the times for it.</p>') +
@@ -1045,7 +1076,7 @@
       }
       else if (booking.step === 3){
         var s2 = currentService();
-        var dObj = booking.date ? new Date(booking.date) : null;
+        var dObj = booking.date ? parseDay(booking.date) : null;
         var friendMode = booking.forWhom === "friend";
         var fieldsHTML = friendMode ?
           '<div class="field"><label for="bfName">Your name (you are booking)</label><input id="bfName" type="text" autocomplete="name" placeholder="e.g. Jordan Smith" /></div>' +
@@ -1092,7 +1123,7 @@
       }
       else if (booking.step === 4){
         var s3 = currentService();
-        var d3 = booking.date ? new Date(booking.date) : null;
+        var d3 = booking.date ? parseDay(booking.date) : null;
         /* Confirmation email goes out only when an email was given (Tony
            Nov 17, 2026: email is optional now) — otherwise we confirm by
            phone. Nothing here may claim an email is on its way. */
@@ -1215,6 +1246,24 @@
           scrollToTopOf("timesHead");
         });
       });
+      /* Month navigation — ‹ › across the booking window only (tomorrow
+         → 60 days). The buttons are disabled at the window edges. */
+      var calPrev = document.getElementById("calPrev");
+      if (calPrev) calPrev.addEventListener("click", function(){
+        var c = calMonthInit();
+        var ws = winStart();
+        if (c.y === ws.getFullYear() && c.m === ws.getMonth()) return;
+        calMonth = c.m === 0 ? { y: c.y - 1, m: 11 } : { y: c.y, m: c.m - 1 };
+        renderBooking();
+      });
+      var calNext = document.getElementById("calNext");
+      if (calNext) calNext.addEventListener("click", function(){
+        var c = calMonthInit();
+        var we = winEnd();
+        if (c.y === we.getFullYear() && c.m === we.getMonth()) return;
+        calMonth = c.m === 11 ? { y: c.y + 1, m: 0 } : { y: c.y, m: c.m + 1 };
+        renderBooking();
+      });
       shell.querySelectorAll("[data-pick-time]").forEach(function(b){
         b.addEventListener("click", function(){ booking.time = b.getAttribute("data-pick-time"); renderBooking(); });
       });
@@ -1325,6 +1374,7 @@
       var again = document.getElementById("bookAgain");
       if (again) again.addEventListener("click", function(){
         booking = { service:null, addons:[], date:null, time:null, step:1, type:"regular", forWhom:"me", referredBy: booking.referredBy };
+        calMonth = null;
         renderBooking();
       });
     }
@@ -1427,6 +1477,7 @@
       var svc = serviceId && (svcById(serviceId) || COMBOS.some(function(c){ return c.id===serviceId; }) || ADDONS.some(function(a){ return a.id===serviceId; }));
       booking.service = svc ? serviceId : null;
       booking.step = svc ? 2 : 1;
+      calMonth = null;
       showView("home", "book");
     }
 
@@ -2049,7 +2100,21 @@
     var chatMsgs = document.getElementById("chatMsgs");
     var chatChips = document.getElementById("chatChips");
 
-    function chatScroll(){ requestAnimationFrame(function(){ chatMsgs.scrollTop = chatMsgs.scrollHeight; }); setTimeout(function(){ chatMsgs.scrollTop = chatMsgs.scrollHeight; }, 60); }
+    /* Scroll the newest message into view and KEEP it there. On iOS a
+       bare scrollTop assignment can be undone by the layout settling
+       after the message lands, so: scroll now, scroll again on the next
+       frame and twice more after layout settles, and scroll the message
+       element itself into view as a belt-and-braces. */
+    function chatScroll(){
+      function go(){
+        chatMsgs.scrollTop = chatMsgs.scrollHeight;
+        var last = chatMsgs.lastElementChild;
+        if (last && last.scrollIntoView) last.scrollIntoView({ block:"end" });
+      }
+      requestAnimationFrame(go);
+      setTimeout(go, 60);
+      setTimeout(go, 300);
+    }
     function addMsg(who, text, actions){
       var d = document.createElement("div");
       d.className = "msg " + who;
@@ -2159,6 +2224,10 @@
       chatPanel.hidden = true;
       chatFab.setAttribute("aria-expanded","false");
     }
+    /* The viewport shrinking (keyboard opening, browser chrome moving)
+       must not strand the newest answer out of view — re-scroll whenever
+       the viewport changes size while the chat is open. */
+    window.addEventListener("resize", function(){ if (chatPanel && !chatPanel.hidden) chatScroll(); });
     chatFab.addEventListener("click", function(){ chatPanel.hidden ? openChat() : closeChat(); });
     var toTop = document.getElementById("toTop");
     function toTopShow(){ if (toTop) toTop.classList.toggle("show", window.scrollY > 500 && !pkgBarVisible() && !giftBarVisible()); }

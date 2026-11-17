@@ -284,6 +284,33 @@
         cursor:pointer; font-family:"Jost",sans-serif; font-size:.98rem; color:var(--ink); min-height:44px;
       }
       .time-chip.sel{ border-color:var(--sage-deep); background:var(--sage-soft); font-weight:600; color:var(--sage-deep); }
+      /* ---------- month calendar (booking step 2, Tony Nov 17) ---------- */
+      .cal{ background:var(--cream); border:1.5px solid var(--line); border-radius:12px; padding:14px 14px 10px; margin-top:6px; }
+      .cal-head{ display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+      .cal-title{ flex:1; text-align:center; font-family:"Cormorant Garamond",serif; font-size:1.45rem; font-weight:600; color:var(--sage-deep); }
+      .cal-nav{ width:44px; height:44px; min-height:44px; flex:0 0 auto; background:var(--paper); border:1.5px solid var(--line); border-radius:8px; font-size:1.5rem; line-height:1; color:var(--sage-deep); cursor:pointer; padding:0 0 2px; }
+      .cal-nav:hover{ border-color:var(--sage-deep); }
+      .cal-nav:disabled{ opacity:.35; cursor:not-allowed; }
+      .cal-week{ display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:4px; margin-bottom:4px; }
+      .cal-week span{ text-align:center; font-size:.72rem; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-soft); padding:2px 0; }
+      .cal-grid{ display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:4px; }
+      .cal-pad{ display:block; }
+      .cal-day{ min-width:0; aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; background:var(--paper); border:1.5px solid var(--line); border-radius:8px; cursor:pointer; font-family:"Jost",sans-serif; color:var(--ink); padding:2px; }
+      .cal-day:hover{ border-color:var(--sage); }
+      .cal-day.sel{ border-color:var(--sage-deep); background:var(--sage-soft); }
+      .cal-day .num{ font-family:"Cormorant Garamond",serif; font-size:1.25rem; font-weight:600; line-height:1; }
+      .cal-day .dot{ display:block; width:6px; height:6px; border-radius:50%; background:transparent; }
+      .cal-day.st-open .dot{ background:var(--sage); }
+      .cal-day.st-few .dot{ background:var(--gold); }
+      .cal-day.st-full .dot{ background:#B9B09A; }
+      .cal-day:disabled{ opacity:.45; cursor:not-allowed; background:var(--cream); }
+      /* ---------- time slot grid (booking step 2) ---------- */
+      .slot-grid{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; margin-top:6px; }
+      .slot{ background:var(--cream); border:1.5px solid var(--line); border-radius:8px; padding:10px 6px; cursor:pointer; font-family:"Jost",sans-serif; font-size:.98rem; color:var(--ink); min-height:48px; }
+      .slot:hover{ border-color:var(--sage); }
+      .slot.sel{ border-color:var(--sage-deep); background:var(--sage-soft); font-weight:600; color:var(--sage-deep); }
+      .slot:disabled{ opacity:.45; cursor:not-allowed; background:var(--cream); }
+      .slot .booked-tag{ display:block; font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); }
       .field{ margin-bottom:16px; }
       .field label{ display:block; font-size:.88rem; font-weight:500; letter-spacing:.05em; margin-bottom:6px; }
       .field input, .field select{
@@ -578,7 +605,26 @@
       .chat-form .btn{ flex:0 0 auto; }
       @media (max-width:860px){
         .chat-fab{ right:14px; bottom:calc(94px + env(safe-area-inset-bottom)); }
-        .chat-panel{ right:12px; bottom:calc(164px + env(safe-area-inset-bottom)); height:min(540px, calc(100dvh - 200px)); }
+        /* Mobile chat is a full-screen sheet (Tony Nov 17): the floating
+           panel hid answers on a real iPhone. The sheet fills the
+           viewport, the messages area flexes between the header and the
+           input pinned at the bottom, so the newest answer is always in
+           view. Desktop keeps the floating panel. */
+        .chat-panel{ left:0; right:0; top:0; bottom:0; width:100%; height:100%; height:100dvh; border-radius:0; border:0; }
+        .chat-msgs{ overscroll-behavior:contain; }
+        .chat-form{ padding-bottom:calc(12px + env(safe-area-inset-bottom)); }
+      }
+      /* Short viewport (keyboard open on a phone): the chips row and the
+         tall header would squeeze the messages area to a slit, so they
+         collapse away — the messages area gets the room, and the newest
+         answer fits. Chips come back as soon as the viewport grows. */
+      @media (max-width:860px) and (max-height:520px){
+        .chat-panel .chat-head{ padding:10px 14px; }
+        .chat-panel .chat-head strong{ font-size:1.15rem; }
+        .chat-panel .chat-head span{ display:none; }
+        .chat-panel .chat-chips{ display:none; }
+        .chat-panel .chat-form{ padding:8px; padding-bottom:calc(8px + env(safe-area-inset-bottom)); }
+        .chat-panel .msg{ padding:9px 12px; }
       }
 
       /* ---------- back to top ---------- */
@@ -878,7 +924,7 @@
           font-size:0; line-height:0;
         }
         .chat-fab svg{ width:26px; height:26px; flex:0 0 auto; }
-        .chat-panel{ bottom:calc(156px + env(safe-area-inset-bottom)); }
+        .chat-panel{ bottom:0; }
         /* page end scrolls fully clear of the bar + chat button */
         .foot-bottom{ padding-bottom:calc(104px + env(safe-area-inset-bottom)); }
         /* welcome: photos sit near the top of the section */
