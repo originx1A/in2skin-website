@@ -491,6 +491,43 @@
     };
     function priceFor(s, type){ return type === "after" ? AH_PRICE[s.id] : s.price; }
 
+    /* Booking add-ons (Tony Nov 17, 2026): the four 15-minute enhancements
+       attach to ANY treatment — pick the treatment first, then tick add-ons.
+       Never standalone: an add-on on its own is not a booking. Prices mirror
+       lib/schedule.js; the $15 Private Hours premium applies once per visit. */
+    var ADDONS = [
+      { id:"nano-needling", name:"NANO Needling", desc:"Deep serum infusion", price:"$55", priceNum:55 },
+      { id:"microdermabrasion", name:"Microdermabrasion", desc:"Polished, brighter skin", price:"$45", priceNum:45 },
+      { id:"light-therapy", name:"Light Therapy", desc:"Warm red light", price:"$45", priceNum:45 },
+      { id:"reflexology", name:"Reflexology", desc:"Feet, whole-body calm", price:"$25", priceNum:25 }
+    ];
+    function addonById(id){ for (var i=0;i<ADDONS.length;i++) if (ADDONS[i].id===id) return ADDONS[i]; return null; }
+    function bookingAddons(){ return (booking.addons || []).map(addonById).filter(Boolean); }
+    function bookingLabel(){
+      var s = currentService(); if (!s) return "";
+      var names = [s.name];
+      bookingAddons().forEach(function(a){ names.push(a.name); });
+      return names.join(" + ");
+    }
+    function bookingMins(){
+      var s = currentService(); if (!s) return "";
+      var mins = s.mins || 0;
+      bookingAddons().forEach(function(){ mins += 15; });
+      return mins > 0 ? mins + " minutes" : "By consultation";
+    }
+    function bookingPrice(){
+      var s = currentService(); if (!s || !s.priceNum) return "Confirmed at your consultation — no payment due now";
+      var n = s.priceNum;
+      bookingAddons().forEach(function(a){ n += a.priceNum; });
+      if (booking.type === "after") n += 15;
+      return "$" + n;
+    }
+    function bookingAddonTotalText(){
+      var s = currentService();
+      if (!s) return "Choose a treatment first — then add anything extra here.";
+      return bookingLabel() + " · " + bookingMins() + " · " + bookingPrice() + (booking.type === "after" ? " (includes the $15 Private Hours premium)" : "");
+    }
+
     /* Live checkout total: base price + $15 Private Hours premium, less the
        $10 first-visit offer, less any gift-certificate balance entered.
        A referral code entered in the gift-code field applies the referrer's
@@ -500,23 +537,26 @@
     var referralFree = 0;
     var referralCodeApplied = false;
     function bookTotalCents(){
-      var s = currentService(); if (!s || !s.priceNum) return 0;
-      var total = s.priceNum * 100 + (booking.type === "after" ? 1500 : 0);
-      if (s.id === "reflexology" && referralFree > 0) total -= s.priceNum * 100;
-      if (booking.first !== "no") total -= 1000;
+      var s = currentService(); if (!s) return 0;
+      var total = (s.priceNum || 0) * 100 + (booking.type === "after" ? 1500 : 0);
+      bookingAddons().forEach(function(a){ total += a.priceNum * 100; });
+      var reflex = addonById("reflexology");
+      if (reflex && bookingAddons().some(function(a){ return a.id === "reflexology"; }) && referralFree > 0) total -= reflex.priceNum * 100;
+      if (s.priceNum > 0 && booking.first !== "no") total -= 1000;
       total -= giftBalanceCents;
       return Math.max(0, total);
     }
     function bookTotalText(){
       var s = currentService();
-      if (!s || !s.priceNum) return "Confirmed at your consultation — no payment due now";
+      if (!s) return "Confirmed at your consultation — no payment due now";
+      if (!s.priceNum && bookingAddons().length === 0) return "Confirmed at your consultation — no payment due now";
       var cents = bookTotalCents();
       var parts = [];
       if (booking.type === "after") parts.push("includes the $15 Private Hours premium");
       if (booking.first !== "no") parts.push("$10 first-visit offer applied");
       if (referralCodeApplied) parts.push("referral credit applied");
       else if (giftBalanceCents > 0) parts.push("gift code applied");
-      if (s.id === "reflexology" && referralFree > 0) parts.push("free reflexology applied");
+      if (bookingAddons().some(function(a){ return a.id === "reflexology"; }) && referralFree > 0) parts.push("free reflexology applied");
       return "$" + (cents / 100).toFixed(2).replace(/\.00$/, "") + (parts.length ? " (" + parts.join(" · ") + ")" : "") + " — pay securely by card at checkout";
     }
     function refreshBookTotal(){
@@ -617,7 +657,7 @@
       '<section class="block" id="services" style="padding-top:56px;"><div class="wrap">' +
         '<div class="sec-head center" style="margin-bottom:26px;"><div class="over">Services &amp; Prices</div><h2>Pick. See the price. <em>Book.</em></h2><p>Tap a treatment for details, or book it right here.</p></div>' +
         '<div class="cards">' + cards + '</div>' +
-        '<div class="sec-head" style="margin-top:44px; margin-bottom:6px;"><h2 style="font-size:1.9rem;">Add-ons · 15 min each</h2></div>' +
+        '<div class="sec-head" style="margin-top:44px; margin-bottom:6px;"><h2 style="font-size:1.9rem;">Add to any treatment</h2><p>Fifteen-minute extras that go with your treatment — tap Book and tick it on in the wizard.</p></div>' +
         '<div class="addon-list">' + addonRows + '</div>' +
         '<div class="offer" style="border-radius:8px; margin-top:34px;"><div class="offer-in" style="padding:18px 16px;">' +
           '<span class="big">First visit? $10 toward any service</span>' +
@@ -815,7 +855,7 @@
     }
 
     /* ---------------- BOOKING WIZARD ---------------- */
-    var booking = { service:null, date:null, time:null, step:1, type:"regular", forWhom:"me" };
+    var booking = { service:null, addons:[], date:null, time:null, step:1, type:"regular", forWhom:"me" };
     var TIMES = ["9:00 AM","10:00 AM","11:00 AM","12:30 PM","1:30 PM","2:30 PM","3:30 PM","4:30 PM","5:30 PM"];
     var TIMES_MORNING = ["7:00 AM","7:45 AM","8:30 AM"];
     var TIMES_EVENING = ["7:00 PM","7:45 PM","8:30 PM"];
@@ -832,7 +872,7 @@
       if (booking.step !== 2 || !booking.date || !booking.service) return;
       var d = new Date(booking.date);
       var dateStr = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-      fetch("/api/availability?date=" + dateStr + "&service=" + encodeURIComponent(booking.service) + "&type=" + booking.type)
+      fetch("/api/availability?date=" + dateStr + "&service=" + encodeURIComponent(booking.service) + "&type=" + booking.type + "&addons=" + encodeURIComponent((booking.addons || []).join(",")))
         .then(function(r){ return r.ok ? r.json() : null; })
         .then(function(j){
           if (!j || !j.times) return;
@@ -871,7 +911,7 @@
       if (booking.step === 1){
         body = '<div class="book-step on"><h3>Choose your treatment</h3>' +
           '<p class="sub">Tap a treatment to continue.</p>' +
-          '<div class="pick-grid">' + SERVICES.map(function(s){
+          '<div class="pick-grid">' + SERVICES.filter(function(s){ return s.cat.indexOf("Enhancement") !== 0; }).map(function(s){
             return '<button type="button" class="pick' + (booking.service===s.id ? " sel" : "") + '" data-pick-service="' + s.id + '">' +
               '<span class="pr">' + s.price + '</span><span class="t">' + s.name + '</span>' +
               '<span class="d">' + s.minsLabel + ' · ' + s.cat + '</span></button>';
@@ -883,6 +923,14 @@
               '<span class="pr">' + c.price + '</span><span class="t">' + c.name + '</span>' +
               '<span class="d">' + c.minsLabel + ' · Signature Combo</span></button>';
           }).join("") + '</div>' +
+          '<h3 style="font-size:1.3rem; margin:22px 0 4px;">Add to any treatment</h3>' +
+          '<p class="sub" style="margin-bottom:12px;">Fifteen-minute extras that go with your treatment — tick any, they run in the same visit.</p>' +
+          '<div class="pick-grid">' + ADDONS.map(function(a){
+            return '<button type="button" class="pick' + ((booking.addons || []).indexOf(a.id) >= 0 ? " sel" : "") + '" data-pick-addon="' + a.id + '">' +
+              '<span class="pr">' + a.price + '</span><span class="t">' + a.name + '</span>' +
+              '<span class="d">15 minutes · ' + a.desc + '</span></button>';
+          }).join("") + '</div>' +
+          '<p class="fine" style="margin-top:12px;">' + bookingAddonTotalText() + '</p>' +
           '<h3 style="font-size:1.3rem; margin:22px 0 4px;">Regular hours, or Private Hours?</h3>' +
           '<div class="pick-grid">' +
             '<button type="button" class="pick' + (booking.type==="regular" ? " sel" : "") + '" data-pick-type="regular">' +
@@ -898,8 +946,8 @@
         var days = nextDays(14);
         var s = currentService();
         var whenNote = booking.type === "after"
-          ? 'For your <strong>' + s.name + '</strong> (' + s.minsLabel + ', ' + priceFor(s, "after") + ' Private Hours). Pick a day to see its times.'
-          : 'For your <strong>' + s.name + '</strong> (' + s.minsLabel + '). Pick a day, then a time that suits you.';
+          ? 'For your <strong>' + bookingLabel() + '</strong> (' + bookingMins() + ', ' + bookingPrice() + ' Private Hours). Pick a day to see its times.'
+          : 'For your <strong>' + bookingLabel() + '</strong> (' + bookingMins() + '). Pick a day, then a time that suits you.';
         body = '<div class="book-step on"><h3>Choose a day &amp; time</h3>' +
           '<p class="sub">' + whenNote + '</p>' +
           '<div class="date-row" role="group" aria-label="Choose a day">' + days.map(function(d){
@@ -947,7 +995,7 @@
         body = '<div class="book-step on"><h3>' + (friendMode ? "Your details — and your friend\u2019s" : "Your details") + '</h3>' +
           '<p class="sub">Almost done — name, phone & email for confirmation.</p>' +
           '<div class="summary-box"><dl>' +
-            '<dt>Treatment</dt><dd>' + s2.name + ' · ' + s2.minsLabel + ' · ' + priceFor(s2, booking.type) + (booking.type === "after" ? ' (Private Hours)' : '') + '</dd>' +
+            '<dt>Treatment</dt><dd>' + bookingLabel() + ' · ' + bookingMins() + ' · ' + bookingPrice() + (booking.type === "after" ? ' (Private Hours)' : '') + '</dd>' +
             '<dt>When</dt><dd>' + (dObj ? fmtDate(dObj) : "") + ' at ' + booking.time + '</dd>' +
             '<dt>Where</dt><dd>In2Skin · Bolton, Ontario</dd>' +
             '<dt>Due at checkout</dt><dd id="bookTotal">' + bookTotalText() + '</dd>' +
@@ -971,8 +1019,8 @@
           '<div class="check">' + ICON_BIGCHECK + '</div>' +
           '<h3>' + (booking.forWhom === "friend" && booking.guestName ? "Booked for " + booking.guestName.split(" ")[0] + " — what a gift." : "You are booked in" + (booking.name ? ", " + booking.name.split(" ")[0] : "") + ".") + '</h3>' +
           '<p style="color:var(--ink-soft); max-width:34em; margin:0 auto;">' + (booking.forWhom === "friend" && booking.guestName ?
-            'The <strong>' + s3.name + '</strong>' + (booking.type === "after" ? ' — a Private Hours appointment —' : '') + ' is reserved for <strong>' + booking.guestName + '</strong> on <strong>' + (d3 ? fmtDate(d3) : "") + ' at ' + booking.time + '</strong> at In2Skin in Bolton. They just show up — everything is arranged.' :
-            'Your <strong>' + s3.name + '</strong>' + (booking.type === "after" ? ' — a Private Hours appointment —' : '') + ' is reserved for <strong>' + (d3 ? fmtDate(d3) : "") + ' at ' + booking.time + '</strong> at In2Skin in Bolton. We look forward to welcoming you.') + '</p></div>' +
+            'The <strong>' + bookingLabel() + '</strong>' + (booking.type === "after" ? ' — a Private Hours appointment —' : '') + ' is reserved for <strong>' + booking.guestName + '</strong> on <strong>' + (d3 ? fmtDate(d3) : "") + ' at ' + booking.time + '</strong> at In2Skin in Bolton. They just show up — everything is arranged.' :
+            'Your <strong>' + bookingLabel() + '</strong>' + (booking.type === "after" ? ' — a Private Hours appointment —' : '') + ' is reserved for <strong>' + (d3 ? fmtDate(d3) : "") + ' at ' + booking.time + '</strong> at In2Skin in Bolton. We look forward to welcoming you.') + '</p></div>' +
           '<div class="after-list">' +
             '<div class="after-item"><span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h16v12H4z" stroke="#2F4A2C" stroke-width="1.8"/><path d="m4 7 8 6 8-6" stroke="#2F4A2C" stroke-width="1.8"/></svg></span>' +
               '<div>' + (booking.forWhom === "friend" && booking.guestName ?
@@ -1004,7 +1052,16 @@
       var shell = document.getElementById("bookShell");
       if (!shell) return;
       shell.querySelectorAll("[data-pick-service]").forEach(function(b){
-        b.addEventListener("click", function(){ booking.service = b.getAttribute("data-pick-service"); booking.step = 2; renderBooking(); var bs=document.getElementById("book"); if(bs) bs.scrollIntoView({behavior:"smooth", block:"start"}); });
+        b.addEventListener("click", function(){ booking.service = b.getAttribute("data-pick-service"); renderBooking(); });
+      });
+      shell.querySelectorAll("[data-pick-addon]").forEach(function(b){
+        b.addEventListener("click", function(){
+          var id = b.getAttribute("data-pick-addon");
+          booking.addons = booking.addons || [];
+          var i = booking.addons.indexOf(id);
+          if (i >= 0) booking.addons.splice(i, 1); else booking.addons.push(id);
+          renderBooking();
+        });
       });
       shell.querySelectorAll("[data-pick-type]").forEach(function(b){
         b.addEventListener("click", function(){
@@ -1106,7 +1163,7 @@
         if (bookBtn){ bookBtn.disabled = true; bookBtn.textContent = "Taking you to secure checkout…"; }
         bookErr("");
         fetch("/api/book", { method:"POST", headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify({ service: booking.service, date: booking.date, time: booking.time, type: booking.type,
+          body: JSON.stringify({ service: booking.service, addons: booking.addons, date: booking.date, time: booking.time, type: booking.type,
             forWhom: booking.forWhom, name: booking.name, phone: booking.phone, email: booking.email,
             guestName: booking.guestName, guestPhone: booking.guestPhone, guestEmail: booking.guestEmail,
             first: booking.first, giftCode: booking.giftCode, referredBy: booking.referredBy }) })
@@ -1133,14 +1190,24 @@
       });
       var again = document.getElementById("bookAgain");
       if (again) again.addEventListener("click", function(){
-        booking = { service:null, date:null, time:null, step:1, type:"regular", forWhom:"me", referredBy: booking.referredBy };
+        booking = { service:null, addons:[], date:null, time:null, step:1, type:"regular", forWhom:"me", referredBy: booking.referredBy };
         renderBooking();
       });
     }
 
     function startBooking(serviceId){
-      if (serviceId && (svcById(serviceId) || COMBOS.some(function(c){ return c.id===serviceId; }))) booking.service = serviceId;
-      booking.step = serviceId ? 2 : 1;
+      if (serviceId && ADDONS.some(function(a){ return a.id===serviceId; })) {
+        /* An add-on on its own is not a booking: open the wizard with it
+           pre-ticked, so the client picks the treatment it goes with. */
+        booking.service = null;
+        booking.addons = [serviceId];
+        booking.step = 1;
+      } else if (serviceId && (svcById(serviceId) || COMBOS.some(function(c){ return c.id===serviceId; }))) {
+        booking.service = serviceId;
+        booking.step = 1; /* land on step 1 so the add-ons are offered */
+      } else {
+        booking.step = 1;
+      }
       showView("home", "book");
     }
 
@@ -1382,9 +1449,10 @@
     function payPrefill(){
       if (booking.step === 4 && booking.service){
         var s = currentService();
-        if (s && s.priceNum){
-          var total = s.priceNum + (booking.type === "after" ? 15 : 0);
-          return { amount: total.toString(), serviceId: s.id, serviceLabel: s.name + (booking.type === "after" ? " · Private Hours" : ""), source: "Pre-filled from the booking total — " + s.name + (booking.type === "after" ? " with the $15 Private Hours premium" : "") + ": " + payMoney(total) + "." };
+        if (s && (s.priceNum || bookingAddons().length)){
+          var total = (s.priceNum || 0) + (booking.type === "after" ? 15 : 0);
+          bookingAddons().forEach(function(a){ total += a.priceNum; });
+          return { amount: total.toString(), serviceId: s.id, serviceLabel: bookingLabel() + (booking.type === "after" ? " · Private Hours" : ""), source: "Pre-filled from the booking total — " + bookingLabel() + (booking.type === "after" ? " with the $15 Private Hours premium" : "") + ": " + payMoney(total) + "." };
         }
       }
       if (gift.step === 3 && gift.option){

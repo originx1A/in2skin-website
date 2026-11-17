@@ -163,7 +163,7 @@ module.exports = async (req, res) => {
       if (b.view === "bookings" && b.action === "walk-in") {
         const payment = ["cash", "e-transfer", "pay-link", "later"].includes(b.payment) ? b.payment : "later";
         const { bufferMins, blocks } = await studioForDate(b.date);
-        const booking = await buildBooking(b, { bufferMins, blocks, allowToday: true, via: "admin" });
+        const booking = await buildBooking(b, { bufferMins, blocks, allowToday: true, allowAddonMain: true, via: "admin" });
         // $0 (consultation, or fully covered by a code): confirmed straight away.
         if (booking.amountCents === 0) {
           booking.status = booking.servicePriceLabel === "Custom" ? "consultation" : "paid";

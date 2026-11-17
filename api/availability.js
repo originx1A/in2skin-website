@@ -7,16 +7,17 @@ const { studioForDate } = require("../lib/studio");
 
 module.exports = async (req, res) => {
   try {
-    const { date, service, type } = req.query || {};
+    const { date, service, type, addons } = req.query || {};
     const svc = findService(service);
     if (!svc) return res.status(400).json({ error: "Unknown treatment." });
     if (!parseDateLocal(date)) return res.status(400).json({ error: "Choose a valid date." });
+    const addonIds = addons ? String(addons).split(",").map((s) => s.trim()).filter(Boolean) : [];
     const all = timesFor(date, type === "after" ? "after" : "regular");
     if (!configured()) return res.status(200).json({ date, times: all, storageConfigured: false });
     const { listBookingsForDate } = require("../lib/bookings");
     const bookings = await listBookingsForDate(date);
     const { bufferMins, blocks } = await studioForDate(date);
-    return res.status(200).json({ date, times: freeTimes(date, type, service, bookings, { bufferMins, blocks }), storageConfigured: true });
+    return res.status(200).json({ date, times: freeTimes(date, type, service, bookings, { bufferMins, blocks }, addonIds), storageConfigured: true });
   } catch (err) {
     return res.status(err.status || 500).json({ error: err.message });
   }

@@ -7,8 +7,9 @@
 const { getStripe } = require("../lib/stripe");
 const { kvGet, kvSet } = require("../lib/kv");
 const {
-  findService, parseDateLocal, timesFor, parseTime, durationFor,
-  slotTaken, QUIET_PREMIUM_CENTS, FIRST_VISIT_CENTS, PENDING_HOLD_MS,
+  findService, parseDateLocal, timesFor, parseTime, normalizeAddons,
+  durationForBooking, baseCentsFor, ADDON_IDS,
+  slotTaken, FIRST_VISIT_CENTS, PENDING_HOLD_MS,
 } = require("../lib/schedule");
 const { studioForDate } = require("../lib/studio");
 const {
@@ -26,6 +27,7 @@ function bad(res, msg) { return res.status(400).json({ error: msg }); }
 // blocks the slot for 30 minutes (PENDING_HOLD_MS) and then releases it.
 // No gift codes and no friend bookings on this path — the caller pays the
 // full price less the first-visit offer, on their own phone, via the link.
+// Add-ons ride along (b.addons): treatment first, then tick add-ons.
 async function handleAgentHold(req, res, b) {
   try {
     const key = process.env.AGENT_API_KEY;
@@ -33,6 +35,12 @@ async function handleAgentHold(req, res, b) {
     if (req.headers["x-agent-key"] !== key) return res.status(401).json({ error: "Agent key not accepted." });
     const svc = findService(b.service);
     if (!svc) return bad(res, "Please choose a treatment.");
+    let addons;
+    try { addons = normalizeAddons(b.addons); } catch (err) { return bad(res, err.message); }
+    if (ADDON_IDS.includes(svc.id)) return bad(res, "Add-ons go with a treatment — please choose a facial first, then add this on.");
+    const totalMins = durationForBooking(svc.id, addons);
+    const addonNames = addons.map((id) => findService(id).name);
+    const serviceLabel = addonNames.length ? `${svc.name} + ${addonNames.join(" + ")}` : svc.name;
     const type = b.type === "after" ? "after" : "regular";
     const d = parseDateLocal(b.date);
     if (!d) return bad(res, "Please choose a day.");
@@ -48,12 +56,12 @@ async function handleAgentHold(req, res, b) {
 
     const bookings = await listBookingsForDate(b.date);
     const { bufferMins, blocks } = await studioForDate(b.date);
-    if (slotTaken(bookings, parseTime(b.time), durationFor(svc), { bufferMins, blocks })) {
+    if (slotTaken(bookings, parseTime(b.time), totalMins, { bufferMins, blocks })) {
       return res.status(409).json({ error: "That time was just taken — please choose another time." });
     }
 
     const first = b.first !== "no";
-    const baseCents = svc.priceNum * 100 + (type === "after" ? QUIET_PREMIUM_CENTS : 0);
+    const baseCents = baseCentsFor(svc.id, addons, type);
     const firstVisitDiscountCents = svc.priceNum > 0 && first ? FIRST_VISIT_CENTS : 0;
     const amountCents = Math.max(0, baseCents - firstVisitDiscountCents);
     const myRef = await getOrCreateReferral({ name: b.name, email: b.email, phone: b.phone });
@@ -61,8 +69,11 @@ async function handleAgentHold(req, res, b) {
       id: newId("bk"),
       service: svc.id,
       serviceName: svc.name,
+      serviceLabel,
+      addons,
+      addonNames,
       servicePriceLabel: svc.priceLabel,
-      minsLabel: svc.mins > 0 ? `${svc.mins} minutes` : "By consultation",
+      minsLabel: svc.mins > 0 ? `${totalMins} minutes` : "By consultation",
       date: b.date,
       time: b.time,
       type,
@@ -117,7 +128,7 @@ async function handleAgentHold(req, res, b) {
           currency: "cad",
           unit_amount: amountCents,
           product_data: {
-            name: `${svc.name} — ${b.date} at ${b.time}${type === "after" ? " (Private Hours)" : ""}`,
+            name: `${serviceLabel} — ${b.date} at ${b.time}${type === "after" ? " (Private Hours)" : ""}`,
             description: `In2Skin · Bolton, Ontario — held by phone${firstVisitDiscountCents ? " · $10 first-visit offer applied" : ""}`,
           },
         },
@@ -136,6 +147,8 @@ async function handleAgentHold(req, res, b) {
       hold: true,
       bookingId: booking.id,
       serviceName: booking.serviceName,
+      serviceLabel: booking.serviceLabel,
+      addons: booking.addons,
       date: booking.date,
       time: booking.time,
       type: booking.type,
