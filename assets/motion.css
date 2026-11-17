@@ -1,0 +1,122 @@
+/* In2Skin motion layer — elegant ambient movement, near-zero bandwidth.
+   Everything here is CSS keyframes + a tiny canvas (see motion.js). No new
+   images, no new video files. All motion respects prefers-reduced-motion. */
+
+:root {
+  --motion-gold-soft: rgba(176, 141, 79, 0.55);
+  --motion-sage-soft: rgba(94, 114, 99, 0.35);
+  --motion-blush-soft: rgba(248, 230, 222, 0.7);
+}
+
+/* ---- floating petals / leaves (pure CSS shapes, no images) ---- */
+.float-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.float-layer > * { position: relative; z-index: 1; }
+
+.petal {
+  position: absolute;
+  width: 14px;
+  height: 20px;
+  border-radius: 100% 4px 100% 4px;
+  background: linear-gradient(135deg, var(--motion-blush-soft), var(--motion-gold-soft));
+  opacity: 0.55;
+  animation: petal-drift 26s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+.petal.sage {
+  background: linear-gradient(135deg, var(--motion-sage-soft), var(--motion-blush-soft));
+}
+.petal.gold {
+  background: linear-gradient(135deg, var(--motion-gold-soft), rgba(233, 200, 118, 0.5));
+}
+.petal.slow { animation-duration: 38s; }
+.petal.fast { animation-duration: 18s; }
+
+@keyframes petal-drift {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 0.35; }
+  25%  { transform: translate3d(14px, -22px, 0) rotate(24deg); opacity: 0.6; }
+  50%  { transform: translate3d(-10px, -44px, 0) rotate(48deg); opacity: 0.45; }
+  75%  { transform: translate3d(18px, -66px, 0) rotate(72deg); opacity: 0.6; }
+  100% { transform: translate3d(0, -88px, 0) rotate(96deg); opacity: 0.35; }
+}
+
+/* ---- slow drift for card media (videos + photos move a little) ---- */
+.drift {
+  animation: gentle-drift 14s ease-in-out infinite alternate;
+  will-change: transform;
+}
+.drift.slow { animation-duration: 22s; }
+
+@keyframes gentle-drift {
+  from { transform: translate3d(0, 0, 0) scale(1.02); }
+  to   { transform: translate3d(0, -8px, 0) scale(1.05); }
+}
+
+/* ---- slow Ken Burns on still section images ---- */
+.kenburns img {
+  animation: kenburns 24s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes kenburns {
+  from { transform: scale(1); }
+  to   { transform: scale(1.06); }
+}
+
+/* ---- shimmer on gold display text (headlines, prices) ---- */
+.shimmer-gold {
+  background: linear-gradient(100deg, #96702f 20%, #e9c876 40%, #b08d4f 60%, #96702f 80%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gold-shimmer 7s linear infinite;
+}
+@keyframes gold-shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+/* ---- reveal on scroll (JS adds .in via IntersectionObserver) ---- */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.reveal.in {
+  opacity: 1;
+  transform: translateY(0);
+}
+.reveal.delay-1 { transition-delay: 0.12s; }
+.reveal.delay-2 { transition-delay: 0.24s; }
+
+/* ---- ambient canvas (soft light, behind content, no assets) ---- */
+.ambient-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ---- soft breathing glow behind hero copy ---- */
+.breathe {
+  animation: breathe 9s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.9; }
+}
+
+/* ---- reduced motion: everything still, always ---- */
+@media (prefers-reduced-motion: reduce) {
+  .petal, .drift, .kenburns img, .shimmer-gold, .breathe,
+  .reveal { animation: none !important; transition: none !important; }
+  .reveal { opacity: 1; transform: none; }
+  .ambient-canvas { display: none; }
+}

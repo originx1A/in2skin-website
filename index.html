@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="color-scheme" content="light dark" />
+    <meta name="color-scheme" content="light" />
     <link rel="icon" href="data:," />
     <title>Facials in Bolton | In2Skin — Aesthetics Bolton, Serving Toronto &amp; the GTA</title>
     <meta name="description" content="Facials in Bolton, Ontario at In2Skin — a private, one-on-one aesthetics studio. Classic &amp; anti-aging facials, chemical peels, reflexology, NANO needling, microdermabrasion &amp; light therapy. Serving Bolton, Caledon, Kleinburg, Vaughan, Brampton &amp; the GTA — worth the drive from Toronto. Book online or call." />
@@ -79,7 +79,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/assets/site.css" />
+    <link rel="stylesheet" href="/assets/site.css?v=20261117d" />
+    <link rel="stylesheet" href="/assets/motion.css?v=20261117d" />
   </head>
   <body>
 
@@ -163,6 +164,7 @@
     </div>
 
     <script src="assets/qrcode.min.js"></script>
+    <script src="/assets/motion.js?v=20261117d" defer></script>
     <script>
     /* ============================================================
        In2Skin preview — data, routing, booking flow (in-memory demo)
@@ -549,7 +551,7 @@
       var addons = SERVICES.filter(function(s){ return s.cat.indexOf("Enhancement")===0; });
       var cards = facials.map(function(s){
         var media = SERVICE_VIDEOS[s.id]
-          ? '<video class="card-photo" src="' + SERVICE_VIDEOS[s.id] + '" poster="' + s.img + '" autoplay muted loop playsinline preload="auto" aria-label="' + s.imgAlt + '"></video>'
+          ? '<video class="card-photo drift slow" src="' + SERVICE_VIDEOS[s.id] + '" poster="' + s.img + '" autoplay muted loop playsinline preload="auto" aria-label="' + s.imgAlt + '"></video>'
           : '<img class="card-photo" src="' + s.img + '" alt="' + s.imgAlt + '" />';
         return '<article class="card">' + media +
           '<div class="cat">' + s.cat + '</div>' +
@@ -574,8 +576,9 @@
         '</div>';
       }).join("");
       return '' +
-      '<section class="hero">' +
+      '<section class="hero" data-ambient>' +
         '<video class="hero-img" src="assets/video-hero-stones.mp4" poster="assets/hero-stones.jpg" autoplay muted loop playsinline preload="auto" aria-label="Three stacked grey spa stones with In2Skin engraved in white, among fresh green leaves — flowers blooming softly in the background"></video>' +
+        '<div class="float-layer"><span class="petal" style="top:72%;left:10%"></span><span class="petal sage slow" style="top:62%;left:80%"></span><span class="petal gold fast" style="top:82%;left:46%"></span></div>' +
         '<div class="hero-shade"></div>' +
         '<div class="hero-in"><div class="wrap" style="width:100%;"><div class="hero-copy">' +
           '<div class="kicker">In2Skin · Bolton, Ontario</div>' +
@@ -587,8 +590,12 @@
       '<section class="block" id="welcome"><div class="wrap">' +
         '<div class="two-col" style="gap:56px;">' +
           '<div class="duo">' +
-            '<video class="duo-main" src="assets/video-classic-facial.mp4" poster="assets/facial-massage.jpg" autoplay muted loop playsinline preload="auto" aria-label="A facial massage in progress — skilled hands working gently across a resting client\u2019s temples"></video>' +
-            '<img class="duo-side" src="assets/spa-room-new.jpg" alt="Inside the In2Skin studio — a serene treatment room with a linen-dressed table, candles, green plants and a stone soaking tub" />' +
+            '<div class="duo-video-wrap">' +
+              '<video class="duo-main drift" src="assets/video-red-light.mp4" poster="assets/red-light.webp" autoplay muted loop playsinline preload="auto" aria-label="Red light therapy — warm red light and gentle steam drifting across a resting client\u2019s face"></video>' +
+              '<div class="vs-shade"></div>' +
+              '<div class="vs-overlay"><span class="vs-tag">Light Therapy</span><span class="vs-title">Red light, warm steam, deep calm.</span><span class="vs-sub">15 minutes that melts the day away.</span></div>' +
+            '</div>' +
+            '<img class="duo-side" src="assets/spa-room-new.jpg" alt="A calm treatment room, dressed and ready for your visit" />' +
           '</div>' +
           '<div>' +
             '<div class="sec-head" style="margin-bottom:16px;"><div class="over">Welcome to In2Skin</div><h2>A quiet room. <em>One guest</em> at a time.</h2></div>' +

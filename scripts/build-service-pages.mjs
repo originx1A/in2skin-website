@@ -102,7 +102,7 @@ function page(s) {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="color-scheme" content="light dark" />
+    <meta name="color-scheme" content="light" />
     <title>${esc(SEO_TITLES[s.id])}</title>
     <meta name="description" content="${esc(SEO_DESCS[s.id])}" />
     <link rel="canonical" href="${SITE}/${s.id}/" />
@@ -117,7 +117,8 @@ ${JSON.stringify(ld.faq, null, 2)}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/assets/site.css" />
+    <link rel="stylesheet" href="/assets/site.css?v=20261117d" />
+    <link rel="stylesheet" href="/assets/motion.css?v=20261117d" />
   </head>
   <body>
     <header class="site">
