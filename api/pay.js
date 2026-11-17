@@ -1,18 +1,34 @@
-// POST /api/pay-spot — the studio enters the amount owed (+ optional gift
-// code) and gets a Stripe payment link back. The client pays on THEIR OWN
-// phone: by text, by email, or by scanning the QR code on the studio phone.
-// The link is emailed when the contact is an email address. Automatic
-// texting is NOT set up (Resend is email-only) — for "text" the studio texts
-// the link from their own phone; the response says so (sms: "not_configured").
+// /api/pay — pay on the spot, one function for both sides:
+//   GET ?id=... → what /pay.html fetches (was /api/pay-link)
+//   POST → the studio creates a Stripe payment link (was /api/pay-spot)
+// The client pays on THEIR OWN phone: by text, by email, or by scanning the
+// QR code on the studio phone. The link is emailed when the contact is an
+// email address. Automatic texting is NOT set up (Resend is email-only) —
+// for "text" the studio texts the link from their own phone; the response
+// says so (sms: "not_configured").
+// Merged because Vercel Hobby allows 12 serverless functions per deployment.
 const { getStripe } = require("../lib/stripe");
-const { kvSet } = require("../lib/kv");
+const { kvGet, kvSet } = require("../lib/kv");
 const { sendEmail } = require("../lib/email");
 const { money } = require("../lib/schedule");
 const { SITE_URL, newId, getGift } = require("../lib/bookings");
 
 module.exports = async (req, res) => {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed." });
   try {
+    if (req.method === "GET") {
+      const rec = await kvGet(`paylink:${req.query.id}`);
+      if (!rec) return res.status(404).json({ error: "Payment link not found." });
+      return res.status(200).json({
+        id: rec.id,
+        stripeUrl: rec.stripeUrl || null,
+        amountCents: rec.amountCents,
+        dueCents: rec.dueCents,
+        serviceLabel: rec.serviceLabel,
+        clientName: rec.clientName,
+        paid: !!rec.paid,
+      });
+    }
+    if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed." });
     const b = req.body || {};
     const amount = Math.round(parseFloat(b.amount) * 100);
     if (!amount || amount < 100) return res.status(400).json({ error: "Please enter the amount owed — $1 or more." });
@@ -86,7 +102,7 @@ module.exports = async (req, res) => {
     }
     return res.status(200).json({ url, stripeUrl: link.url, id, giftApplied: giftAppliedCents / 100, sms });
   } catch (err) {
-    console.error("[pay-spot]", err);
+    console.error("[pay]", err);
     return res.status(err.status || 500).json({ error: err.message });
   }
 };
