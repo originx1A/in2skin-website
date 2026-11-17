@@ -167,6 +167,40 @@ async function run() {
   await availability(mockReq({ query: { date: d4, service: "classic-facial", type: "regular" } }), res);
   check("availability shows 12:30 after removal", res.body.times.includes("12:30 PM"), true);
 
+  // ---------- 2b. availability range mode (date-grid statuses) ----------
+  const d5 = addDays(today, 5);
+  const d6 = addDays(today, 6);
+  const d7 = addDays(today, 7);
+  res = mockRes();
+  await availability(mockReq({ query: { from: d5, to: d7, service: "classic-facial" } }), res);
+  check("range -> 200", res.statusCode, 200);
+  check("range covers 3 days", Object.keys(res.body.dates || {}).length, 3);
+  check("range d5 regular total 9", res.body.dates[d5].regular.total, 9);
+  check("range d5 regular free 9 (empty)", res.body.dates[d5].regular.free, 9);
+  check("range d5 after total matches schedule", res.body.dates[d5].after.total, sched.timesFor(d5, "after").length);
+  check("range d5 after free all (empty)", res.body.dates[d5].after.free, res.body.dates[d5].after.total);
+  check("range d7 regular free 9 (empty)", res.body.dates[d7].regular.free, 9);
+  const block2 = await studio.addBlock({ date: d6, start: "12:00", end: "13:00", reason: "Range test" });
+  res = mockRes();
+  await availability(mockReq({ query: { from: d5, to: d7, service: "classic-facial" } }), res);
+  check("range d6 regular free 8 with block", res.body.dates[d6].regular.free, 8);
+  check("range d6 regular total still 9", res.body.dates[d6].regular.total, 9);
+  check("range d6 after free all (block misses private)", res.body.dates[d6].after.free, res.body.dates[d6].after.total);
+  check("range d5 still free 9 with d6 blocked", res.body.dates[d5].regular.free, 9);
+  check("range block removed", await studio.removeBlock(block2.id), true);
+  res = mockRes();
+  await availability(mockReq({ query: { from: d5, to: d7, service: "nope" } }), res);
+  check("range bad service -> 400", res.statusCode, 400);
+  res = mockRes();
+  await availability(mockReq({ query: { from: "2026-13-40", to: d7, service: "classic-facial" } }), res);
+  check("range bad from -> 400", res.statusCode, 400);
+  res = mockRes();
+  await availability(mockReq({ query: { from: d7, to: d5, service: "classic-facial" } }), res);
+  check("range from after to -> 400", res.statusCode, 400);
+  res = mockRes();
+  await availability(mockReq({ query: { from: d5, to: addDays(d5, 31), service: "classic-facial" } }), res);
+  check("range over 31 days -> 400", res.statusCode, 400);
+
   // ---------- 3. walk-in booking ----------
   res = await callAdmin({
     view: "bookings", action: "walk-in",

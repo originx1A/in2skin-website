@@ -24,9 +24,16 @@
     "priceRange": "$25 - $475",
     "address": {
       "@type": "PostalAddress",
+      "streetAddress": "92 Willow Street",
       "addressLocality": "Bolton",
       "addressRegion": "ON",
+      "postalCode": "L7E 3G3",
       "addressCountry": "CA"
+    },
+    "geo": {
+      "@type": "GeoCoordinates",
+      "latitude": 43.88088,
+      "longitude": -79.73492
     },
     "areaServed": [
       "Bolton",
@@ -113,7 +120,7 @@
     </header>
     <main>
       <section class="svc-hero">
-        <video src="/assets/video-reflexology.mp4" poster="/assets/reflexology-new.webp" autoplay muted loop playsinline preload="auto" aria-label="Foot reflexology — hands gently working the reflex points of the foot in a calm spa setting"></video>
+        <video src="/assets/video-reflexology.mp4" poster="/assets/reflexology.webp" autoplay muted loop playsinline preload="metadata" aria-label="Hands massaging the lower leg during a reflexology treatment, rolled towels nearby in a calm spa setting"></video>
         <div class="shade"></div>
         <div class="cap"><div class="wrap"><div class="cat">Enhancement · Add-On · Bolton, Ontario</div><h1>Reflexology</h1></div></div>
       </section>
@@ -168,10 +175,19 @@
               <li>Directions shared when you book</li>
               <li>Booking: by phone, or online anytime</li>
               <li>First visit? $10 toward any service</li>
+              <li><a href="/questions/">Questions about facials? See our answers</a></li>
             </ul>
           </div>
         </div>
+        <div class="foot-bottom">
+          <span>© 2026 In2Skin · Bolton, Ontario</span>
+          <span>Website by <a href="mailto:hello.funderwood@gmail.com">Funderwood</a></span>
+        </div>
       </div>
     </footer>
+    <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+    <script>
+    var toTop=document.getElementById("toTop"); function toTopShow(){ if(toTop) toTop.classList.toggle("show", window.scrollY>500); } window.addEventListener("scroll", toTopShow, {passive:true}); toTopShow(); if(toTop) toTop.addEventListener("click", function(){ window.scrollTo({top:0, behavior:"smooth"}); });
+    </script>
   </body>
 </html>

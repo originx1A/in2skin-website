@@ -32,6 +32,24 @@ const SEO_DESCS = extract("SEO_DESCS");
 const SITE = "https://boltonfacials.com";
 const PHONE_DISPLAY = "(289) 212-4124";
 const PHONE_TEL = "tel:+12892124124";
+// Static SEO pages built by scripts/build-seo-pages.mjs — kept in the
+// sitemap so a rebuild never drops them.
+const EXTRA_PAGES = [
+  "/facials-caledon/",
+  "/facials-kleinburg/",
+  "/facials-vaughan/",
+  "/facials-brampton/",
+  "/facials-nobleton/",
+  "/facials-king-city/",
+  "/facials-orangeville/",
+  "/facials-georgetown/",
+  "/acne-prone-skin/",
+  "/rosacea-sensitive-skin/",
+  "/dull-skin/",
+  "/fine-lines/",
+  "/tired-skin/",
+  "/questions/",
+];
 
 function esc(s) {
   return String(s)
@@ -45,7 +63,7 @@ const svcById = (id) => SERVICES.find((s) => s.id === id);
 function page(s) {
   const video = SERVICE_VIDEOS[s.id];
   const media = video
-    ? `<video src="/${video}" poster="/${s.img}" autoplay muted loop playsinline preload="auto" aria-label="${esc(s.imgAlt)}"></video>`
+    ? `<video src="/${video}" poster="/${s.img}" autoplay muted loop playsinline preload="metadata" aria-label="${esc(s.imgAlt)}"></video>`
     : `<img src="/${s.img}" alt="${esc(s.imgAlt)}" />`;
   const pairs = s.pairs
     .map((pid) => {
@@ -81,7 +99,15 @@ function page(s) {
         url: `${SITE}/`,
         telephone: "+1-289-212-4124",
         priceRange: "$25 - $475",
-        address: { "@type": "PostalAddress", addressLocality: "Bolton", addressRegion: "ON", addressCountry: "CA" },
+        address: {
+          "@type": "PostalAddress",
+          streetAddress: "92 Willow Street",
+          addressLocality: "Bolton",
+          addressRegion: "ON",
+          postalCode: "L7E 3G3",
+          addressCountry: "CA",
+        },
+        geo: { "@type": "GeoCoordinates", latitude: 43.88088, longitude: -79.73492 },
         areaServed: ["Bolton", "Caledon", "Kleinburg", "Vaughan", "Brampton", "Nobleton", "King City", "Orangeville", "Georgetown", "Toronto"],
       },
       offers: JSON.parse(priceOffer),
@@ -182,11 +208,20 @@ ${JSON.stringify(ld.faq, null, 2)}
               <li>Directions shared when you book</li>
               <li>Booking: by phone, or online anytime</li>
               <li>First visit? $10 toward any service</li>
+              <li><a href="/questions/">Questions about facials? See our answers</a></li>
             </ul>
           </div>
         </div>
+        <div class="foot-bottom">
+          <span>© 2026 In2Skin · Bolton, Ontario</span>
+          <span>Website by <a href="mailto:hello.funderwood@gmail.com">Funderwood</a></span>
+        </div>
       </div>
     </footer>
+    <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+    <script>
+    var toTop=document.getElementById("toTop"); function toTopShow(){ if(toTop) toTop.classList.toggle("show", window.scrollY>500); } window.addEventListener("scroll", toTopShow, {passive:true}); toTopShow(); if(toTop) toTop.addEventListener("click", function(){ window.scrollTo({top:0, behavior:"smooth"}); });
+    </script>
   </body>
 </html>
 `;
@@ -203,9 +238,9 @@ for (const s of SERVICES) {
 
 const sitemap =
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-  [`/`, ...pages]
+  [`/`, ...pages, ...EXTRA_PAGES]
     .map((p) => `  <url><loc>${SITE}${p}</loc></url>`)
     .join("\n") +
   `\n</urlset>\n`;
 writeFileSync(join(ROOT, "sitemap.xml"), sitemap);
-console.log("wrote sitemap.xml with", pages.length + 1, "urls");
+console.log("wrote sitemap.xml with", pages.length + EXTRA_PAGES.length + 1, "urls");

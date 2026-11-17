@@ -16,12 +16,13 @@ require.cache[kvPath] = {
   },
 };
 const stripePath = require.resolve("../lib/stripe");
+let lastCheckoutArgs = null;
 require.cache[stripePath] = {
   exports: {
     getStripe: () => ({
       checkout: {
         sessions: {
-          create: async () => ({ id: "cs_test_1", url: "https://checkout.stripe.test/pay/cs_test_1" }),
+          create: async (args) => { lastCheckoutArgs = args; return { id: "cs_test_1", url: "https://checkout.stripe.test/pay/cs_test_1" }; },
           retrieve: async () => ({ payment_status: "paid", amount_total: 10000, metadata: {}, payment_intent: "pi_test" }),
         },
       },
@@ -35,7 +36,7 @@ delete process.env.RESEND_API_KEY;
 process.env.AGENT_API_KEY = "test-agent-key";
 
 const { kvGet, kvSet } = require("../lib/kv");
-const { buildBooking, saveBooking } = require("../lib/bookings");
+const { buildBooking, saveBooking, sendBookingConfirmation } = require("../lib/bookings");
 const book = require("../api/book");
 
 function mockRes() {
@@ -125,6 +126,61 @@ async function run() {
   assert.equal(res2.statusCode, 200, "agent hold for standalone reflexology -> 200, got " + res2.statusCode + " " + JSON.stringify(res2.body));
   assert.equal(res2.body.amountCents, 1500, "agent standalone reflexology total is $15");
   assert.equal(res2.body.serviceLabel, "Reflexology");
+
+  // 10. Email is optional (Tony Nov 17, 2026): a booking with no email
+  //     succeeds, stores "", and still gets a referral code.
+  b = await buildBooking(base({ email: "", phone: "(905) 555-0600", date: futureDate(13) }), { bufferMins: 30, blocks: [], via: "web" });
+  assert.equal(b.email, "", "no-email booking stores an empty email");
+  assert.equal(b.amountCents, 5500, "Classic first visit, no email, is $55, got " + b.amountCents);
+  assert.ok(b.myReferralCode, "no-email booking still gets a referral code");
+
+  // 11. An email that IS given must still look like an email.
+  await assert.rejects(
+    buildBooking(base({ email: "not-an-email", date: futureDate(14) }), { bufferMins: 30, blocks: [], via: "web" }),
+    /doesn't look right/,
+  );
+
+  // 12. Booking for a friend with no emails at all: succeeds, guestEmail null.
+  b = await buildBooking(base({ email: "", phone: "(905) 555-0700", date: futureDate(15),
+    forWhom: "friend", guestName: "Alex Taylor", guestPhone: "(905) 555-0701", guestEmail: "" }),
+    { bufferMins: 30, blocks: [], via: "web" });
+  assert.equal(b.email, "", "friend booking stores an empty booker email");
+  assert.equal(b.guestEmail, null, "friend booking stores a null guest email");
+  assert.equal(b.amountCents, 5500, "friend booking, no emails, is $55");
+
+  // 13. POST /api/book with no email key at all: 200 + checkout URL, and
+  //     Stripe never sees an empty customer_email.
+  const res3 = mockRes();
+  await book({ method: "POST", headers: {}, body: { service: "classic-facial", date: futureDate(16), time: "9:00 AM", type: "regular", name: "No Email Booker", phone: "(905) 555-0800", first: "yes" } }, res3);
+  assert.equal(res3.statusCode, 200, "POST /api/book with no email -> 200, got " + res3.statusCode + " " + JSON.stringify(res3.body));
+  assert.ok(res3.body.url, "no-email booking returns a checkout URL");
+  assert.equal(lastCheckoutArgs.customer_email, undefined, "no customer_email sent to Stripe for a no-email booking");
+
+  // 14. The confirmation email with no recipient never sends, never throws.
+  const noEmailBooking = await buildBooking(base({ email: "", phone: "(905) 555-0900", date: futureDate(17) }), { bufferMins: 30, blocks: [], via: "web" });
+  await saveBooking(noEmailBooking);
+  noEmailBooking.status = "paid";
+  noEmailBooking.amountPaidCents = noEmailBooking.amountCents;
+  const sent = await sendBookingConfirmation(noEmailBooking);
+  assert.equal(sent, false, "no confirmation email without an address");
+
+  // 15. sendEmail with no recipient never calls the email provider, even
+  //     when the key is set (production) — a missing email must never
+  //     break a booking or payment.
+  const { sendEmail } = require("../lib/email");
+  const realFetch = global.fetch;
+  let fetchCalls = 0;
+  global.fetch = async () => { fetchCalls++; return { ok: true }; };
+  process.env.RESEND_API_KEY = "test-key";
+  try {
+    assert.equal(await sendEmail({ to: [""], subject: "t", html: "<p>t</p>" }), false, "empty recipient list sends nothing");
+    assert.equal(fetchCalls, 0, "provider never called without a recipient");
+    assert.equal(await sendEmail({ to: ["a@test.example"], subject: "t", html: "<p>t</p>" }), true, "a real recipient still sends");
+    assert.equal(fetchCalls, 1, "provider called once for a real recipient");
+  } finally {
+    global.fetch = realFetch;
+    delete process.env.RESEND_API_KEY;
+  }
 
   console.log("booking-addons tests: passed");
 }
