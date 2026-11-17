@@ -36,7 +36,7 @@ Set these in the Vercel project settings (Production + Preview). Template:
 | `RESEND_API_KEY` | Resend dashboard (free tier) → API Keys → create one. | **NO — key not created yet** |
 | `EMAIL_FROM` | Optional. Default is `In2Skin <bookings@boltonfacials.com>`. | n/a (has default) |
 | `SITE_URL` | Optional. Default is `https://boltonfacials.com`. | n/a (has default) |
-| `ADMIN_EMAIL` | The studio email that receives admin magic links. Set it to the studio's email address. | **NO — value not chosen yet** |
+| `ADMIN_EMAIL` | The studio emails that receive admin magic links — comma-separated list (Tony's + Sarah's). | **NO — value not chosen yet** |
 | `ADMIN_PASSWORD` | Password for admin login (the alternative to magic links). Choose a strong one; store it in the Secure Vault, not in chat. | **NO — value not chosen yet** |
 
 Until the KV, Stripe and Resend keys are set, the API endpoints return a
