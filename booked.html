@@ -53,6 +53,12 @@
               + '<dt>Where</dt><dd>In2Skin · Bolton, Ontario</dd>'
               + '<dt>Paid</dt><dd>' + money(b.amountPaidCents) + (b.giftAppliedCents ? ' (includes ' + money(b.giftAppliedCents) + ' from your gift certificate)' : '') + ' — shows as IN2SKIN on your statement</dd>'
               + '</dl></div>'
+              + (b.myReferralCode
+                ? '<div class="summary-box" style="margin-top:16px;"><dl>'
+                  + '<dt>Your referral code</dt><dd><strong>' + b.myReferralCode + '</strong></dd>'
+                  + '<dt>Share it</dt><dd>boltonfacials.com/?ref=' + b.myReferralCode + '</dd></dl>'
+                  + '<p style="color:var(--ink-soft);">When three friends book and pay in full with your code, you earn $15 treatment credit and a free reflexology add-on. No cash value — credit is for treatments only.</p></div>'
+                : '')
               + '<p style="color:var(--ink-soft);">Need to move your appointment? Please call at least 24 hours ahead and we will find you a new time — there is no charge to reschedule.</p>';
           })
           .catch(function(){

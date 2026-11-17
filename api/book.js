@@ -12,8 +12,11 @@ const {
 } = require("../lib/schedule");
 const {
   SITE_URL, newId, saveBooking, listBookingsForDate,
-  getGift, getBooking, deductGift, sendBookingConfirmation, sendHoldEmail,
+  getGift, getBooking, finalizePaidBooking, sendHoldEmail,
 } = require("../lib/bookings");
+const {
+  normalizeReferralCode, getReferralByCode, getOrCreateReferral, noteReferral,
+} = require("../lib/referrals");
 
 function bad(res, msg) { return res.status(400).json({ error: msg }); }
 
@@ -52,6 +55,7 @@ async function handleAgentHold(req, res, b) {
     const baseCents = svc.priceNum * 100 + (type === "after" ? QUIET_PREMIUM_CENTS : 0);
     const firstVisitDiscountCents = svc.priceNum > 0 && first ? FIRST_VISIT_CENTS : 0;
     const amountCents = Math.max(0, baseCents - firstVisitDiscountCents);
+    const myRef = await getOrCreateReferral({ name: b.name, email: b.email, phone: b.phone });
     const booking = {
       id: newId("bk"),
       service: svc.id,
@@ -73,6 +77,13 @@ async function handleAgentHold(req, res, b) {
       giftCode: null,
       giftAppliedCents: 0,
       giftDeducted: false,
+      referralCode: null,
+      referralAppliedCents: 0,
+      referralDeducted: false,
+      freeReflexologyApplied: false,
+      freeReflexologyDeducted: false,
+      referredBy: null,
+      myReferralCode: myRef.code,
       amountCents,
       amountPaidCents: 0,
       status: "pending",
@@ -83,7 +94,9 @@ async function handleAgentHold(req, res, b) {
     const holdUntil = new Date(Date.now() + PENDING_HOLD_MS).toISOString();
 
     // Consultation (or a first-visit discount covering it all): no payment
-    // due — hold the time and let Sarah confirm it.
+    // due — hold the time and let Sarah confirm it. A consultation earns no
+    // referral credit and marks no client paid, so the hold email is the
+    // only email on this path.
     if (amountCents === 0) {
       booking.status = svc.priceNum === 0 ? "consultation" : "paid";
       await saveBooking(booking);
@@ -156,10 +169,9 @@ module.exports = async (req, res) => {
         booking.status = "paid";
         booking.amountPaidCents = session.amount_total || booking.amountCents;
         booking.stripePaymentIntentId = session.payment_intent || null;
-        await deductGift(booking);
         await kvSet(`booking:${booking.id}`, booking);
       }
-      await sendBookingConfirmation(booking);
+      await finalizePaidBooking(booking);
       return res.status(200).json({
         paid: true,
         booking: {
@@ -172,6 +184,7 @@ module.exports = async (req, res) => {
           email: booking.email,
           amountPaidCents: booking.amountPaidCents,
           giftAppliedCents: booking.giftAppliedCents,
+          myReferralCode: booking.myReferralCode || null,
         },
       });
     } catch (err) {
@@ -209,21 +222,62 @@ module.exports = async (req, res) => {
       return res.status(409).json({ error: "That time was just taken — please choose another time." });
     }
 
+    // Who sent them? A referral code from a share link (?ref=CODE) or typed
+    // in — it must belong to a real referrer, or the booking is refused.
+    let referredBy = null;
+    if (b.referredBy && String(b.referredBy).trim()) {
+      const rc = normalizeReferralCode(b.referredBy);
+      if (!(await getReferralByCode(rc))) {
+        return bad(res, "That referral code was not found — check the code, or leave it blank.");
+      }
+      referredBy = rc;
+    }
+
     // Price: base + $15 Private Hours premium, less $10 first-visit offer,
-    // less gift-certificate balance.
+    // less gift-certificate balance, less referral credit. One code per
+    // booking, entered in the gift-code field: a gift code applies its
+    // balance; a referral code (the referrer's own) applies their credit
+    // after the gift balance would — and makes a Reflexology booking free
+    // if they have a free add-on banked.
     const first = b.first !== "no";
     let baseCents = svc.priceNum * 100 + (type === "after" ? QUIET_PREMIUM_CENTS : 0);
     const firstVisitDiscountCents = svc.priceNum > 0 && first ? FIRST_VISIT_CENTS : 0;
     let giftCode = null;
     let giftAppliedCents = 0;
+    let referralCode = null;
+    let referralAppliedCents = 0;
+    let freeReflexologyApplied = false;
     if (b.giftCode && String(b.giftCode).trim()) {
       const gift = await getGift(b.giftCode);
-      if (!gift) return bad(res, "That gift code was not found — check the code and try again.");
-      if (!gift.balanceCents || gift.balanceCents <= 0) return bad(res, "That gift code has no balance left.");
-      giftCode = gift.code;
-      giftAppliedCents = Math.min(gift.balanceCents, Math.max(0, baseCents - firstVisitDiscountCents));
+      if (gift) {
+        if (!gift.balanceCents || gift.balanceCents <= 0) return bad(res, "That gift code has no balance left.");
+        giftCode = gift.code;
+        giftAppliedCents = Math.min(gift.balanceCents, Math.max(0, baseCents - firstVisitDiscountCents));
+      } else {
+        const rc = normalizeReferralCode(b.giftCode);
+        const referralRecord = rc ? await getReferralByCode(rc) : null;
+        if (!referralRecord) return bad(res, "That code was not found — check the code and try again.");
+        const em = String(b.email).trim().toLowerCase();
+        const ph = String(b.phone).replace(/[^0-9]/g, "");
+        const owns = (referralRecord.email && referralRecord.email === em)
+          || (referralRecord.phone && referralRecord.phone === ph);
+        if (!owns) return bad(res, "That referral code belongs to another client — only the client who earned it can use it.");
+        referralCode = referralRecord.code;
+        if (svc.id === "reflexology" && (referralRecord.freeReflexology || 0) > 0) {
+          freeReflexologyApplied = true;
+          baseCents -= svc.priceNum * 100; // the treatment itself is free; the Private Hours premium still applies
+        }
+        referralAppliedCents = Math.min(referralRecord.creditCents || 0, Math.max(0, baseCents - firstVisitDiscountCents));
+      }
     }
-    const amountCents = Math.max(0, baseCents - firstVisitDiscountCents - giftAppliedCents);
+    const amountCents = Math.max(0, baseCents - firstVisitDiscountCents - giftAppliedCents - referralAppliedCents);
+
+    // Every client gets ONE personal referral code automatically at booking —
+    // the code of the person coming (the guest on a friend booking).
+    const attendee = b.forWhom === "friend"
+      ? { name: b.guestName, email: b.guestEmail, phone: b.guestPhone }
+      : { name: b.name, email: b.email, phone: b.phone };
+    const myRef = await getOrCreateReferral(attendee);
 
     const booking = {
       id: newId("bk"),
@@ -246,21 +300,28 @@ module.exports = async (req, res) => {
       giftCode,
       giftAppliedCents,
       giftDeducted: false,
+      referralCode,
+      referralAppliedCents,
+      referralDeducted: false,
+      freeReflexologyApplied,
+      freeReflexologyDeducted: false,
+      referredBy,
+      myReferralCode: myRef.code,
       amountCents,
       amountPaidCents: 0,
       status: "pending",
       emailSent: false,
       createdAt: new Date().toISOString(),
     };
+    if (referredBy) await noteReferral(booking);
 
     // No payment due: custom consultation, or a gift code covering it all.
     if (amountCents === 0) {
       booking.status = svc.priceNum === 0 ? "consultation" : "paid";
       booking.amountPaidCents = 0;
-      await deductGift(booking);
       await saveBooking(booking);
-      await sendBookingConfirmation(booking);
-      return res.status(200).json({ paid: true, bookingId: booking.id, consultation: booking.status === "consultation" });
+      await finalizePaidBooking(booking);
+      return res.status(200).json({ paid: true, bookingId: booking.id, consultation: booking.status === "consultation", myReferralCode: booking.myReferralCode });
     }
 
     await saveBooking(booking);
@@ -276,7 +337,7 @@ module.exports = async (req, res) => {
           unit_amount: amountCents,
           product_data: {
             name: `${svc.name} — ${b.date} at ${b.time}${type === "after" ? " (Private Hours)" : ""}`,
-            description: `In2Skin · Bolton, Ontario${giftAppliedCents ? ` · ${money(giftAppliedCents)} from gift certificate ${giftCode}` : ""}${firstVisitDiscountCents ? " · $10 first-visit offer applied" : ""}`,
+            description: `In2Skin · Bolton, Ontario${giftAppliedCents ? ` · ${money(giftAppliedCents)} from gift certificate ${giftCode}` : ""}${referralAppliedCents ? ` · ${money(referralAppliedCents)} from referral credit ${referralCode}` : ""}${freeReflexologyApplied ? " · free reflexology add-on" : ""}${firstVisitDiscountCents ? " · $10 first-visit offer applied" : ""}`,
           },
         },
       }],
@@ -287,6 +348,8 @@ module.exports = async (req, res) => {
         bookingId: booking.id,
         giftCode: giftCode || "",
         giftAppliedCents: String(giftAppliedCents),
+        referralCode: referralCode || "",
+        referralAppliedCents: String(referralAppliedCents),
       },
       success_url: `${SITE_URL}/booked.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${SITE_URL}/#book`,

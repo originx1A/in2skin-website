@@ -9,9 +9,9 @@ const { kvGet, kvSet } = require("../lib/kv");
 const { sendEmail } = require("../lib/email");
 const { money } = require("../lib/schedule");
 const {
-  SITE_URL, getBooking, deductGift, sendBookingConfirmation,
-  ensureGiftCode, sendGiftCertificate, sendGiftReceipt,
-  recordPayment, newId,
+  SITE_URL, getBooking, finalizePaidBooking,
+  ensureGiftCode, sendGiftCertificate, sendGiftReceipt, sendVoucherCertificate,
+  recordPayment, newId, getGift, logGiftUse,
 } = require("../lib/bookings");
 
 module.exports = async (req, res) => {
@@ -41,22 +41,26 @@ module.exports = async (req, res) => {
           booking.status = "paid";
           booking.amountPaidCents = session.amount_total || booking.amountCents;
           booking.stripePaymentIntentId = session.payment_intent || null;
-          await deductGift(booking);
           await kvSet(`booking:${booking.id}`, booking);
         }
-        if (booking) await sendBookingConfirmation(booking);
+        if (booking) await finalizePaidBooking(booking);
       } else if (meta.type === "gift") {
         const gift = await ensureGiftCode(session);
-        await sendGiftCertificate(gift);
+        if (gift.kind === "voucher") await sendVoucherCertificate(gift);
+        else await sendGiftCertificate(gift);
         await sendGiftReceipt(gift);
       } else if (meta.type === "payspot" && meta.paylinkId) {
         const rec = await kvGet(`paylink:${meta.paylinkId}`);
         if (rec) {
           if (meta.giftCode && meta.giftAppliedCents && !rec.giftDeducted) {
-            const { getGift } = require("../lib/bookings");
             const gift = await getGift(meta.giftCode);
             if (gift) {
               gift.balanceCents = Math.max(0, gift.balanceCents - Number(meta.giftAppliedCents));
+              logGiftUse(gift, {
+                bookingId: rec.id, amountCents: Number(meta.giftAppliedCents),
+                date: new Date().toISOString(), usedBy: rec.clientName || "",
+                note: "pay on the spot",
+              });
               await kvSet(`gift:${gift.code}`, gift);
             }
             rec.giftDeducted = true;

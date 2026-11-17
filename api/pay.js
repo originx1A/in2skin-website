@@ -11,7 +11,7 @@ const { getStripe } = require("../lib/stripe");
 const { kvGet, kvSet } = require("../lib/kv");
 const { sendEmail } = require("../lib/email");
 const { money } = require("../lib/schedule");
-const { SITE_URL, newId, getGift } = require("../lib/bookings");
+const { SITE_URL, newId, getGift, logGiftUse } = require("../lib/bookings");
 
 module.exports = async (req, res) => {
   try {
@@ -61,6 +61,10 @@ module.exports = async (req, res) => {
       // Fully covered by the gift code — no payment link needed.
       const gift = await getGift(giftCode);
       gift.balanceCents = Math.max(0, gift.balanceCents - giftAppliedCents);
+      logGiftUse(gift, {
+        bookingId: id, amountCents: giftAppliedCents,
+        date: new Date().toISOString(), usedBy: clientName, note: "pay on the spot",
+      });
       await kvSet(`gift:${gift.code}`, gift);
       await kvSet(`paylink:${id}`, {
         id, amountCents: amount, dueCents: 0, clientName, contact, method,

@@ -490,11 +490,17 @@
     function priceFor(s, type){ return type === "after" ? AH_PRICE[s.id] : s.price; }
 
     /* Live checkout total: base price + $15 Private Hours premium, less the
-       $10 first-visit offer, less any gift-certificate balance entered. */
+       $10 first-visit offer, less any gift-certificate balance entered.
+       A referral code entered in the gift-code field applies the referrer's
+       credit instead, and makes a Reflexology booking free if they have a
+       free add-on banked. */
     var giftBalanceCents = 0;
+    var referralFree = 0;
+    var referralCodeApplied = false;
     function bookTotalCents(){
       var s = currentService(); if (!s || !s.priceNum) return 0;
       var total = s.priceNum * 100 + (booking.type === "after" ? 1500 : 0);
+      if (s.id === "reflexology" && referralFree > 0) total -= s.priceNum * 100;
       if (booking.first !== "no") total -= 1000;
       total -= giftBalanceCents;
       return Math.max(0, total);
@@ -506,7 +512,9 @@
       var parts = [];
       if (booking.type === "after") parts.push("includes the $15 Private Hours premium");
       if (booking.first !== "no") parts.push("$10 first-visit offer applied");
-      if (giftBalanceCents > 0) parts.push("gift code applied");
+      if (referralCodeApplied) parts.push("referral credit applied");
+      else if (giftBalanceCents > 0) parts.push("gift code applied");
+      if (s.id === "reflexology" && referralFree > 0) parts.push("free reflexology applied");
       return "$" + (cents / 100).toFixed(2).replace(/\.00$/, "") + (parts.length ? " (" + parts.join(" · ") + ")" : "") + " — pay securely by card at checkout";
     }
     function refreshBookTotal(){
@@ -613,7 +621,7 @@
         '<p style="text-align:center; color:var(--ink-soft); margin-top:16px;">Prefer to call? <a href="' + PHONE_TEL + '"><strong>Call ' + PHONE_DISPLAY + '</strong></a></p>' +
       '</div></section>' +
       '<section class="block band-warm" id="gift"><div class="wrap">' +
-        '<div class="sec-head center" style="margin-bottom:24px;"><div class="over">Gift Certificates</div><h2>Give a little glow</h2><p>Buy a treatment — or any amount — for someone you love. Rather pick the day for them? <a href="#book" data-scroll="book"><strong>Book for a friend instead</strong></a>.</p></div>' +
+        '<div class="sec-head center" style="margin-bottom:24px;"><div class="over">Gift Certificates &amp; Vouchers</div><h2>Give a little glow</h2><p>Buy a treatment — or any amount — for someone you love, or gift a full treatment voucher: a named facial with add-ons, paid ahead. Rather pick the day for them? <a href="#book" data-scroll="book"><strong>Book for a friend instead</strong></a>.</p></div>' +
         '<div class="photo-strip two">' +
           '<img src="assets/gift-box.jpg" alt="A spa gift box with rose bath salts, a sugar scrub, a rolled towel tied with a ribbon and a lit candle" loading="lazy" />' +
           '<img src="assets/gift-rose.webp" alt="A spa gift set with candles, a pink towel and a jar of rose bath salts, ready to give" loading="lazy" />' +
@@ -909,6 +917,7 @@
           '</div>' +
           '<div class="field"><label for="bfFirst">Is this your friend\u2019s first visit to In2Skin?</label>' +
             '<select id="bfFirst"><option value="yes">Yes — first visit</option><option value="no">They have visited before</option></select></div>' +
+          '<div class="field"><label for="bfRefCode">Who sent you? (optional)</label><input id="bfRefCode" type="text" autocomplete="off" placeholder="e.g. ALEX-4821" value="' + (booking.referredBy || "") + '" /><p class="fine" style="margin-top:6px;">A friend shared their code with you? Enter it here — they earn credit when you book and pay.</p></div>' +
           '<div class="field"><label for="bfGiftCode">Gift certificate code (optional)</label><input id="bfGiftCode" type="text" autocomplete="off" placeholder="e.g. IN2SKIN-ABC123" /><p class="fine" id="bfGiftNote" style="margin-top:6px;">Have a gift certificate? Enter the code — its balance comes off this booking. Anything left stays on the code.</p></div>'
         :
           '<div class="field"><label for="bfName">Your name</label><input id="bfName" name="name" type="text" autocomplete="name" placeholder="e.g. Jordan Smith" /></div>' +
@@ -918,6 +927,7 @@
           '</div>' +
           '<div class="field"><label for="bfFirst">Is this your first visit to In2Skin?</label>' +
             '<select id="bfFirst" name="first"><option value="yes">Yes — first visit</option><option value="no">I have visited before</option></select></div>' +
+          '<div class="field"><label for="bfRefCode">Who sent you? (optional)</label><input id="bfRefCode" type="text" autocomplete="off" placeholder="e.g. ALEX-4821" value="' + (booking.referredBy || "") + '" /><p class="fine" style="margin-top:6px;">A friend shared their code with you? Enter it here — they earn credit when you book and pay.</p></div>' +
           '<div class="field"><label for="bfGiftCode">Gift certificate code (optional)</label><input id="bfGiftCode" type="text" autocomplete="off" placeholder="e.g. IN2SKIN-ABC123" /><p class="fine" id="bfGiftNote" style="margin-top:6px;">Have a gift certificate? Enter the code — its balance comes off this booking. Anything left stays on the code.</p></div>';
         body = '<div class="book-step on"><h3>' + (friendMode ? "Your details — and your friend\u2019s" : "Your details") + '</h3>' +
           '<p class="sub">Almost done — name, phone & email for confirmation.</p>' +
@@ -958,6 +968,11 @@
             '<div class="after-item"><span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="#2F4A2C" stroke-width="1.8"/><path d="M12 7.5V12l3 2" stroke="#2F4A2C" stroke-width="1.8" stroke-linecap="round"/></svg></span>' +
               '<div><strong>A reminder before your visit</strong><p>You will receive a friendly reminder email ahead of your appointment, so all you need to do is arrive and relax.</p></div></div>' +
           '</div>' +
+          (booking.myReferralCode ?
+            '<div class="summary-box" style="margin-top:16px;"><dl>' +
+            '<dt>Your referral code</dt><dd><strong>' + booking.myReferralCode + '</strong></dd>' +
+            '<dt>Share it</dt><dd>boltonfacials.com/?ref=' + booking.myReferralCode + '</dd></dl>' +
+            '<p style="color:var(--ink-soft);">When three friends book and pay in full with your code, you earn $15 treatment credit and a free reflexology add-on. No cash value — credit is for treatments only.</p></div>' : '') +
           '<div class="book-nav" style="justify-content:center;"><button type="button" class="btn btn-ghost" id="bookAgain">Book Another Treatment</button>' +
           '<a class="btn btn-call" href="' + PHONE_TEL + '">' + ICON_PHONE + ' Questions? Call ' + PHONE_DISPLAY + '</a></div></div>';
       }
@@ -1008,15 +1023,22 @@
       if (bfGift) bfGift.addEventListener("change", function(){
         var code = bfGift.value.trim();
         var note = document.getElementById("bfGiftNote");
-        if (!code){ giftBalanceCents = 0; refreshBookTotal(); return; }
+        if (!code){ giftBalanceCents = 0; referralFree = 0; referralCodeApplied = false; refreshBookTotal(); return; }
         fetch("/api/gift-balance?code=" + encodeURIComponent(code))
           .then(function(r){ return r.ok ? r.json() : null; })
           .then(function(j){
-            if (j && typeof j.balanceCents === "number" && j.balanceCents > 0){
+            if (j && j.referral){
+              giftBalanceCents = j.creditCents || 0;
+              referralFree = j.freeReflexology || 0;
+              referralCodeApplied = true;
+              if (note) note.textContent = "Referral code — $" + ((j.creditCents || 0) / 100).toFixed(2) + " credit" + (referralFree > 0 ? " + " + referralFree + " free reflexology add-on" : "") + " on this code.";
+            } else if (j && typeof j.balanceCents === "number" && j.balanceCents > 0){
               giftBalanceCents = j.balanceCents;
+              referralFree = 0; referralCodeApplied = false;
               if (note) note.textContent = "Gift code applied — $" + (j.balanceCents / 100).toFixed(2) + " balance on this code.";
             } else {
               giftBalanceCents = 0;
+              referralFree = 0; referralCodeApplied = false;
               if (note) note.textContent = "That code was not found, or has no balance left — check the code and try again.";
             }
             refreshBookTotal();
@@ -1063,6 +1085,8 @@
         booking.first = document.getElementById("bfFirst").value;
         var giftCodeEl = document.getElementById("bfGiftCode");
         booking.giftCode = giftCodeEl ? giftCodeEl.value.trim() : "";
+        var refCodeEl = document.getElementById("bfRefCode");
+        booking.referredBy = refCodeEl ? refCodeEl.value.trim().toUpperCase() : (booking.referredBy || "");
         var bookBtn = form.querySelector('button[type="submit"]');
         if (bookBtn){ bookBtn.disabled = true; bookBtn.textContent = "Taking you to secure checkout…"; }
         bookErr("");
@@ -1070,7 +1094,7 @@
           body: JSON.stringify({ service: booking.service, date: booking.date, time: booking.time, type: booking.type,
             forWhom: booking.forWhom, name: booking.name, phone: booking.phone, email: booking.email,
             guestName: booking.guestName, guestPhone: booking.guestPhone, guestEmail: booking.guestEmail,
-            first: booking.first, giftCode: booking.giftCode }) })
+            first: booking.first, giftCode: booking.giftCode, referredBy: booking.referredBy }) })
         .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
         .then(function(res){
           if (!res.ok){
@@ -1081,6 +1105,7 @@
           if (res.j.url){ window.location.href = res.j.url; return; }
           /* Paid in full by gift code, or a consultation with no payment due. */
           booking.bookingId = res.j.bookingId || null;
+          booking.myReferralCode = res.j.myReferralCode || booking.myReferralCode || null;
           booking.step = 4; renderBooking();
           pay.touched = false; pay.step = 1; renderPay();
           var el = document.getElementById("book");
@@ -1093,7 +1118,7 @@
       });
       var again = document.getElementById("bookAgain");
       if (again) again.addEventListener("click", function(){
-        booking = { service:null, date:null, time:null, step:1, type:"regular", forWhom:"me" };
+        booking = { service:null, date:null, time:null, step:1, type:"regular", forWhom:"me", referredBy: booking.referredBy };
         renderBooking();
       });
     }
@@ -1111,9 +1136,40 @@
       { id:"gift-works", name:"The Works Gift Certificate", desc:"Facial + red light + reflexology, all at once", priceLabel:"$135" },
       { id:"gift-custom", name:"Custom Amount Gift Certificate", desc:"Any amount you choose — they pick the treatment", priceLabel:"You choose" }
     ];
-    var gift = { option:null, step:1, code:"" };
+    var gift = { option:null, step:1, code:"", mode:"gift", voucherMain:null, voucherAddons:[], voucherType:"regular" };
     function giftOption(){ for (var i=0;i<GIFT_OPTIONS.length;i++) if (GIFT_OPTIONS[i].id===gift.option) return GIFT_OPTIONS[i]; return null; }
     function giftErr(msg){ var e = document.getElementById("giftErr"); if (e) e.textContent = msg; }
+
+    /* Treatment vouchers: a named facial + add-ons, paid in full ahead.
+       Prices mirror lib/schedule.js — main + add-ons, +$15 per treatment
+       for Private Hours. */
+    var VOUCHER_MAINS = [
+      { id:"classic-facial", name:"Classic Facial", desc:"55 minutes · the classic refresh", priceLabel:"$65", priceNum:65 },
+      { id:"anti-aging-facial", name:"Anti-Aging Facial", desc:"80 minutes · firmer, smoother, brighter", priceLabel:"$95", priceNum:95 },
+      { id:"combo-classic", name:"The Works — with Classic Facial", desc:"55 minutes · facial + red light + reflexology", priceLabel:"$135", priceNum:135 },
+      { id:"combo-anti", name:"The Works — with Anti-Aging Facial", desc:"80 minutes · facial + red light + reflexology", priceLabel:"$165", priceNum:165 }
+    ];
+    var VOUCHER_ADDONS = [
+      { id:"nano-needling", name:"NANO Needling", desc:"15 minutes · deep serum infusion", priceLabel:"$55", priceNum:55 },
+      { id:"microdermabrasion", name:"Microdermabrasion", desc:"15 minutes · polished, brighter skin", priceLabel:"$45", priceNum:45 },
+      { id:"light-therapy", name:"Light Therapy", desc:"15 minutes · warm red light", priceLabel:"$45", priceNum:45 },
+      { id:"reflexology", name:"Reflexology", desc:"15 minutes · feet, whole-body calm", priceLabel:"$25", priceNum:25 }
+    ];
+    function voucherMain(){ for (var i=0;i<VOUCHER_MAINS.length;i++) if (VOUCHER_MAINS[i].id===gift.voucherMain) return VOUCHER_MAINS[i]; return null; }
+    function voucherAddonById(id){ for (var i=0;i<VOUCHER_ADDONS.length;i++) if (VOUCHER_ADDONS[i].id===id) return VOUCHER_ADDONS[i]; return null; }
+    function voucherTotalCents(){
+      var m = voucherMain(); if (!m) return 0;
+      var n = m.priceNum;
+      (gift.voucherAddons || []).forEach(function(id){ var a = voucherAddonById(id); if (a) n += a.priceNum; });
+      if (gift.voucherType === "after") n += 15 * (1 + (gift.voucherAddons || []).length);
+      return n * 100;
+    }
+    function voucherLabel(){
+      var m = voucherMain(); if (!m) return "";
+      var names = [m.name];
+      (gift.voucherAddons || []).forEach(function(id){ var a = voucherAddonById(id); if (a) names.push(a.name); });
+      return names.join(" + ") + " — $" + (voucherTotalCents() / 100).toFixed(2).replace(/\.00$/, "");
+    }
 
     function renderGift(){
       var shell = document.getElementById("giftShell");
@@ -1124,28 +1180,57 @@
       }).join("") + '</div>';
       var body = "";
       if (gift.step === 1){
-        body = '<div class="book-step on"><h3>Choose a gift certificate</h3>' +
-          '<p class="sub">Pick a treatment to gift, or choose any amount.</p>' +
-          '<div class="pick-grid">' + GIFT_OPTIONS.map(function(o){
-            return '<button type="button" class="pick' + (gift.option===o.id ? " sel" : "") + '" data-pick-gift="' + o.id + '">' +
-              '<span class="pr">' + o.priceLabel + '</span><span class="t">' + o.name + '</span>' +
-              '<span class="d">' + o.desc + '</span></button>';
-          }).join("") + '</div>' +
-          (gift.option === "gift-custom" ?
-            '<div class="field" style="margin-top:18px; max-width:280px;"><label for="gfAmount">Your amount (CAD $)</label><input id="gfAmount" type="number" min="10" step="5" placeholder="e.g. 100" /></div>' : '') +
-          '<div class="err" id="giftErr"></div>' +
-          '<div class="book-nav"><span class="spacer"></span>' +
-          '<button type="button" class="btn btn-call" id="giftTo2">Continue →</button></div></div>';
+        var modeRow = '<div class="pick-grid" style="margin-bottom:18px;">' +
+          '<button type="button" class="pick' + (gift.mode==="gift" ? " sel" : "") + '" data-pick-giftmode="gift"><span class="t">Gift Certificate</span><span class="d">Any amount — they pick the treatment</span></button>' +
+          '<button type="button" class="pick' + (gift.mode==="voucher" ? " sel" : "") + '" data-pick-giftmode="voucher"><span class="t">Treatment Voucher</span><span class="d">A named facial + add-ons, paid ahead</span></button></div>';
+        if (gift.mode === "voucher"){
+          body = '<div class="book-step on"><h3>Choose a treatment voucher</h3>' +
+            '<p class="sub">Pick a facial, add anything extra, and choose the hours. Your friend gets a code — good for exactly this treatment.</p>' +
+            modeRow +
+            '<h3 style="font-size:1.3rem; margin:4px 0 10px;">The facial</h3><div class="pick-grid">' + VOUCHER_MAINS.map(function(o){
+              return '<button type="button" class="pick' + (gift.voucherMain===o.id ? " sel" : "") + '" data-pick-vmain="' + o.id + '">' +
+                '<span class="pr">' + o.priceLabel + '</span><span class="t">' + o.name + '</span>' +
+                '<span class="d">' + o.desc + '</span></button>';
+            }).join("") + '</div>' +
+            '<h3 style="font-size:1.3rem; margin:22px 0 10px;">Add-ons (optional)</h3><div class="pick-grid">' + VOUCHER_ADDONS.map(function(o){
+              return '<button type="button" class="pick' + ((gift.voucherAddons||[]).indexOf(o.id) >= 0 ? " sel" : "") + '" data-pick-vaddon="' + o.id + '">' +
+                '<span class="pr">' + o.priceLabel + '</span><span class="t">' + o.name + '</span>' +
+                '<span class="d">' + o.desc + '</span></button>';
+            }).join("") + '</div>' +
+            '<h3 style="font-size:1.3rem; margin:22px 0 10px;">Regular hours, or Private Hours?</h3><div class="pick-grid">' +
+              '<button type="button" class="pick' + (gift.voucherType==="regular" ? " sel" : "") + '" data-pick-vtype="regular"><span class="t">Regular Hours</span><span class="d">At the regular price</span></button>' +
+              '<button type="button" class="pick' + (gift.voucherType==="after" ? " sel" : "") + '" data-pick-vtype="after"><span class="pr">+$15 / treatment</span><span class="t">Private Hours</span><span class="d">+$15 per treatment</span></button></div>' +
+            '<div class="summary-box" style="margin-top:18px;"><dl><dt>Voucher total</dt><dd>' + (voucherMain() ? voucherLabel() : "Pick a facial to see the total") + '</dd></dl></div>' +
+            '<div class="err" id="giftErr"></div>' +
+            '<div class="book-nav"><span class="spacer"></span>' +
+            '<button type="button" class="btn btn-call" id="giftTo2">Continue →</button></div></div>';
+        } else {
+          body = '<div class="book-step on"><h3>Choose a gift certificate</h3>' +
+            '<p class="sub">Pick a treatment to gift, or choose any amount.</p>' +
+            modeRow +
+            '<div class="pick-grid">' + GIFT_OPTIONS.map(function(o){
+              return '<button type="button" class="pick' + (gift.option===o.id ? " sel" : "") + '" data-pick-gift="' + o.id + '">' +
+                '<span class="pr">' + o.priceLabel + '</span><span class="t">' + o.name + '</span>' +
+                '<span class="d">' + o.desc + '</span></button>';
+            }).join("") + '</div>' +
+            (gift.option === "gift-custom" ?
+              '<div class="field" style="margin-top:18px; max-width:280px;"><label for="gfAmount">Your amount (CAD $)</label><input id="gfAmount" type="number" min="10" step="5" placeholder="e.g. 100" /></div>' : '') +
+            '<div class="err" id="giftErr"></div>' +
+            '<div class="book-nav"><span class="spacer"></span>' +
+            '<button type="button" class="btn btn-call" id="giftTo2">Continue →</button></div></div>';
+        }
       }
       else if (gift.step === 2){
         var o = giftOption();
         body = '<div class="book-step on"><h3>Who is it for?</h3>' +
-          '<p class="sub">Your details, and your friend\u2019s — their certificate code goes to their email.</p>' +
-          '<div class="summary-box"><dl>' +
-            '<dt>Certificate</dt><dd>' + o.name + '</dd>' +
-            '<dt>Value</dt><dd>' + (o.id === "gift-custom" ? "$" + gift.amount : o.priceLabel) + '</dd>' +
-            '<dt>Payment</dt><dd>Interac e-transfer</dd>' +
-          '</dl></div>' +
+          '<p class="sub">Your details, and your friend\u2019s — their ' + (gift.mode === "voucher" ? "voucher" : "certificate") + ' code goes to their email.</p>' +
+          (gift.mode === "voucher"
+            ? '<div class="summary-box"><dl><dt>Voucher</dt><dd>Good for ' + voucherLabel() + '</dd><dt>Payment</dt><dd>Card at secure checkout — shows as IN2SKIN</dd></dl></div>'
+            : '<div class="summary-box"><dl>' +
+              '<dt>Certificate</dt><dd>' + o.name + '</dd>' +
+              '<dt>Value</dt><dd>' + (o.id === "gift-custom" ? "$" + gift.amount : o.priceLabel) + '</dd>' +
+              '<dt>Payment</dt><dd>Interac e-transfer</dd>' +
+            '</dl></div>') +
           '<form id="giftForm" novalidate>' +
             '<div class="form-2col">' +
               '<div class="field"><label for="gfName">Your name</label><input id="gfName" type="text" autocomplete="name" placeholder="e.g. Jordan Smith" /></div>' +
@@ -1162,7 +1247,7 @@
           '</form></div>';
       }
       else if (gift.step === 3){
-        var o3 = giftOption();
+        var o3 = giftOption() || { name: voucherLabel(), id: "voucher", priceLabel: "$" + (voucherTotalCents() / 100).toFixed(2).replace(/\.00$/, "") };
         body = '<div class="book-step on"><div class="confirm-hero">' +
           '<div class="check">' + ICON_BIGCHECK + '</div>' +
           '<h3>Your gift is on its way' + (gift.buyerName ? ", " + gift.buyerName.split(" ")[0] : "") + '.</h3>' +
@@ -1189,8 +1274,33 @@
       shell.querySelectorAll("[data-pick-gift]").forEach(function(b){
         b.addEventListener("click", function(){ gift.option = b.getAttribute("data-pick-gift"); renderGift(); });
       });
+      shell.querySelectorAll("[data-pick-giftmode]").forEach(function(b){
+        b.addEventListener("click", function(){ gift.mode = b.getAttribute("data-pick-giftmode"); renderGift(); });
+      });
+      shell.querySelectorAll("[data-pick-vmain]").forEach(function(b){
+        b.addEventListener("click", function(){ gift.voucherMain = b.getAttribute("data-pick-vmain"); renderGift(); });
+      });
+      shell.querySelectorAll("[data-pick-vaddon]").forEach(function(b){
+        b.addEventListener("click", function(){
+          var id = b.getAttribute("data-pick-vaddon");
+          var list = gift.voucherAddons || [];
+          var i = list.indexOf(id);
+          if (i >= 0) list.splice(i, 1); else list.push(id);
+          gift.voucherAddons = list;
+          renderGift();
+        });
+      });
+      shell.querySelectorAll("[data-pick-vtype]").forEach(function(b){
+        b.addEventListener("click", function(){ gift.voucherType = b.getAttribute("data-pick-vtype"); renderGift(); });
+      });
       var to2 = document.getElementById("giftTo2");
       if (to2) to2.addEventListener("click", function(){
+        if (gift.mode === "voucher"){
+          if (!voucherMain()){ giftErr("Please choose a facial for the voucher."); return; }
+          gift.step = 2; renderGift();
+          var gs = document.getElementById("gift"); if (gs) gs.scrollIntoView({ behavior:"smooth", block:"start" });
+          return;
+        }
         if (!gift.option){ giftErr("Please choose a certificate to continue."); return; }
         if (gift.option === "gift-custom"){
           var amt = document.getElementById("gfAmount");
@@ -1220,9 +1330,13 @@
         var giftBtn = form.querySelector('button[type="submit"]');
         if (giftBtn){ giftBtn.disabled = true; giftBtn.textContent = "Taking you to secure checkout…"; }
         giftErr("");
+        var giftBody = gift.mode === "voucher"
+          ? { kind:"voucher", service: gift.voucherMain, addons: gift.voucherAddons, type: gift.voucherType,
+              buyerName: name, buyerEmail: email, recipientName: rName, recipientEmail: rEmail, message: gift.message }
+          : { option: gift.option, amount: gift.amount, buyerName: name, buyerEmail: email,
+              recipientName: rName, recipientEmail: rEmail, message: gift.message };
         fetch("/api/gift-buy", { method:"POST", headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify({ option: gift.option, amount: gift.amount, buyerName: name, buyerEmail: email,
-            recipientName: rName, recipientEmail: rEmail, message: gift.message }) })
+          body: JSON.stringify(giftBody) })
         .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
         .then(function(res){
           if (!res.ok){
@@ -1239,7 +1353,7 @@
       });
       var again = document.getElementById("giftAgain");
       if (again) again.addEventListener("click", function(){
-        gift = { option:null, step:1, code:"" };
+        gift = { option:null, step:1, code:"", mode:"gift", voucherMain:null, voucherAddons:[], voucherType:"regular" };
         renderGift();
       });
     }
@@ -1743,6 +1857,16 @@
         else { var el = document.getElementById(target); if (el) el.scrollIntoView({ behavior:"smooth", block:"start" }); }
       }
     });
+
+    /* Referral share links: boltonfacials.com/?ref=NAME-XXXX — the code that
+       referred this visitor is stamped on their booking, so the friend who
+       sent them earns credit when they book and pay in full. */
+    (function(){
+      try {
+        var ref = new URLSearchParams(location.search).get("ref");
+        if (ref) booking.referredBy = ref.trim().toUpperCase();
+      } catch(e){}
+    })();
 
     routeFromHash();
     </script>

@@ -36,6 +36,25 @@
       </section>
 
       <section style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;">Referrals — $15 credit + free reflexology every 3 friends</h2>
+        <p class="sub">When three friends book and pay in full with a client's code, that client earns $15 treatment credit and a free reflexology add-on. No cash value — credit is for treatments only.</p>
+        <div id="refList" style="margin-top:12px;">Loading referrals…</div>
+        <h3 style="font-size:1.1rem; margin:22px 0 8px;">Create a code for a walk-in client</h3>
+        <div class="form-2col">
+          <div class="field"><label for="refName">Client's name</label><input id="refName" type="text" placeholder="e.g. Alex Taylor" /></div>
+          <div class="field"><label for="refEmail">Client's email</label><input id="refEmail" type="email" placeholder="e.g. alex@example.com" /></div>
+        </div>
+        <div class="field"><label for="refPhone">Client's phone</label><input id="refPhone" type="tel" placeholder="e.g. (905) 555-0100" /></div>
+        <p style="margin-top:12px;"><button class="btn btn-book" id="refCreate" type="button">Create Referral Code</button> <span id="refMsg" style="color:#7A3B2E; margin-left:8px;"></span></p>
+      </section>
+
+      <section style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;">Gift certificates &amp; treatment vouchers</h2>
+        <p class="sub">Every code — who bought it, who holds it now, what was spent and where, and what is left. A voucher dies when its full total is used and the treatment is marked complete; a no-show puts the value back on the voucher.</p>
+        <div id="codeList" style="margin-top:12px;">Loading codes…</div>
+      </section>
+
+      <section style="margin-top:36px;">
         <h2 style="font-size:1.4rem;">Call answering — when the phone agent may put calls through to you</h2>
         <p class="sub">The voice agent on (289) 212-4124 checks this before every transfer. Outside these hours — or while paused — it takes a message and offers online booking instead.</p>
         <div id="callStatus" class="summary-box" style="margin-top:12px;">Loading call hours…</div>
@@ -110,23 +129,121 @@
         calFrom.value = todayKey();
         var to = new Date(); to.setDate(to.getDate() + 30);
         calTo.value = to.getFullYear() + "-" + String(to.getMonth()+1).padStart(2,"0") + "-" + String(to.getDate()).padStart(2,"0");
+        function isPastBooking(b){
+          var m = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec(b.time || "");
+          if (!m) return false;
+          var h = (+m[1]) % 12; if (m[3].toUpperCase() === "PM") h += 12;
+          var p = b.date.split("-");
+          var when = new Date(+p[0], +p[1]-1, +p[2], h, +m[2]);
+          return when.getTime() < Date.now();
+        }
         function loadCal(){
           fetch("/api/admin/bookings?from=" + calFrom.value + "&to=" + calTo.value)
             .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
             .then(function(res){
               if (!res.ok){ msg.textContent = res.j.error || "Could not load bookings."; return; }
               var rows = res.j.bookings.map(function(b){
+                var needsOutcome = (b.status === "paid" || b.status === "consultation") && isPastBooking(b);
+                var outcome = "";
+                if (b.status === "paid" || b.status === "consultation"){
+                  outcome = ' <button class="btn btn-book btn-book-sm" type="button" data-outcome="complete" data-id="' + b.id + '">Completed</button>'
+                    + ' <button class="btn btn-ghost btn-book-sm" type="button" data-outcome="no-show" data-id="' + b.id + '">No-show</button>';
+                }
                 return '<div class="after-item"><div><strong>' + fmtDate(b.date) + ' · ' + b.time + '</strong> — ' + b.serviceName
                   + ' · ' + (b.guestName || b.name) + ' · ' + b.phone + ' · ' + b.email
                   + ' · <em>' + b.status + '</em>' + (b.type === "after" ? ' · Private Hours' : '')
-                  + (b.giftCode ? ' · gift ' + b.giftCode : '') + '</div></div>';
+                  + (b.giftCode ? ' · gift ' + b.giftCode : '')
+                  + (b.referredBy ? ' · referred by ' + b.referredBy : '')
+                  + (needsOutcome ? ' · <strong style="color:#7A3B2E;">Needs outcome — did they show up?</strong>' : '')
+                  + '</div><div style="margin-top:8px;">' + outcome + '</div></div>';
               });
               document.getElementById("calList").innerHTML = rows.length ? rows.join("") : "<p style='color:var(--ink-soft);'>No bookings in this range.</p>";
             })
             .catch(function(){ msg.textContent = "Could not load bookings — check your connection."; });
         }
         document.getElementById("calLoad").addEventListener("click", loadCal);
+        document.getElementById("calList").addEventListener("click", function(ev){
+          var btn = ev.target.closest("[data-outcome]");
+          if (!btn) return;
+          var action = btn.getAttribute("data-outcome");
+          var id = btn.getAttribute("data-id");
+          btn.disabled = true;
+          fetch("/api/admin/data", { method:"POST", headers:{ "Content-Type":"application/json" },
+            body: JSON.stringify({ view:"bookings", action: action, bookingId: id }) })
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ msg.textContent = res.j.error || "Could not save the outcome."; return; }
+              msg.textContent = action === "complete" ? "Marked complete." : "Marked no-show — the voucher value was put back on the code.";
+              loadCal(); loadCodes();
+            })
+            .catch(function(){ msg.textContent = "Could not save the outcome — check your connection."; });
+        });
         loadCal();
+
+        // ---- referrals ----
+        function loadReferrals(){
+          fetch("/api/admin/data?view=referrals")
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ document.getElementById("refList").textContent = res.j.error || "Could not load referrals."; return; }
+              var rows = res.j.referrals.map(function(r){
+                var friends = (r.referred || []).map(function(f){
+                  return (f.name || f.email || "Friend") + " — " + (f.paid ? "paid" : "booked, not paid yet");
+                }).join("; ");
+                return '<div class="after-item"><div><strong>' + r.code + '</strong> — ' + (r.name || "Client") + ' · ' + (r.email || "") + ' · ' + (r.phone || "")
+                  + '<br/>Credit: <strong>' + money(r.creditCents) + '</strong> (used ' + money(r.creditUsedCents) + ') · Free reflexology banked: <strong>' + r.freeReflexology + '</strong> · Paid referrals: <strong>' + r.paidCount + '</strong>'
+                  + (friends ? '<br/><span style="color:var(--ink-soft);">Referred: ' + friends + '</span>' : '<br/><span style="color:var(--ink-soft);">No referrals yet.</span>')
+                  + '</div></div>';
+              });
+              document.getElementById("refList").innerHTML = rows.length ? rows.join("") : "<p style='color:var(--ink-soft);'>No referral codes yet — the first one is created when a client books.</p>";
+            })
+            .catch(function(){ document.getElementById("refList").textContent = "Could not load referrals — check your connection."; });
+        }
+        document.getElementById("refCreate").addEventListener("click", function(){
+          var m = document.getElementById("refMsg");
+          var name = document.getElementById("refName").value.trim();
+          var email = document.getElementById("refEmail").value.trim();
+          var phone = document.getElementById("refPhone").value.trim();
+          if (!name || !email || !phone){ m.textContent = "Add the client's name, email and phone."; return; }
+          m.textContent = "";
+          fetch("/api/admin/data", { method:"POST", headers:{ "Content-Type":"application/json" },
+            body: JSON.stringify({ view:"referrals", action:"create", name: name, email: email, phone: phone }) })
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ m.textContent = res.j.error || "Could not create the code."; return; }
+              m.textContent = "Code " + res.j.referral.code + " is ready to share.";
+              loadReferrals();
+            })
+            .catch(function(){ m.textContent = "Could not create the code — check your connection."; });
+        });
+        loadReferrals();
+
+        // ---- gift certificates & vouchers ----
+        function fmtUse(u){
+          var sign = u.amountCents < 0 ? "+" : "−";
+          return money(Math.abs(u.amountCents)) + " on " + (u.date || "").slice(0, 10) + (u.usedBy ? " · " + u.usedBy : "") + (u.note ? " (" + u.note + ")" : "");
+        }
+        function loadCodes(){
+          fetch("/api/admin/data?view=codes")
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ document.getElementById("codeList").textContent = res.j.error || "Could not load codes."; return; }
+              var rows = res.j.codes.map(function(g){
+                var spent = (g.uses || []).reduce(function(n, u){ return n + (u.amountCents || 0); }, 0);
+                var uses = (g.uses || []).map(function(u){ return fmtUse(u); }).join("; ");
+                return '<div class="after-item"><div><strong>' + g.code + '</strong> — ' + (g.kind === "voucher" ? "Treatment voucher" : "Gift certificate")
+                  + (g.voucherLabel ? ' · Good for <strong>' + g.voucherLabel + '</strong>' : '')
+                  + '<br/>Bought by ' + (g.buyerName || "—") + ' · Held by ' + (g.holderName || g.recipientName || "—") + ' (' + (g.holderEmail || g.recipientEmail || "—") + ')'
+                  + '<br/>Original <strong>' + money(g.originalCents) + '</strong> · Spent ' + money(spent) + ' · Balance left <strong>' + money(g.balanceCents) + '</strong> · Status: <strong>' + g.status + '</strong>'
+                  + (g.suggestedUseBy ? '<br/><span style="color:var(--ink-soft);">Suggested use by ' + g.suggestedUseBy + ' — the dollar value never expires.</span>' : '')
+                  + (uses ? '<br/><span style="color:var(--ink-soft);">Uses: ' + uses + '</span>' : '')
+                  + '</div></div>';
+              });
+              document.getElementById("codeList").innerHTML = rows.length ? rows.join("") : "<p style='color:var(--ink-soft);'>No gift certificates or vouchers yet.</p>";
+            })
+            .catch(function(){ document.getElementById("codeList").textContent = "Could not load codes — check your connection."; });
+        }
+        loadCodes();
 
         // ---- call answering hours ----
         var callSettings = null;
