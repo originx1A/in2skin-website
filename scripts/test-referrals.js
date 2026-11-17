@@ -42,11 +42,14 @@ function tomorrowKey() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function paidBooking(id, friend, referredBy) {
+function paidBooking(id, friend, referredBy, amounts) {
+  const a = amounts || { amountCents: 6500, firstVisitDiscountCents: 0, giftAppliedCents: 0 };
   return {
     id, status: "paid", forWhom: "me", name: friend.name, email: friend.email,
     phone: friend.phone, guestName: null, guestEmail: null, guestPhone: null,
     date: tomorrowKey(), referredBy: referredBy || null,
+    amountCents: a.amountCents, firstVisitDiscountCents: a.firstVisitDiscountCents,
+    giftAppliedCents: a.giftAppliedCents,
   };
 }
 
@@ -109,6 +112,21 @@ async function run() {
   check("consultation not issued", consultRes.issued, false);
   check("consultation reason", consultRes.reason, "not-paid");
 
+  // --- $65 floor: a $25 add-on alone does not count, and does not burn the friend's new status ---
+  const small = await refs.issueReferralCredit(paidBooking("bk-small", { name: "Sam Small", email: "sam@example.com", phone: "(905) 555-0404" }, alex.code, { amountCents: 2500, firstVisitDiscountCents: 0, giftAppliedCents: 0 }));
+  check("below-floor not issued", small.issued, false);
+  check("below-floor reason", small.reason, "below-minimum");
+  const alexSmall = await refs.getReferralByCode(alex.code);
+  check("paidCount unchanged after below-floor", alexSmall.paidCount, 6);
+  const smallLater = await refs.issueReferralCredit(paidBooking("bk-small2", { name: "Sam Small", email: "sam@example.com", phone: "(905) 555-0404" }, alex.code));
+  check("same friend later full facial counts", smallLater.issued, true);
+  check("paidCount 7 after later full facial", smallLater.paidCount, 7);
+
+  // --- $65 floor: first-visit Classic ($55 charged on a $65 value) still counts ---
+  const firstVisit = await refs.issueReferralCredit(paidBooking("bk-first", { name: "Fay First", email: "fay@example.com", phone: "(905) 555-0505" }, alex.code, { amountCents: 5500, firstVisitDiscountCents: 1000, giftAppliedCents: 0 }));
+  check("first-visit Classic counts", firstVisit.issued, true);
+  check("paidCount 8 after first-visit Classic", firstVisit.paidCount, 8);
+
   // --- redemption: credit + free reflexology deduct once ---
   const redBooking = {
     id: "bk-redeem", status: "paid", referralCode: alex.code, referralAppliedCents: 1500,
@@ -155,7 +173,7 @@ async function run() {
   check("gift uses[] has 1 entry", giftAfter.uses.length, 1);
   check("gift use amount 6500", giftAfter.uses[0].amountCents, 6500);
   const alexPaid = await refs.getReferralByCode(alex.code);
-  check("Casey paid -> Alex paidCount 7", alexPaid.paidCount, 7);
+  check("Casey paid -> Alex paidCount 9", alexPaid.paidCount, 9);
 
   // --- booking validation: unknown referral code / not-owned code ---
   res = mockRes();
@@ -182,8 +200,8 @@ async function run() {
   await giftApi({ method: "GET", query: { code: alex.code } }, res);
   check("gift-balance referral -> 200", res.statusCode, 200);
   check("gift-balance referral flag", res.body.referral, true);
-  check("gift-balance referral credit", res.body.creditCents, 1500);
-  check("gift-balance free reflexology", res.body.freeReflexology, 1);
+  check("gift-balance referral credit", res.body.creditCents, 3000);
+  check("gift-balance free reflexology", res.body.freeReflexology, 2);
 
   // --- admin list ---
   const all = await refs.listReferrals();

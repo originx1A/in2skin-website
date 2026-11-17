@@ -76,7 +76,9 @@ plain words. Prices, hours, and booking rules come from there.
   treatment is completed. No cash value. Suggested use within 120 days;
   the dollar value never expires.
 - **Referrals:** every three friends who book and pay in full earns $15
-  credit plus a free reflexology add-on. No cash, ever.
+  credit plus a free reflexology add-on. No cash, ever. A friend counts
+  only when their booking is worth at least $65 (a full facial) — a $25
+  add-on alone does not count.
 - **Payment:** cash or e-transfer; card by a pay link on the client's own
   phone at the visit, or in full by card when booking online. Interac-only
   debit → e-transfer. Charges show as IN2SKIN.
