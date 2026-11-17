@@ -68,11 +68,12 @@ async function run() {
   assert.equal(b.amountCents, 14000, "Classic + 2 add-ons Private Hours is $140, got " + b.amountCents);
   assert.equal(b.minsLabel, "85 minutes");
 
-  // 3. An add-on on its own is not a booking.
-  await assert.rejects(
-    buildBooking(base({ service: "reflexology" }), { bufferMins: 30, blocks: [], via: "web" }),
-    /go with a treatment/,
-  );
+  // 3. An add-on on its own IS a booking (Tony Nov 17, 2026: some people
+  //    just come for the reflexology). $25 - $10 first visit = $15. 15 min.
+  b = await buildBooking(base({ service: "reflexology" }), { bufferMins: 30, blocks: [], via: "web" });
+  assert.equal(b.amountCents, 1500, "Reflexology alone first visit is $15, got " + b.amountCents);
+  assert.equal(b.serviceLabel, "Reflexology", "standalone label is just the treatment");
+  assert.equal(b.minsLabel, "15 minutes", "standalone reflexology is 15 minutes");
 
   // 4. Unknown add-on id is refused.
   await assert.rejects(
@@ -116,6 +117,14 @@ async function run() {
   assert.equal(res.statusCode, 200, "agent hold with add-ons -> 200, got " + res.statusCode + " " + JSON.stringify(res.body));
   assert.equal(res.body.amountCents, 10000, "agent hold total is $100");
   assert.equal(res.body.serviceLabel, "Classic Facial + Light Therapy");
+
+  // 9. Voice-agent hold for a standalone add-on.
+  const res2 = mockRes();
+  await book({ method: "POST", headers: { "x-agent-key": "test-agent-key" },
+    body: { via: "agent", service: "reflexology", date: futureDate(12), time: "9:00 AM", type: "regular", name: "Reflex Only", phone: "(905) 555-0400", email: "reflex@test.example", first: "yes" } }, res2);
+  assert.equal(res2.statusCode, 200, "agent hold for standalone reflexology -> 200, got " + res2.statusCode + " " + JSON.stringify(res2.body));
+  assert.equal(res2.body.amountCents, 1500, "agent standalone reflexology total is $15");
+  assert.equal(res2.body.serviceLabel, "Reflexology");
 
   console.log("booking-addons tests: passed");
 }

@@ -8,7 +8,7 @@ const { getStripe } = require("../lib/stripe");
 const { kvGet, kvSet } = require("../lib/kv");
 const {
   findService, parseDateLocal, timesFor, parseTime, normalizeAddons,
-  durationForBooking, baseCentsFor, ADDON_IDS,
+  durationForBooking, baseCentsFor,
   slotTaken, FIRST_VISIT_CENTS, PENDING_HOLD_MS,
 } = require("../lib/schedule");
 const { studioForDate } = require("../lib/studio");
@@ -37,7 +37,6 @@ async function handleAgentHold(req, res, b) {
     if (!svc) return bad(res, "Please choose a treatment.");
     let addons;
     try { addons = normalizeAddons(b.addons); } catch (err) { return bad(res, err.message); }
-    if (ADDON_IDS.includes(svc.id)) return bad(res, "Add-ons go with a treatment — please choose a facial first, then add this on.");
     const totalMins = durationForBooking(svc.id, addons);
     const addonNames = addons.map((id) => findService(id).name);
     const serviceLabel = addonNames.length ? `${svc.name} + ${addonNames.join(" + ")}` : svc.name;
