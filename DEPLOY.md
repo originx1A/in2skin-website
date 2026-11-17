@@ -80,7 +80,11 @@ still loads and the booking wizard falls back to showing all times.
 3. Book again using that gift code — confirm the balance comes off and the
    remainder stays on the code.
 4. Pay on the spot: create a link from the homepage Pay section, open it on
-   a phone, pay with a test card — confirm the receipt.
+   a phone, pay with a test card — confirm the receipt. After paying, Stripe
+   redirects to pay-paid.html, which confirms the payment through
+   GET /api/pay?session_id= even if the webhook never fires (Nov 17: the
+   webhook was never invoked for a test payment — the redirect is the
+   fallback, the webhook stays the primary path when it delivers).
 5. Admin: request a magic link, sign in, confirm today's payments and the
    calendar show the test bookings; sign out and back in (session persists).
 6. Confirm the webhook in Stripe shows `checkout.session.completed` → 200.

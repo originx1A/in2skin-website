@@ -1,6 +1,7 @@
 // Admin dashboard tests — cancel / move / blocks / buffer / walk-in /
 // payments / email / reports / agentMode / caller messages / webhook
-// pay-link-to-booking. Run: node scripts/test-admin.js
+// pay-link-to-booking / payspot GET fallback (settle without the webhook).
+// Run: node scripts/test-admin.js
 // Uses an in-memory KV stub + stubbed auth/Stripe (no Stripe/KV/Resend needed).
 const assert = require("assert");
 
@@ -25,6 +26,12 @@ require.cache[authPath] = {
   },
 };
 // --- Stripe stub: checkout sessions + payment links + webhook verify ---
+// retrieveOverride lets a test pose as one specific checkout session
+// (the payspot fallback reads the session back from Stripe); otherwise
+// retrieve returns the generic paid session. lastPaymentLinkArgs captures
+// the payment-link creation call (the pay-paid redirect lives in it).
+let retrieveOverride = null;
+let lastPaymentLinkArgs = null;
 const stripePath = require.resolve("../lib/stripe");
 require.cache[stripePath] = {
   exports: {
@@ -32,11 +39,14 @@ require.cache[stripePath] = {
       checkout: {
         sessions: {
           create: async () => ({ id: "cs_test_1", url: "https://checkout.stripe.test/pay/cs_test_1" }),
-          retrieve: async () => ({ payment_status: "paid", amount_total: 6500, metadata: {}, payment_intent: "pi_test" }),
+          retrieve: async (id) => (
+            retrieveOverride && retrieveOverride.id === id ? retrieveOverride
+            : { payment_status: "paid", amount_total: 6500, metadata: {}, payment_intent: "pi_test" }
+          ),
         },
       },
       paymentLinks: {
-        create: async () => ({ id: "plink_test_1", url: "https://pay.stripe.test/plink_test_1" }),
+        create: async (args) => { lastPaymentLinkArgs = args; return { id: "plink_test_1", url: "https://pay.stripe.test/plink_test_1" }; },
       },
       webhooks: {
         constructEvent: (raw) => JSON.parse(raw.toString()),
@@ -59,6 +69,7 @@ const availability = require("../api/availability");
 const transferStatusHandler = require("../api/transfer-status");
 const webhook = require("../api/stripe-webhook");
 const book = require("../api/book");
+const payHandler = require("../api/pay");
 
 let pass = 0, fail = 0;
 function check(name, got, want) {
@@ -433,6 +444,65 @@ async function run() {
   check("admin block-remove -> 200", res.statusCode, 200);
   res = await callAdmin({ view: "settings", action: "block-remove", id: "blk_nope" });
   check("admin block-remove unknown -> 404", res.statusCode, 404);
+
+  // ---------- 14. pay-on-the-spot fallback: GET ?session_id= settles without the webhook ----------
+  // The payment link Stripe creates points back at pay-paid.html with the
+  // checkout session id, so the redirect page can settle the payment even
+  // when the webhook never fires (Nov 17: zero webhook invocations).
+  const spot = await bookingsLib.createPayLink({
+    amountCents: 6500, clientName: "Spot Payer", contact: "spot@example.com",
+    method: "email", serviceLabel: "Classic Facial",
+  });
+  check("payspot link created", !!spot.url, true);
+  check("pay link redirects to pay-paid", /pay-paid\.html\?id=.+&session_id=\{CHECKOUT_SESSION_ID\}/.test(lastPaymentLinkArgs.after_completion.redirect.url), true);
+  // Unpaid session -> not paid, nothing recorded.
+  retrieveOverride = { id: "cs_spot_unpaid", payment_status: "unpaid", amount_total: 6500, payment_intent: "pi_spot", metadata: { type: "payspot", paylinkId: spot.id, giftCode: "", giftAppliedCents: "0" } };
+  res = mockRes();
+  await payHandler(mockReq({ method: "GET", query: { session_id: "cs_spot_unpaid" } }), res);
+  check("unpaid session -> paid false", res.body.paid, false);
+  check("unpaid session -> record still unpaid", (await bookingsLib.listPayments()).filter((p) => p.paylinkId === spot.id).length, 0);
+  // Paid session -> settles, records the payment once.
+  retrieveOverride = { id: "cs_spot_paid", payment_status: "paid", amount_total: 6500, payment_intent: "pi_spot", metadata: { type: "payspot", paylinkId: spot.id, giftCode: "", giftAppliedCents: "0" } };
+  res = mockRes();
+  await payHandler(mockReq({ method: "GET", query: { session_id: "cs_spot_paid" } }), res);
+  check("paid session -> 200", res.statusCode, 200);
+  check("paid session -> paid true", res.body.paid, true);
+  check("paid session -> amount", res.body.amountCents, 6500);
+  check("paid session -> service", res.body.serviceLabel, "Classic Facial");
+  check("one payment recorded", (await bookingsLib.listPayments()).filter((p) => p.paylinkId === spot.id).length, 1);
+  // Same session again -> idempotent: no second payment.
+  res = mockRes();
+  await payHandler(mockReq({ method: "GET", query: { session_id: "cs_spot_paid" } }), res);
+  check("replay -> still paid", res.body.paid, true);
+  check("replay -> still one payment", (await bookingsLib.listPayments()).filter((p) => p.paylinkId === spot.id).length, 1);
+  // Booking-linked link: the settle lands on the booking once, and a
+  // webhook arriving afterwards for the same session adds nothing.
+  const spot2 = await bookingsLib.createPayLink({
+    amountCents: 1500, clientName: "Walk In", contact: "walkin@example.com",
+    method: "email", serviceLabel: "Classic Facial — balance", bookingId: payWalkIn.id,
+  });
+  retrieveOverride = { id: "cs_spot_bk", payment_status: "paid", amount_total: 1500, payment_intent: "pi_spot2", metadata: { type: "payspot", paylinkId: spot2.id, giftCode: "", giftAppliedCents: "0" } };
+  res = mockRes();
+  await payHandler(mockReq({ method: "GET", query: { session_id: "cs_spot_bk" } }), res);
+  check("booking link settles -> paid", res.body.paid, true);
+  check("booking amount adds once", (await bookingsLib.getBooking(payWalkIn.id)).amountPaidCents, 9500);
+  const whEvent2 = { type: "checkout.session.completed", data: { object: { id: "cs_spot_bk", amount_total: 1500, payment_intent: "pi_spot2", metadata: { type: "payspot", paylinkId: spot2.id, giftCode: "", giftAppliedCents: "0" } } } };
+  const whReq2 = mockReq({ method: "POST", headers: { "stripe-signature": "sig" } });
+  whReq2[Symbol.asyncIterator] = async function* () { yield Buffer.from(JSON.stringify(whEvent2)); };
+  res = mockRes();
+  await webhook(whReq2, res);
+  check("webhook after GET -> 200", res.statusCode, 200);
+  check("webhook replay adds nothing", (await bookingsLib.getBooking(payWalkIn.id)).amountPaidCents, 9500);
+  // Wrong session type -> 400, unknown link -> 404.
+  retrieveOverride = { id: "cs_wrong", payment_status: "paid", amount_total: 6500, payment_intent: "pi_x", metadata: { type: "booking", bookingId: "bk_x" } };
+  res = mockRes();
+  await payHandler(mockReq({ method: "GET", query: { session_id: "cs_wrong" } }), res);
+  check("non-payspot session -> 400", res.statusCode, 400);
+  retrieveOverride = { id: "cs_ghost", payment_status: "paid", amount_total: 6500, payment_intent: "pi_x", metadata: { type: "payspot", paylinkId: "pl_nope" } };
+  res = mockRes();
+  await payHandler(mockReq({ method: "GET", query: { session_id: "cs_ghost" } }), res);
+  check("unknown paylink -> 404", res.statusCode, 404);
+  retrieveOverride = null;
 
   console.log(`admin tests: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

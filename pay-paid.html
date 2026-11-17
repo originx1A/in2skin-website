@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en-CA">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <title>Payment received — In2Skin, Bolton</title>
+    <meta name="description" content="Your In2Skin payment confirmation." />
+    <link rel="stylesheet" href="/assets/site.css" />
+  </head>
+  <body>
+    <header class="site">
+      <div class="wrap header-in">
+        <a class="brand" href="/" aria-label="In2Skin — home"><span class="brand-text"><span class="wordmark">In2Skin</span><span class="tagline">Aesthetics · Bolton</span></span></a>
+      </div>
+    </header>
+    <main class="wrap" style="max-width:640px; padding:48px 20px 80px;">
+      <div class="book-step on" style="text-align:center;">
+        <div id="paidIcon" style="font-size:2.4rem;">✓</div>
+        <h1 id="paidTitle" style="font-family:'Cormorant Garamond',serif; font-size:2rem; margin-bottom:8px;">Confirming your payment…</h1>
+        <p id="paidMsg" style="color:var(--ink-soft);">Checking with Stripe — one moment.</p>
+        <div id="paidDetail" style="text-align:left; max-width:480px; margin:20px auto 0;"></div>
+        <p style="margin-top:28px;"><a class="btn btn-book" href="/">Back to In2Skin</a></p>
+      </div>
+    </main>
+    <script>
+      (function(){
+        var params = new URLSearchParams(location.search);
+        var sid = params.get("session_id");
+        var id = params.get("id");
+        var title = document.getElementById("paidTitle");
+        var msg = document.getElementById("paidMsg");
+        var detail = document.getElementById("paidDetail");
+        function money(c){ return "$" + (c/100).toFixed(2).replace(/\.00$/, ""); }
+        function esc(s){ return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+        function showPaid(j){
+          // dueCents is what Stripe charged; amountCents is the full value
+          // (same number unless a gift certificate covered part of it).
+          var paidCents = (j.dueCents || j.amountCents);
+          title.textContent = "Paid — thank you" + (j.clientName ? ", " + j.clientName.split(" ")[0] : "") + ".";
+          msg.textContent = "Your receipt is on its way" + (j.serviceLabel ? " — and your visit is all settled." : ".");
+          detail.innerHTML = '<div class="summary-box"><dl>'
+            + '<dt>Paid</dt><dd>' + money(paidCents) + ' — shows as IN2SKIN on your statement</dd>'
+            + (j.serviceLabel ? '<dt>For</dt><dd>' + esc(j.serviceLabel) + '</dd>' : '')
+            + '<dt>Where</dt><dd>In2Skin · Bolton, Ontario</dd>'
+            + '</dl></div>';
+        }
+        function notPaid(){
+          title.textContent = "Payment not confirmed yet";
+          msg.textContent = "Your payment has not come through yet. If you just paid, give it a moment and refresh this page. If you cancelled, nothing was charged — please ask the studio to send you a fresh payment link.";
+        }
+        if (!sid && !id){
+          title.textContent = "No payment found";
+          msg.textContent = "This page needs a payment reference. If you just paid, your receipt email is on its way.";
+          return;
+        }
+        var url = sid
+          ? "/api/pay?session_id=" + encodeURIComponent(sid)
+          : "/api/pay?id=" + encodeURIComponent(id);
+        fetch(url)
+          .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+          .then(function(res){
+            if (!res.ok || !res.j.paid){ notPaid(); return; }
+            showPaid(res.j);
+          })
+          .catch(function(){
+            title.textContent = "Could not confirm yet";
+            msg.textContent = "We could not reach the payment service. If you just paid, your receipt email will arrive when the payment clears — and the studio can see it on their dashboard.";
+          });
+      })();
+    </script>
+  </body>
+</html>

@@ -5,13 +5,10 @@
 //   pay-spot link    -> mark the pay link paid, record the payment.
 // Raw body is required for signature verification.
 const { getStripe } = require("../lib/stripe");
-const { kvGet, kvSet } = require("../lib/kv");
-const { sendEmail } = require("../lib/email");
-const { money } = require("../lib/schedule");
+const { kvSet } = require("../lib/kv");
 const {
-  SITE_URL, getBooking, finalizePaidBooking,
+  getBooking, finalizePaidBooking, markPaylinkPaid,
   ensureGiftCode, sendGiftCertificate, sendGiftReceipt, sendVoucherCertificate,
-  recordPayment, newId, getGift, logGiftUse,
 } = require("../lib/bookings");
 
 module.exports = async (req, res) => {
@@ -50,64 +47,10 @@ module.exports = async (req, res) => {
         else await sendGiftCertificate(gift);
         await sendGiftReceipt(gift);
       } else if (meta.type === "payspot" && meta.paylinkId) {
-        const rec = await kvGet(`paylink:${meta.paylinkId}`);
-        if (rec) {
-          if (meta.giftCode && meta.giftAppliedCents && !rec.giftDeducted) {
-            const gift = await getGift(meta.giftCode);
-            if (gift) {
-              gift.balanceCents = Math.max(0, gift.balanceCents - Number(meta.giftAppliedCents));
-              logGiftUse(gift, {
-                bookingId: rec.id, amountCents: Number(meta.giftAppliedCents),
-                date: new Date().toISOString(), usedBy: rec.clientName || "",
-                note: "pay on the spot",
-              });
-              await kvSet(`gift:${gift.code}`, gift);
-            }
-            rec.giftDeducted = true;
-          }
-          rec.paid = true;
-          rec.paidAt = new Date().toISOString();
-          await kvSet(`paylink:${rec.id}`, rec);
-          await recordPayment({
-            id: newId("pay"),
-            kind: "pay-spot",
-            amountCents: session.amount_total || rec.dueCents,
-            clientName: rec.clientName,
-            serviceLabel: rec.serviceLabel,
-            method: "card",
-            paylinkId: rec.id,
-            bookingId: rec.bookingId || null,
-            checkoutSessionId: session.id,
-            createdAt: new Date().toISOString(),
-          });
-          // A pay link sent for a booking balance: the money lands on the
-          // booking, and a booking that was waiting on payment becomes paid
-          // (gift + referral settle once, via finalizePaidBooking). A booking
-          // already marked paid can still owe a balance — a move to Private
-          // Hours raises the total by $15 — so the amount is added for any
-          // booking that is not closed, and only unpaid/pending flip to paid.
-          if (rec.bookingId) {
-            const booking = await getBooking(rec.bookingId);
-            if (booking && !["completed", "cancelled", "no-show"].includes(booking.status)) {
-              booking.amountPaidCents = (booking.amountPaidCents || 0) + (session.amount_total || rec.dueCents);
-              booking.paymentMethod = "card";
-              if (booking.amountPaidCents >= (booking.amountCents || 0) && (booking.status === "unpaid" || booking.status === "pending")) {
-                booking.status = "paid";
-                await kvSet(`booking:${booking.id}`, booking);
-                await finalizePaidBooking(booking);
-              } else {
-                await kvSet(`booking:${booking.id}`, booking);
-              }
-            }
-          }
-          if (rec.contact && rec.contact.includes("@")) {
-            await sendEmail({
-              to: rec.contact,
-              subject: `Your In2Skin receipt — ${money(session.amount_total || rec.dueCents)} paid`,
-              html: `<h2 style="font-family:Georgia,serif;color:#2F4A2C;">Paid — thank you</h2><p>Hi ${String(rec.clientName || "").split(" ")[0] || "there"},</p><p>Your payment of <strong>${money(session.amount_total || rec.dueCents)}</strong> for <strong>${rec.serviceLabel}</strong> at In2Skin is confirmed. The charge shows as <strong>IN2SKIN</strong> on your card statement.</p><p>— In2Skin, Bolton</p>`,
-            });
-          }
-        }
+        // Shared with the GET fallback in /api/pay — see markPaylinkPaid
+        // in lib/bookings.js. The fallback replays the same step when the
+        // webhook never fires; either order is safe (idempotent per session).
+        await markPaylinkPaid(session);
       }
     }
     return res.status(200).json({ received: true });

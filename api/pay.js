@@ -1,5 +1,11 @@
 // /api/pay — pay on the spot, one function for both sides:
 //   GET ?id=... → what /pay.html fetches (was /api/pay-link)
+//   GET ?session_id=... → what /pay-paid.html fetches after Stripe checkout:
+//     retrieves the session from Stripe, verifies it is a paid payspot
+//     session, and settles it through markPaylinkPaid — the same step the
+//     webhook runs. The webhook never fired for the Nov 17 test payment
+//     (zero invocations in the Vercel logs), so the redirect page is the
+//     fallback that marks the link paid; either order is safe (idempotent).
 //   POST → the studio creates a Stripe payment link (was /api/pay-spot)
 // The client pays on THEIR OWN phone: by text, by email, or by scanning the
 // QR code on the studio phone. The link is emailed when the contact is an
@@ -10,11 +16,34 @@
 // "send a pay link" action for a booking balance shares the same path.
 // Merged because Vercel Hobby allows 12 serverless functions per deployment.
 const { kvGet } = require("../lib/kv");
-const { createPayLink } = require("../lib/bookings");
+const { getStripe } = require("../lib/stripe");
+const { createPayLink, markPaylinkPaid } = require("../lib/bookings");
 
 module.exports = async (req, res) => {
   try {
     if (req.method === "GET") {
+      if (req.query.session_id) {
+        const stripe = getStripe();
+        const session = await stripe.checkout.sessions.retrieve(req.query.session_id);
+        if (session.payment_status !== "paid") {
+          return res.status(200).json({ paid: false });
+        }
+        const meta = session.metadata || {};
+        if (meta.type !== "payspot" || !meta.paylinkId) {
+          return res.status(400).json({ error: "That payment is not a pay-on-the-spot payment." });
+        }
+        const rec = await markPaylinkPaid(session);
+        if (!rec) return res.status(404).json({ error: "Payment link not found." });
+        return res.status(200).json({
+          paid: true,
+          id: rec.id,
+          amountCents: session.amount_total || rec.dueCents,
+          dueCents: rec.dueCents,
+          serviceLabel: rec.serviceLabel,
+          clientName: rec.clientName,
+          paidAt: rec.paidAt || null,
+        });
+      }
       const rec = await kvGet(`paylink:${req.query.id}`);
       if (!rec) return res.status(404).json({ error: "Payment link not found." });
       return res.status(200).json({
