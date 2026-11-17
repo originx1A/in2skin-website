@@ -66,9 +66,10 @@ plain words. Prices, hours, and booking rules come from there.
 - **Booking:** online at boltonfacials.com (live availability, email
   confirmation) or by phone. Bookings open from tomorrow, up to 60 days
   ahead. Advance booking recommended. Reschedule free with 24 hours' notice.
-- **30 minutes between appointments** — the room is cleaned and prepped,
-  so back-to-back times are never offered. The agent never offers a time
-  the calendar says is taken.
+- **Gap between appointments** — the room is cleaned and prepped between
+  appointments (Sarah sets the gap in the admin panel; 30 minutes by
+  default), so back-to-back times are never offered. The agent never offers
+  a time the calendar says is taken.
 - **Gift certificates:** any amount; the balance carries over and never expires.
 - **Treatment vouchers:** pay ahead for a named facial plus add-ons and get
   a code to give as a gift. Any leftover value stays with the person who
@@ -97,6 +98,14 @@ plain words. Prices, hours, and booking rules come from there.
   GET https://boltonfacials.com/api/transfer-status — transfer only if it
   says transferAllowed: true. (Until that check is wired, use studio open
   hours: regular 9:00am–5:30pm + Private Hours 7–9am, after 7pm, Sundays.)
+- **Agent bypass (Sarah's switch, "Who answers the phone?" on the admin
+  panel):** the same transfer-status check returns `agentMode`. When it is
+  `"direct"`, transfer EVERY caller to Sarah immediately — do not ask what
+  they need, do not answer questions first — but only while
+  transferAllowed is true. When it is false (outside her hours or paused),
+  take a message exactly as today. When agentMode is `"agent"` (the
+  default), work as now: answer, help, and transfer only when the caller
+  asks for a person or the agent cannot answer.
   Sarah sets her own hours on the admin panel and can pause transfers any
   time — the check reads her live setting.
 - Outside those times: take a message (name, number, reason), promise a
@@ -106,9 +115,23 @@ plain words. Prices, hours, and booking rules come from there.
 
 ## Agent function — check_transfer_status (wire after the site deploy)
 - GET https://boltonfacials.com/api/transfer-status
-- Returns `{ transferAllowed: true/false, reason: "on" | "paused" | "outside_hours", ... }`
+- Returns `{ transferAllowed: true/false, reason: "on" | "paused" | "outside_hours", agentMode: "agent" | "direct", ... }`
 - Call it before every transfer. If transferAllowed is false, take a message.
 - If the call fails, take a message — never transfer on an error.
+- If agentMode is `"direct"`, transfer EVERY caller immediately while
+  transferAllowed is true — do not ask what they need first. Outside her
+  hours, take a message exactly as today.
+
+## Agent function — take_message (wire in the Retell dashboard)
+- POST https://boltonfacials.com/api/transfer-status with header
+  `x-agent-key: <AGENT_API_KEY>` and body
+  `{ name, phone, reason, callId }` — the caller's name, number, and why
+  they called. The studio gets the message on the admin dashboard
+  (Messages section) and by email to Sarah + Tony.
+- Call it whenever the agent takes a message: outside Sarah's hours, while
+  transfers are paused, when a transfer fails or no one answers, or when
+  the agent cannot answer. Confirm to the caller that the message was taken
+  and Sarah will call back.
 
 ## Booking by phone (live calendar — hold + pay link)
 - The agent CAN see the live calendar. Before offering any time it calls

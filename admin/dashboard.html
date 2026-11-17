@@ -7,6 +7,18 @@
     <title>Studio dashboard — In2Skin</title>
     <link rel="stylesheet" href="/assets/site.css" />
     <script src="/assets/qrcode.min.js"></script>
+    <style>
+      /* Inline action panels under a booking + print-friendly reports. */
+      .act-panel { background: var(--cream); border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-top: 10px; }
+      .act-panel label { display: block; font-size: .9rem; margin: 8px 0 4px; }
+      .act-panel input, .act-panel select, .act-panel textarea { font-family: inherit; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); width: 100%; box-sizing: border-box; }
+      .gap-btn[aria-pressed="true"] { background: var(--sage-deep); color: #fff; }
+      @media print {
+        body * { visibility: hidden; }
+        #reportPrint, #reportPrint * { visibility: visible; }
+        #reportPrint { position: absolute; left: 0; top: 0; width: 100%; }
+      }
+    </style>
   </head>
   <body>
     <header class="site">
@@ -28,11 +40,81 @@
       </section>
 
       <section style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;">Studio settings — gap between appointments &amp; blocked-off time</h2>
+        <p class="sub">The gap is the room reset time between appointments. Blocked-off time stops new bookings — bookings already in that window stay.</p>
+        <h3 style="font-size:1.1rem; margin:18px 0 8px;">Gap between appointments</h3>
+        <p><span id="gapBtns">
+          <button class="btn btn-ghost gap-btn" type="button" data-gap="15">15 min</button>
+          <button class="btn btn-ghost gap-btn" type="button" data-gap="30">30 min</button>
+          <button class="btn btn-ghost gap-btn" type="button" data-gap="45">45 min</button>
+          <button class="btn btn-ghost gap-btn" type="button" data-gap="60">60 min</button>
+        </span> <span id="gapMsg" style="color:#7A3B2E; margin-left:8px;"></span></p>
+        <h3 style="font-size:1.1rem; margin:22px 0 8px;">Block off time</h3>
+        <div class="form-2col">
+          <div class="field"><label for="blkDate">Day</label><input id="blkDate" type="date" /></div>
+          <div class="field"><label for="blkReason">Reason (optional)</label><input id="blkReason" type="text" placeholder="e.g. Day off" /></div>
+        </div>
+        <div class="form-2col">
+          <div class="field"><label for="blkStart">From</label><input id="blkStart" type="time" value="09:00" /></div>
+          <div class="field"><label for="blkEnd">To</label><input id="blkEnd" type="time" value="17:30" /></div>
+        </div>
+        <p><label><input id="blkAllDay" type="checkbox" /> Whole day (7:00 AM – 9:00 PM)</label></p>
+        <p style="margin-top:12px;"><button class="btn btn-book" id="blkAdd" type="button">Block off this time</button> <span id="blkMsg" style="color:#7A3B2E; margin-left:8px;"></span></p>
+        <div id="blkList" style="margin-top:12px;">Loading blocks…</div>
+      </section>
+
+      <section style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;">Book a walk-in</h2>
+        <p class="sub">Book a client yourself — same prices, same gift / referral / first-visit rules as online booking.</p>
+        <form id="walkForm">
+          <div class="form-2col">
+            <div class="field"><label for="wkName">Client's name</label><input id="wkName" type="text" placeholder="e.g. Alex Taylor" /></div>
+            <div class="field"><label for="wkPhone">Client's phone</label><input id="wkPhone" type="tel" placeholder="e.g. (905) 555-0100" /></div>
+          </div>
+          <div class="field"><label for="wkEmail">Client's email</label><input id="wkEmail" type="email" placeholder="e.g. alex@example.com" /></div>
+          <div class="form-2col">
+            <div class="field"><label for="wkService">Treatment</label><select id="wkService"></select></div>
+            <div class="field"><label for="wkType">Hours</label><select id="wkType"><option value="regular">Regular hours</option><option value="after">Private Hours (+$15)</option></select></div>
+          </div>
+          <div class="form-2col">
+            <div class="field"><label for="wkDate">Day</label><input id="wkDate" type="date" /></div>
+            <div class="field"><label for="wkTime">Time</label><select id="wkTime"><option value="">Pick a day first</option></select></div>
+          </div>
+          <div class="form-2col">
+            <div class="field"><label for="wkGift">Gift / referral code (optional)</label><input id="wkGift" type="text" placeholder="e.g. IN2SKIN-ABC123" /></div>
+            <div class="field"><label for="wkRef">Referred by (optional)</label><input id="wkRef" type="text" placeholder="e.g. ALEX-4821" /></div>
+          </div>
+          <div class="field"><label><input id="wkFirst" type="checkbox" checked /> First visit — $10 off applies</label></div>
+          <div class="field"><label for="wkPay">Payment</label>
+            <select id="wkPay">
+              <option value="cash">Paid now — cash</option>
+              <option value="e-transfer">Paid now — e-transfer</option>
+              <option value="pay-link">Send a card pay link</option>
+              <option value="later">Pay at the visit</option>
+            </select></div>
+          <div class="err" id="wkErr"></div>
+          <p style="margin-top:12px;"><button type="submit" class="btn btn-book btn-big">Book this appointment</button></p>
+        </form>
+        <div id="walkResult" style="margin-top:16px;"></div>
+      </section>
+
+      <section style="margin-top:36px;">
         <h2 style="font-size:1.4rem;">Calendar — all bookings</h2>
         <p><label for="calFrom">From</label> <input id="calFrom" type="date" style="font-family:inherit; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink);" />
         <label for="calTo">to</label> <input id="calTo" type="date" style="font-family:inherit; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink);" />
         <button class="btn btn-book" id="calLoad" type="button">Show</button></p>
         <div id="calList" style="margin-top:12px;"></div>
+      </section>
+
+      <section style="margin-top:36px;" id="reportSection">
+        <h2 style="font-size:1.4rem;">Reports — clients, treatments &amp; payments</h2>
+        <p class="sub">Client history for your records. Download it as a spreadsheet file, or print it.</p>
+        <p><label for="repFrom">From</label> <input id="repFrom" type="date" style="font-family:inherit; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink);" />
+        <label for="repTo">to</label> <input id="repTo" type="date" style="font-family:inherit; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink);" />
+        <button class="btn btn-book" id="repLoad" type="button">Load report</button>
+        <button class="btn btn-ghost" id="repCsv" type="button" disabled>Download CSV</button>
+        <button class="btn btn-ghost" id="repPrint" type="button" disabled>Print</button></p>
+        <div id="reportPrint" style="margin-top:12px;"><p style="color:var(--ink-soft);">Pick a date range and load the report.</p></div>
       </section>
 
       <section style="margin-top:36px;">
@@ -58,6 +140,12 @@
         <h2 style="font-size:1.4rem;">Call answering — when the phone agent may put calls through to you</h2>
         <p class="sub">The voice agent on (289) 212-4124 checks this before every transfer. Outside these hours — or while paused — it takes a message and offers online booking instead.</p>
         <div id="callStatus" class="summary-box" style="margin-top:12px;">Loading call hours…</div>
+        <h3 style="font-size:1.1rem; margin:22px 0 8px;">Who answers the phone?</h3>
+        <p><span id="agentModeBtns">
+          <button class="btn btn-ghost gap-btn" type="button" data-mode="agent">AI assistant answers</button>
+          <button class="btn btn-ghost gap-btn" type="button" data-mode="direct">Calls go straight to me</button>
+        </span> <span id="modeMsg" style="color:#7A3B2E; margin-left:8px;"></span></p>
+        <p class="sub">Straight to me means the assistant puts every caller straight through to you — only while your call hours below say you're answering. Outside those hours it still takes a message.</p>
         <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
           <label for="pauseUntil">Pause transfers until</label>
           <input id="pauseUntil" type="time" style="font-family:inherit; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink);" />
@@ -67,6 +155,12 @@
         <p class="sub" style="margin-top:6px;">A couple of hours off, or sleeping — pause and the agent takes messages until the time you picked.</p>
         <div id="callWeek" style="margin-top:16px;"></div>
         <p style="margin-top:12px;"><button class="btn btn-book" id="callSave" type="button">Save call hours</button> <span id="callMsg" style="color:#7A3B2E; margin-left:8px;"></span></p>
+      </section>
+
+      <section style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;">Messages — from callers</h2>
+        <p class="sub">Messages the phone assistant took when it couldn't put a caller through. Newest first — tap the number to call back.</p>
+        <div id="msgList" style="margin-top:12px;">Loading messages…</div>
       </section>
 
       <section style="margin-top:36px;">
@@ -116,7 +210,7 @@
               document.getElementById("paySummary").innerHTML = '<dl><dt>' + fmtDate(j.date) + '</dt><dd>Total paid: <strong>' + j.total + '</strong> (' + (j.paySpot.length + j.bookings.length) + ' payments)</dd></dl>';
               var rows = [];
               j.paySpot.forEach(function(p){ rows.push('<div class="after-item"><div><strong>' + money(p.amountCents) + '</strong> — ' + (p.serviceLabel || "In2Skin visit") + ' · ' + (p.clientName || "Client") + ' · pay on the spot</div></div>'); });
-              j.bookings.forEach(function(b){ rows.push('<div class="after-item"><div><strong>' + money(b.amountPaidCents || 0) + '</strong> — ' + b.serviceName + ' · ' + (b.guestName || b.name || "Client") + ' · ' + b.time + ' · online booking' + (b.giftAppliedCents ? ' · ' + money(b.giftAppliedCents) + ' from gift code' : '') + '</div></div>'); });
+              j.bookings.forEach(function(b){ rows.push('<div class="after-item"><div><strong>' + money(b.amountPaidCents || 0) + '</strong> — ' + b.serviceName + ' · ' + (b.guestName || b.name || "Client") + ' · ' + b.time + ' · ' + (b.via === "admin" ? "walk-in" : "online booking") + (b.giftAppliedCents ? ' · ' + money(b.giftAppliedCents) + ' from gift code' : '') + ((b.balanceDueCents || 0) > 0 ? ' · <strong style="color:#7A3B2E;">owes ' + money(b.balanceDueCents) + '</strong>' : '') + '</div></div>'); });
               document.getElementById("payList").innerHTML = rows.length ? rows.join("") : "<p style='color:var(--ink-soft);'>No payments recorded for this day yet.</p>";
             })
             .catch(function(){ msg.textContent = "Could not load payments — check your connection."; });
@@ -137,46 +231,231 @@
           var when = new Date(+p[0], +p[1]-1, +p[2], h, +m[2]);
           return when.getTime() < Date.now();
         }
+        var calBookings = {};
+        function loadTimesInto(sel, dateStr, serviceId, type){
+          sel.innerHTML = '<option value="">Loading…</option>';
+          fetch("/api/availability?date=" + dateStr + "&service=" + encodeURIComponent(serviceId) + "&type=" + type)
+            .then(function(r){ return r.json(); })
+            .then(function(j){
+              if (!j.times || !j.times.length){ sel.innerHTML = '<option value="">No free times that day</option>'; return; }
+              sel.innerHTML = j.times.map(function(t){ return '<option value="' + t + '">' + t + '</option>'; }).join("");
+            })
+            .catch(function(){ sel.innerHTML = '<option value="">Could not load times</option>'; });
+        }
         function loadCal(){
           fetch("/api/admin/bookings?from=" + calFrom.value + "&to=" + calTo.value)
             .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
             .then(function(res){
               if (!res.ok){ msg.textContent = res.j.error || "Could not load bookings."; return; }
+              calBookings = {};
               var rows = res.j.bookings.map(function(b){
-                var needsOutcome = (b.status === "paid" || b.status === "consultation") && isPastBooking(b);
+                calBookings[b.id] = b;
+                var needsOutcome = (b.status === "paid" || b.status === "consultation" || b.status === "unpaid") && isPastBooking(b);
                 var outcome = "";
-                if (b.status === "paid" || b.status === "consultation"){
+                if (b.status === "paid" || b.status === "consultation" || b.status === "unpaid"){
                   outcome = ' <button class="btn btn-book btn-book-sm" type="button" data-outcome="complete" data-id="' + b.id + '">Completed</button>'
                     + ' <button class="btn btn-ghost btn-book-sm" type="button" data-outcome="no-show" data-id="' + b.id + '">No-show</button>';
+                }
+                var upcoming = ["pending", "unpaid", "paid", "consultation"].indexOf(b.status) >= 0;
+                var acts = "";
+                if (upcoming){
+                  acts = ' <button class="btn btn-ghost btn-book-sm" type="button" data-act="move" data-id="' + b.id + '">Move</button>'
+                    + ' <button class="btn btn-ghost btn-book-sm" type="button" data-act="cancel" data-id="' + b.id + '">Cancel</button>'
+                    + ' <button class="btn btn-ghost btn-book-sm" type="button" data-act="pay" data-id="' + b.id + '">Payment</button>';
+                }
+                if (b.status !== "cancelled"){
+                  acts += ' <button class="btn btn-ghost btn-book-sm" type="button" data-act="email" data-id="' + b.id + '">Email</button>';
                 }
                 return '<div class="after-item"><div><strong>' + fmtDate(b.date) + ' · ' + b.time + '</strong> — ' + b.serviceName
                   + ' · ' + (b.guestName || b.name) + ' · ' + b.phone + ' · ' + b.email
                   + ' · <em>' + b.status + '</em>' + (b.type === "after" ? ' · Private Hours' : '')
                   + (b.giftCode ? ' · gift ' + b.giftCode : '')
                   + (b.referredBy ? ' · referred by ' + b.referredBy : '')
+                  + ((b.balanceDueCents || 0) > 0 ? ' · <strong style="color:#7A3B2E;">owes ' + money(b.balanceDueCents) + '</strong>' : '')
+                  + (b.paymentMethod ? ' · paid by ' + b.paymentMethod : '')
+                  + (b.status === "pending" && b.checkoutUrl ? ' · <a href="' + b.checkoutUrl + '" target="_blank" rel="noopener">card link sent</a>' : '')
                   + (needsOutcome ? ' · <strong style="color:#7A3B2E;">Needs outcome — did they show up?</strong>' : '')
-                  + '</div><div style="margin-top:8px;">' + outcome + '</div></div>';
+                  + '</div><div style="margin-top:8px;">' + outcome + acts + '</div><div class="act-slot" data-slot="' + b.id + '"></div></div>';
               });
               document.getElementById("calList").innerHTML = rows.length ? rows.join("") : "<p style='color:var(--ink-soft);'>No bookings in this range.</p>";
             })
             .catch(function(){ msg.textContent = "Could not load bookings — check your connection."; });
         }
+        function closePanels(){ document.querySelectorAll(".act-slot").forEach(function(s){ s.innerHTML = ""; }); }
+        function openPanel(id, html){
+          closePanels();
+          var slot = document.querySelector('[data-slot="' + id + '"]');
+          if (slot) slot.innerHTML = html;
+        }
+        function movePanel(b){
+          return '<div class="act-panel"><h3 style="margin:0 0 6px;">Move — ' + b.serviceName + '</h3>'
+            + '<label>New day</label><input type="date" id="mvDate" value="' + b.date + '">'
+            + '<label>Hours</label><select id="mvType"><option value="regular"' + (b.type !== "after" ? " selected" : "") + '>Regular hours</option><option value="after"' + (b.type === "after" ? " selected" : "") + '>Private Hours (+$15)</option></select>'
+            + '<label>New time</label><select id="mvTime"><option value="">Pick a day first</option></select>'
+            + '<p class="sub">Only free times are shown. Moving between Regular and Private Hours changes the total by $15.</p>'
+            + '<p><button class="btn btn-book" type="button" data-mv-save="' + b.id + '">Save new time</button> <span id="mvMsg" style="color:#7A3B2E;"></span></p></div>';
+        }
+        function cancelPanel(b){
+          return '<div class="act-panel"><h3 style="margin:0 0 6px;">Cancel — ' + b.serviceName + ' · ' + fmtDate(b.date) + ' ' + b.time + '</h3>'
+            + '<p class="sub">The slot opens back up, any gift / voucher value used goes back on the code, and the client gets a polite email.</p>'
+            + '<label>Reason (optional, shown to the client)</label><input type="text" id="cxReason" placeholder="e.g. Studio closed that day">'
+            + '<p><button class="btn btn-book" type="button" data-cx-save="' + b.id + '">Yes, cancel this booking</button> <span id="cxMsg" style="color:#7A3B2E;"></span></p></div>';
+        }
+        function emailPanel(b){
+          return '<div class="act-panel"><h3 style="margin:0 0 6px;">Email — ' + (b.guestName || b.name) + '</h3>'
+            + '<p><button class="btn btn-ghost" type="button" data-em-resend="' + b.id + '">Resend confirmation email</button> <span id="emMsg" style="color:#7A3B2E;"></span></p>'
+            + '<label>Subject</label><input type="text" id="emSubject" value="Your In2Skin appointment">'
+            + '<label>Message</label><textarea id="emMessage" rows="4" placeholder="Write a short note…"></textarea>'
+            + '<p><button class="btn btn-book" type="button" data-em-send="' + b.id + '">Send note</button></p></div>';
+        }
+        function payPanel(b){
+          return '<div class="act-panel"><h3 style="margin:0 0 6px;">Payment — ' + b.serviceName + '</h3>'
+            + '<p>Total <strong>' + money(b.amountCents) + '</strong> · Paid <strong>' + money(b.amountPaidCents || 0) + '</strong> · Balance due <strong>' + money(b.balanceDueCents || 0) + '</strong>' + (b.amountNote ? ' · ' + b.amountNote : '') + '</p>'
+            + '<label>Record a payment received ($)</label><input type="number" id="pyAmount" min="1" step="0.01" placeholder="e.g. 65">'
+            + '<label>How was it paid?</label><select id="pyMethod"><option value="cash">Cash</option><option value="e-transfer">E-transfer</option><option value="card">Card (at the visit)</option></select>'
+            + '<label>Note (optional)</label><input type="text" id="pyNote" placeholder="e.g. Paid at the visit">'
+            + '<p><button class="btn btn-book" type="button" data-py-save="' + b.id + '">Record payment</button> <span id="pyMsg" style="color:#7A3B2E;"></span></p>'
+            + '<label>Change the amount owed ($)</label><input type="number" id="pyNewAmount" min="0" step="0.01" value="' + ((b.amountCents || 0) / 100) + '">'
+            + '<label>Why the change (optional)</label><input type="text" id="pyAmountNote" placeholder="e.g. Exact peel price at consultation">'
+            + '<p><button class="btn btn-ghost" type="button" data-py-amount="' + b.id + '">Save new amount</button></p>'
+            + ((b.balanceDueCents || 0) > 0 ? '<p><button class="btn btn-ghost" type="button" data-py-link="' + b.id + '">Send a card pay link for the balance</button> <span id="pyLinkMsg"></span></p>' : '')
+            + '</div>';
+        }
+        function postAdmin(body){
+          return fetch("/api/admin/data", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) })
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); });
+        }
         document.getElementById("calLoad").addEventListener("click", loadCal);
         document.getElementById("calList").addEventListener("click", function(ev){
-          var btn = ev.target.closest("[data-outcome]");
-          if (!btn) return;
-          var action = btn.getAttribute("data-outcome");
-          var id = btn.getAttribute("data-id");
-          btn.disabled = true;
-          fetch("/api/admin/data", { method:"POST", headers:{ "Content-Type":"application/json" },
-            body: JSON.stringify({ view:"bookings", action: action, bookingId: id }) })
-            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
-            .then(function(res){
-              if (!res.ok){ msg.textContent = res.j.error || "Could not save the outcome."; return; }
-              msg.textContent = action === "complete" ? "Marked complete." : "Marked no-show — the voucher value was put back on the code.";
-              loadCal(); loadCodes();
-            })
-            .catch(function(){ msg.textContent = "Could not save the outcome — check your connection."; });
+          var outBtn = ev.target.closest("[data-outcome]");
+          if (outBtn){
+            var action = outBtn.getAttribute("data-outcome");
+            var id = outBtn.getAttribute("data-id");
+            outBtn.disabled = true;
+            postAdmin({ view:"bookings", action: action, bookingId: id })
+              .then(function(res){
+                if (!res.ok){ msg.textContent = res.j.error || "Could not save the outcome."; return; }
+                msg.textContent = action === "complete" ? "Marked complete." : "Marked no-show — the voucher value was put back on the code.";
+                loadCal(); loadCodes(); loadPayments();
+              })
+              .catch(function(){ msg.textContent = "Could not save the outcome — check your connection."; });
+            return;
+          }
+          var actBtn = ev.target.closest("[data-act]");
+          if (actBtn){
+            var b = calBookings[actBtn.getAttribute("data-id")];
+            if (!b) return;
+            var kind = actBtn.getAttribute("data-act");
+            if (kind === "move"){
+              openPanel(b.id, movePanel(b));
+              var refresh = function(){
+                loadTimesInto(document.getElementById("mvTime"), document.getElementById("mvDate").value, b.service, document.getElementById("mvType").value);
+              };
+              document.getElementById("mvDate").addEventListener("change", refresh);
+              document.getElementById("mvType").addEventListener("change", refresh);
+              refresh();
+            } else if (kind === "cancel"){ openPanel(b.id, cancelPanel(b)); }
+            else if (kind === "email"){ openPanel(b.id, emailPanel(b)); }
+            else if (kind === "pay"){ openPanel(b.id, payPanel(b)); }
+            return;
+          }
+          var mvBtn = ev.target.closest("[data-mv-save]");
+          if (mvBtn){
+            var mid = mvBtn.getAttribute("data-mv-save");
+            var m = document.getElementById("mvMsg");
+            var nt = document.getElementById("mvTime").value;
+            if (!nt){ m.textContent = "Pick a free time first."; return; }
+            mvBtn.disabled = true;
+            postAdmin({ view:"bookings", action:"move", bookingId: mid, date: document.getElementById("mvDate").value, time: nt, type: document.getElementById("mvType").value })
+              .then(function(res){
+                if (!res.ok){ m.textContent = res.j.error || "Could not move the booking."; mvBtn.disabled = false; return; }
+                msg.textContent = "Moved — the client was emailed the new time" + (res.j.emailed ? "." : " (the email could not be sent).");
+                loadCal(); loadPayments();
+              })
+              .catch(function(){ m.textContent = "Could not move — check your connection."; mvBtn.disabled = false; });
+            return;
+          }
+          var cxBtn = ev.target.closest("[data-cx-save]");
+          if (cxBtn){
+            var cid = cxBtn.getAttribute("data-cx-save");
+            cxBtn.disabled = true;
+            postAdmin({ view:"bookings", action:"cancel", bookingId: cid, reason: document.getElementById("cxReason").value.trim() })
+              .then(function(res){
+                if (!res.ok){ document.getElementById("cxMsg").textContent = res.j.error || "Could not cancel."; cxBtn.disabled = false; return; }
+                msg.textContent = "Cancelled — the slot is open again and the client was emailed" + (res.j.emailed ? "." : " (the email could not be sent).");
+                loadCal(); loadPayments(); loadCodes();
+              })
+              .catch(function(){ document.getElementById("cxMsg").textContent = "Could not cancel — check your connection."; cxBtn.disabled = false; });
+            return;
+          }
+          var emResend = ev.target.closest("[data-em-resend]");
+          if (emResend){
+            var eid = emResend.getAttribute("data-em-resend");
+            postAdmin({ view:"bookings", action:"resend-confirmation", bookingId: eid })
+              .then(function(res){
+                document.getElementById("emMsg").textContent = res.ok && res.j.emailed ? "Confirmation sent." : "The email could not be sent — check that email is set up, then try again.";
+              });
+            return;
+          }
+          var emSend = ev.target.closest("[data-em-send]");
+          if (emSend){
+            var sid = emSend.getAttribute("data-em-send");
+            var subject = document.getElementById("emSubject").value.trim();
+            var message = document.getElementById("emMessage").value.trim();
+            if (!subject || !message){ document.getElementById("emMsg").textContent = "Add a subject and a message."; return; }
+            emSend.disabled = true;
+            postAdmin({ view:"bookings", action:"email-client", bookingId: sid, subject: subject, message: message })
+              .then(function(res){
+                document.getElementById("emMsg").textContent = res.ok && res.j.emailed ? "Note sent." : (res.j.error || "The email could not be sent — check that email is set up, then try again.");
+                if (res.ok) emSend.disabled = false;
+              })
+              .catch(function(){ document.getElementById("emMsg").textContent = "Could not send — check your connection."; emSend.disabled = false; });
+            return;
+          }
+          var pySave = ev.target.closest("[data-py-save]");
+          if (pySave){
+            var pid = pySave.getAttribute("data-py-save");
+            var amt = parseFloat(document.getElementById("pyAmount").value);
+            if (!amt || amt < 1){ document.getElementById("pyMsg").textContent = "Enter the amount received — $1 or more."; return; }
+            pySave.disabled = true;
+            postAdmin({ view:"bookings", action:"record-payment", bookingId: pid, amountCents: Math.round(amt * 100), method: document.getElementById("pyMethod").value, note: document.getElementById("pyNote").value.trim() })
+              .then(function(res){
+                if (!res.ok){ document.getElementById("pyMsg").textContent = res.j.error || "Could not record the payment."; pySave.disabled = false; return; }
+                msg.textContent = res.j.paid ? "Payment recorded — the booking is now paid in full." : "Payment recorded.";
+                loadCal(); loadPayments();
+              })
+              .catch(function(){ document.getElementById("pyMsg").textContent = "Could not record — check your connection."; pySave.disabled = false; });
+            return;
+          }
+          var pyAmt = ev.target.closest("[data-py-amount]");
+          if (pyAmt){
+            var aid = pyAmt.getAttribute("data-py-amount");
+            var namt = parseFloat(document.getElementById("pyNewAmount").value);
+            if (namt == null || isNaN(namt) || namt < 0){ document.getElementById("pyMsg").textContent = "Enter the new amount owed — $0 or more."; return; }
+            pyAmt.disabled = true;
+            postAdmin({ view:"bookings", action:"set-amount", bookingId: aid, amountCents: Math.round(namt * 100), note: document.getElementById("pyAmountNote").value.trim() })
+              .then(function(res){
+                if (!res.ok){ document.getElementById("pyMsg").textContent = res.j.error || "Could not save the amount."; pyAmt.disabled = false; return; }
+                msg.textContent = "Amount updated.";
+                loadCal(); loadPayments();
+              })
+              .catch(function(){ document.getElementById("pyMsg").textContent = "Could not save — check your connection."; pyAmt.disabled = false; });
+            return;
+          }
+          var pyLink = ev.target.closest("[data-py-link]");
+          if (pyLink){
+            var lid = pyLink.getAttribute("data-py-link");
+            pyLink.disabled = true;
+            postAdmin({ view:"bookings", action:"pay-link", bookingId: lid })
+              .then(function(res){
+                var lm = document.getElementById("pyLinkMsg");
+                if (!res.ok){ lm.textContent = res.j.error || "Could not create the link."; pyLink.disabled = false; return; }
+                lm.innerHTML = 'Link sent — <a href="' + res.j.url + '" target="_blank" rel="noopener">open it</a>';
+                loadCal(); loadPayments();
+              })
+              .catch(function(){ document.getElementById("pyLinkMsg").textContent = "Could not create the link — check your connection."; pyLink.disabled = false; });
+            return;
+          }
         });
         loadCal();
 
@@ -263,6 +542,10 @@
             el.innerHTML = "<dl><dt>Transfers are OFF right now</dt><dd>Outside your call hours — the agent is taking messages" + (st.nextOn ? " until <strong>" + fmtClock(st.nextOn) + "</strong>" : "") + ".</dd></dl>";
           }
           document.getElementById("resumeBtn").style.display = st.reason === "paused" ? "" : "none";
+          var mode = s.agentMode || "agent";
+          document.querySelectorAll("#agentModeBtns .gap-btn").forEach(function(btn){
+            btn.setAttribute("aria-pressed", String(btn.getAttribute("data-mode") === mode));
+          });
           var rows = DAY_ORDER.map(function(d){
             var r = s.week[d];
             return '<div style="display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--line); flex-wrap:wrap;">'
@@ -304,8 +587,23 @@
             })
             .catch(function(){ m.textContent = "Could not save — check your connection."; });
         }
+        function collectSettings(){
+          var pressed = document.querySelector('#agentModeBtns .gap-btn[aria-pressed="true"]');
+          return { week: collectWeek(), pausedUntil: callSettings.settings.pausedUntil, agentMode: pressed ? pressed.getAttribute("data-mode") : "agent" };
+        }
+        document.getElementById("agentModeBtns").addEventListener("click", function(ev){
+          var btn = ev.target.closest(".gap-btn");
+          if (!btn) return;
+          var mode = btn.getAttribute("data-mode");
+          document.querySelectorAll("#agentModeBtns .gap-btn").forEach(function(x){
+            x.setAttribute("aria-pressed", String(x === btn));
+          });
+          var s = collectSettings();
+          s.agentMode = mode;
+          saveCall(s, mode === "direct" ? "Calls will go straight to you while your call hours say you're answering." : "The AI assistant answers again.");
+        });
         document.getElementById("callSave").addEventListener("click", function(){
-          var s = { week: collectWeek(), pausedUntil: callSettings.settings.pausedUntil };
+          var s = collectSettings();
           saveCall(s, "Call hours saved.");
         });
         document.getElementById("pauseBtn").addEventListener("click", function(){
@@ -314,17 +612,57 @@
           var d = new Date(); var p = t.split(":");
           d.setHours(+p[0], +p[1], 0, 0);
           if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
-          var s = { week: collectWeek(), pausedUntil: d.toISOString() };
+          var s = collectSettings();
+          s.pausedUntil = d.toISOString();
           saveCall(s, "Transfers paused until " + fmtClock(t) + ".");
         });
         document.getElementById("resumeBtn").addEventListener("click", function(){
-          var s = { week: collectWeek(), pausedUntil: null };
+          var s = collectSettings();
+          s.pausedUntil = null;
           saveCall(s, "Transfers are back on.");
         });
         var pu = document.getElementById("pauseUntil");
         var d2 = new Date(Date.now() + 2*60*60*1000);
         pu.value = String(d2.getHours()).padStart(2,"0") + ":" + String(d2.getMinutes()).padStart(2,"0");
         loadCall();
+
+        // ---- caller messages ----
+        function esc(s){ return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+        function fmtMsgTime(iso){
+          try { return new Date(iso).toLocaleString("en-CA", { month:"short", day:"numeric", hour:"numeric", minute:"2-digit" }); } catch(e){ return iso; }
+        }
+        function loadMessages(){
+          fetch("/api/admin/data?view=messages")
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ document.getElementById("msgList").textContent = res.j.error || "Could not load messages."; return; }
+              var rows = res.j.messages.map(function(m){
+                var tel = (m.phone || "").replace(/[^0-9+]/g, "");
+                return '<div class="after-item"' + (m.read ? ' style="opacity:.65;"' : '') + '><div><strong>' + esc(m.name) + '</strong> · <a href="tel:' + tel + '">' + esc(m.phone) + '</a> · ' + fmtMsgTime(m.receivedAt)
+                  + '<br/>' + esc(m.reason || "No reason given.")
+                  + '</div><div style="margin-top:8px;"><button class="btn btn-ghost btn-book-sm" type="button" data-msg-read="' + m.id + '" data-read="' + (m.read ? "false" : "true") + '">' + (m.read ? "Mark unread" : "Mark read") + '</button>'
+                  + ' <button class="btn btn-ghost btn-book-sm" type="button" data-msg-del="' + m.id + '">Delete</button></div></div>';
+              });
+              document.getElementById("msgList").innerHTML = rows.length ? rows.join("") : "<p style='color:var(--ink-soft);'>No messages yet — when the assistant takes one, it shows up here.</p>";
+            })
+            .catch(function(){ document.getElementById("msgList").textContent = "Could not load messages — check your connection."; });
+        }
+        document.getElementById("msgList").addEventListener("click", function(ev){
+          var readBtn = ev.target.closest("[data-msg-read]");
+          if (readBtn){
+            postAdmin({ view:"messages", action:"read", id: readBtn.getAttribute("data-msg-read"), read: readBtn.getAttribute("data-read") === "true" })
+              .then(function(){ loadMessages(); });
+            return;
+          }
+          var delBtn = ev.target.closest("[data-msg-del]");
+          if (delBtn){
+            if (!confirm("Delete this message?")) return;
+            postAdmin({ view:"messages", action:"delete", id: delBtn.getAttribute("data-msg-del") })
+              .then(function(){ loadMessages(); });
+            return;
+          }
+        });
+        loadMessages();
 
         var methodSel = document.getElementById("spMethod");
         var contactWrap = document.getElementById("spContactWrap");
@@ -378,6 +716,184 @@
           })
           .catch(function(){ err.textContent = "Could not reach the payment service — check your connection and try again."; });
         });
+
+        // ---- studio settings: gap + blocked-off time ----
+        var gapCurrent = 30;
+        function loadSettings(){
+          fetch("/api/admin/data?view=settings")
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ document.getElementById("gapMsg").textContent = res.j.error || "Could not load settings."; return; }
+              gapCurrent = res.j.bufferMins;
+              document.querySelectorAll(".gap-btn").forEach(function(btn){
+                btn.setAttribute("aria-pressed", String(+btn.getAttribute("data-gap") === gapCurrent));
+              });
+              var rows = res.j.blocks.map(function(bk){
+                return '<div class="after-item"><div><strong>' + fmtDate(bk.date) + ' · ' + bk.startLabel + '–' + bk.endLabel + '</strong>' + (bk.reason ? ' — ' + bk.reason : '') + '</div><div style="margin-top:8px;"><button class="btn btn-ghost btn-book-sm" type="button" data-blk-del="' + bk.id + '">Remove block</button></div></div>';
+              });
+              document.getElementById("blkList").innerHTML = rows.length ? rows.join("") : "<p style='color:var(--ink-soft);'>No blocked-off time — the studio is open every day on the regular schedule.</p>";
+            })
+            .catch(function(){ document.getElementById("gapMsg").textContent = "Could not load settings — check your connection."; });
+        }
+        document.getElementById("gapBtns").addEventListener("click", function(ev){
+          var btn = ev.target.closest(".gap-btn");
+          if (!btn) return;
+          var n = +btn.getAttribute("data-gap");
+          fetch("/api/admin/data", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ view:"settings", action:"buffer", bufferMins: n }) })
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ document.getElementById("gapMsg").textContent = res.j.error || "Could not save."; return; }
+              gapCurrent = res.j.bufferMins;
+              document.querySelectorAll(".gap-btn").forEach(function(x){ x.setAttribute("aria-pressed", String(+x.getAttribute("data-gap") === gapCurrent)); });
+              document.getElementById("gapMsg").textContent = "Gap saved — " + gapCurrent + " minutes between appointments.";
+            })
+            .catch(function(){ document.getElementById("gapMsg").textContent = "Could not save — check your connection."; });
+        });
+        document.getElementById("blkDate").value = todayKey();
+        document.getElementById("blkAllDay").addEventListener("change", function(){
+          var allDay = this.checked;
+          document.getElementById("blkStart").value = allDay ? "07:00" : "09:00";
+          document.getElementById("blkEnd").value = allDay ? "21:00" : "17:30";
+          document.getElementById("blkStart").disabled = allDay;
+          document.getElementById("blkEnd").disabled = allDay;
+        });
+        document.getElementById("blkAdd").addEventListener("click", function(){
+          var m = document.getElementById("blkMsg");
+          var date = document.getElementById("blkDate").value;
+          var start = document.getElementById("blkStart").value;
+          var end = document.getElementById("blkEnd").value;
+          if (!date || !start || !end){ m.textContent = "Pick a day, a start time and an end time."; return; }
+          m.textContent = "";
+          fetch("/api/admin/data", { method:"POST", headers:{ "Content-Type":"application/json" },
+            body: JSON.stringify({ view:"settings", action:"block-add", date: date, start: start, end: end, reason: document.getElementById("blkReason").value.trim() }) })
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ m.textContent = res.j.error || "Could not save the block."; return; }
+              m.textContent = res.j.overlapping
+                ? "Blocked off — note: " + res.j.overlapping + " booking(s) already sit in that window; they stay, only new bookings are stopped."
+                : "Blocked off — no new bookings in that window.";
+              loadSettings();
+            })
+            .catch(function(){ m.textContent = "Could not save — check your connection."; });
+        });
+        document.getElementById("blkList").addEventListener("click", function(ev){
+          var btn = ev.target.closest("[data-blk-del]");
+          if (!btn) return;
+          fetch("/api/admin/data", { method:"POST", headers:{ "Content-Type":"application/json" },
+            body: JSON.stringify({ view:"settings", action:"block-remove", id: btn.getAttribute("data-blk-del") }) })
+            .then(function(){ loadSettings(); });
+        });
+        loadSettings();
+
+        // ---- walk-in booking ----
+        function loadCatalog(){
+          fetch("/api/admin/data?view=catalog")
+            .then(function(r){ return r.json(); })
+            .then(function(j){
+              var opts = [];
+              j.services.forEach(function(s){ opts.push('<option value="' + s.id + '">' + s.name + ' — ' + s.priceLabel + (s.mins ? ' · ' + s.mins + ' min' : ' · by consultation') + '</option>'); });
+              j.combos.forEach(function(c){ opts.push('<option value="' + c.id + '">' + c.name + ' — ' + c.priceLabel + ' · ' + c.mins + ' min</option>'); });
+              document.getElementById("wkService").innerHTML = opts.join("");
+              refreshWalkTimes();
+            });
+        }
+        function refreshWalkTimes(){
+          var date = document.getElementById("wkDate").value;
+          var sel = document.getElementById("wkTime");
+          var svc = document.getElementById("wkService").value;
+          var type = document.getElementById("wkType").value;
+          if (!date || !svc){ sel.innerHTML = '<option value="">Pick a day first</option>'; return; }
+          loadTimesInto(sel, date, svc, type);
+        }
+        ["wkDate", "wkService", "wkType"].forEach(function(id){ document.getElementById(id).addEventListener("change", refreshWalkTimes); });
+        var wkTomorrow = new Date(); wkTomorrow.setDate(wkTomorrow.getDate() + 1);
+        document.getElementById("wkDate").value = wkTomorrow.getFullYear() + "-" + String(wkTomorrow.getMonth()+1).padStart(2,"0") + "-" + String(wkTomorrow.getDate()).padStart(2,"0");
+        loadCatalog();
+        document.getElementById("walkForm").addEventListener("submit", function(ev){
+          ev.preventDefault();
+          var err = document.getElementById("wkErr");
+          var body = {
+            view:"bookings", action:"walk-in",
+            service: document.getElementById("wkService").value,
+            type: document.getElementById("wkType").value,
+            date: document.getElementById("wkDate").value,
+            time: document.getElementById("wkTime").value,
+            name: document.getElementById("wkName").value.trim(),
+            phone: document.getElementById("wkPhone").value.trim(),
+            email: document.getElementById("wkEmail").value.trim(),
+            first: document.getElementById("wkFirst").checked ? "yes" : "no",
+            giftCode: document.getElementById("wkGift").value.trim(),
+            referredBy: document.getElementById("wkRef").value.trim(),
+            payment: document.getElementById("wkPay").value,
+          };
+          if (!body.time){ err.textContent = "Pick a free time for the appointment."; return; }
+          err.textContent = "";
+          postAdmin(body)
+            .then(function(res){
+              var out = document.getElementById("walkResult");
+              if (!res.ok){ err.textContent = res.j.error || "Could not book."; return; }
+              var b = res.j.booking;
+              out.innerHTML = '<div class="book-step on" style="text-align:center;"><h3>Booked — ' + b.serviceName + '</h3><p>' + fmtDate(b.date) + ' at ' + b.time + ' · ' + (b.guestName || b.name) + ' · Total ' + money(b.amountCents) + (b.status === "paid" ? ' · Paid' : b.status === "unpaid" ? ' · Pay at the visit' : b.status === "pending" ? ' · Card link sent' : '') + '</p>'
+                + (res.j.checkoutUrl ? '<p><a class="btn btn-book" href="' + res.j.checkoutUrl + '" target="_blank" rel="noopener">Open the card payment link →</a></p><p style="color:var(--ink-soft);">The link was also emailed to the client.</p>' : '')
+                + '</div>';
+              loadCal(); loadPayments();
+            })
+            .catch(function(){ err.textContent = "Could not reach the booking service — check your connection."; });
+        });
+
+        // ---- reports ----
+        var reportData = null;
+        var repTo = new Date();
+        var repFrom = new Date(); repFrom.setDate(repFrom.getDate() - 30);
+        document.getElementById("repTo").value = repTo.getFullYear() + "-" + String(repTo.getMonth()+1).padStart(2,"0") + "-" + String(repTo.getDate()).padStart(2,"0");
+        document.getElementById("repFrom").value = repFrom.getFullYear() + "-" + String(repFrom.getMonth()+1).padStart(2,"0") + "-" + String(repFrom.getDate()).padStart(2,"0");
+        function csvCell(v){ var s = String(v == null ? "" : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+        document.getElementById("repLoad").addEventListener("click", function(){
+          var from = document.getElementById("repFrom").value;
+          var to = document.getElementById("repTo").value;
+          fetch("/api/admin/data?view=reports&from=" + from + "&to=" + to)
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ document.getElementById("reportPrint").innerHTML = "<p>" + (res.j.error || "Could not load the report.") + "</p>"; return; }
+              reportData = res.j;
+              var t = res.j.totals;
+              var html = '<h3 style="font-size:1.2rem;">In2Skin — client report · ' + res.j.from + ' to ' + res.j.to + '</h3>'
+                + '<div class="summary-box"><dl><dt>Totals</dt><dd>' + t.bookingsCount + ' bookings · ' + t.completedCount + ' completed · ' + t.cancelledCount + ' cancelled · ' + t.noShowCount + ' no-shows · ' + t.unpaidCount + ' unpaid · ' + t.clientsCount + ' clients</dd><dd>Collected: <strong>' + t.revenueCollected + '</strong> · Still owed: <strong>' + t.outstanding + '</strong></dd></dl></div>';
+              res.j.clients.forEach(function(c){
+                html += '<div class="after-item"><div><strong>' + c.name + '</strong> · ' + c.email + ' · ' + (c.phone || "") + '<br/>'
+                  + c.bookings.map(function(bk){ return fmtDate(bk.date) + ' ' + bk.time + ' — ' + bk.serviceName + ' · ' + bk.status + ' · ' + money(bk.amountCents) + ' (paid ' + money(bk.amountPaidCents || 0) + ')'; }).join('<br/>')
+                  + '<br/>Total owed ' + money(c.totalOwedCents) + ' · Total paid ' + money(c.totalPaidCents) + '</div></div>';
+              });
+              if (!res.j.clients.length) html += "<p style='color:var(--ink-soft);'>No bookings in this range.</p>";
+              document.getElementById("reportPrint").innerHTML = html;
+              document.getElementById("repCsv").disabled = false;
+              document.getElementById("repPrint").disabled = false;
+            })
+            .catch(function(){ document.getElementById("reportPrint").innerHTML = "<p>Could not load the report — check your connection.</p>"; });
+        });
+        document.getElementById("repCsv").addEventListener("click", function(){
+          if (!reportData) return;
+          var rows = [["Date", "Client", "Email", "Phone", "Service", "Status", "Amount owed ($)", "Amount paid ($)", "Payment method"]];
+          reportData.clients.forEach(function(c){
+            c.bookings.forEach(function(bk){
+              rows.push([bk.date, c.name, c.email, c.phone, bk.serviceName, bk.status, (bk.amountCents / 100).toFixed(2), ((bk.amountPaidCents || 0) / 100).toFixed(2), bk.paymentMethod || ""]);
+            });
+          });
+          rows.push([]);
+          rows.push(["Payments"]);
+          rows.push(["Date", "Client", "Email", "Service", "Method", "Amount ($)"]);
+          reportData.payments.forEach(function(p){
+            rows.push([(p.createdAt || "").slice(0, 10), p.clientName, p.email || "", p.serviceLabel, p.method || "", (p.amountCents / 100).toFixed(2)]);
+          });
+          var csv = rows.map(function(r){ return r.map(csvCell).join(","); }).join("\n");
+          var blob = new Blob([csv], { type: "text/csv" });
+          var a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = "in2skin-report-" + reportData.from + "-to-" + reportData.to + ".csv";
+          a.click();
+          URL.revokeObjectURL(a.href);
+        });
+        document.getElementById("repPrint").addEventListener("click", function(){ window.print(); });
       })();
     </script>
   </body>

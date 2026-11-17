@@ -3,6 +3,7 @@
 // falls back to the full schedule (booking will report the real error).
 const { kvGet, configured } = require("../lib/kv");
 const { findService, parseDateLocal, freeTimes, timesFor } = require("../lib/schedule");
+const { studioForDate } = require("../lib/studio");
 
 module.exports = async (req, res) => {
   try {
@@ -14,7 +15,8 @@ module.exports = async (req, res) => {
     if (!configured()) return res.status(200).json({ date, times: all, storageConfigured: false });
     const { listBookingsForDate } = require("../lib/bookings");
     const bookings = await listBookingsForDate(date);
-    return res.status(200).json({ date, times: freeTimes(date, type, service, bookings), storageConfigured: true });
+    const { bufferMins, blocks } = await studioForDate(date);
+    return res.status(200).json({ date, times: freeTimes(date, type, service, bookings, { bufferMins, blocks }), storageConfigured: true });
   } catch (err) {
     return res.status(err.status || 500).json({ error: err.message });
   }

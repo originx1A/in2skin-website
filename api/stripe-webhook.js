@@ -76,9 +76,30 @@ module.exports = async (req, res) => {
             serviceLabel: rec.serviceLabel,
             method: "card",
             paylinkId: rec.id,
+            bookingId: rec.bookingId || null,
             checkoutSessionId: session.id,
             createdAt: new Date().toISOString(),
           });
+          // A pay link sent for a booking balance: the money lands on the
+          // booking, and a booking that was waiting on payment becomes paid
+          // (gift + referral settle once, via finalizePaidBooking). A booking
+          // already marked paid can still owe a balance — a move to Private
+          // Hours raises the total by $15 — so the amount is added for any
+          // booking that is not closed, and only unpaid/pending flip to paid.
+          if (rec.bookingId) {
+            const booking = await getBooking(rec.bookingId);
+            if (booking && !["completed", "cancelled", "no-show"].includes(booking.status)) {
+              booking.amountPaidCents = (booking.amountPaidCents || 0) + (session.amount_total || rec.dueCents);
+              booking.paymentMethod = "card";
+              if (booking.amountPaidCents >= (booking.amountCents || 0) && (booking.status === "unpaid" || booking.status === "pending")) {
+                booking.status = "paid";
+                await kvSet(`booking:${booking.id}`, booking);
+                await finalizePaidBooking(booking);
+              } else {
+                await kvSet(`booking:${booking.id}`, booking);
+              }
+            }
+          }
           if (rec.contact && rec.contact.includes("@")) {
             await sendEmail({
               to: rec.contact,

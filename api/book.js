@@ -7,16 +7,16 @@
 const { getStripe } = require("../lib/stripe");
 const { kvGet, kvSet } = require("../lib/kv");
 const {
-  findService, parseDateLocal, dateKey, timesFor, parseTime, durationFor,
-  slotTaken, QUIET_PREMIUM_CENTS, FIRST_VISIT_CENTS, PENDING_HOLD_MS, money,
+  findService, parseDateLocal, timesFor, parseTime, durationFor,
+  slotTaken, QUIET_PREMIUM_CENTS, FIRST_VISIT_CENTS, PENDING_HOLD_MS,
 } = require("../lib/schedule");
+const { studioForDate } = require("../lib/studio");
 const {
   SITE_URL, newId, saveBooking, listBookingsForDate,
-  getGift, getBooking, finalizePaidBooking, sendHoldEmail,
+  getBooking, finalizePaidBooking, sendHoldEmail,
+  buildBooking, createBookingCheckout,
 } = require("../lib/bookings");
-const {
-  normalizeReferralCode, getReferralByCode, getOrCreateReferral, noteReferral,
-} = require("../lib/referrals");
+const { getOrCreateReferral } = require("../lib/referrals");
 
 function bad(res, msg) { return res.status(400).json({ error: msg }); }
 
@@ -47,7 +47,8 @@ async function handleAgentHold(req, res, b) {
     if (!b.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(b.email))) return bad(res, "Please add a valid email — your confirmation is sent there.");
 
     const bookings = await listBookingsForDate(b.date);
-    if (slotTaken(bookings, parseTime(b.time), durationFor(svc))) {
+    const { bufferMins, blocks } = await studioForDate(b.date);
+    if (slotTaken(bookings, parseTime(b.time), durationFor(svc), { bufferMins, blocks })) {
       return res.status(409).json({ error: "That time was just taken — please choose another time." });
     }
 
@@ -197,126 +198,14 @@ module.exports = async (req, res) => {
     const b = req.body || {};
     // Voice-agent hold: same slot rules, no gift codes, no friend bookings.
     if (b.via === "agent") return handleAgentHold(req, res, b);
-    const svc = findService(b.service);
-    if (!svc) return bad(res, "Please choose a treatment.");
-    const type = b.type === "after" ? "after" : "regular";
-    const d = parseDateLocal(b.date);
-    if (!d) return bad(res, "Please choose a day.");
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-    const maxDay = new Date(today); maxDay.setDate(maxDay.getDate() + 60);
-    if (d < tomorrow) return bad(res, "Bookings start from tomorrow — please choose a later day.");
-    if (d > maxDay) return bad(res, "Bookings open up to 60 days ahead — please choose an earlier day.");
-    if (!timesFor(b.date, type).includes(b.time)) return bad(res, "That time is not available for this kind of appointment.");
-    if (!b.name || !String(b.name).trim()) return bad(res, "Please add your name so we know who is coming.");
-    if (!b.phone || String(b.phone).replace(/[^0-9]/g, "").length < 10) return bad(res, "Please add a phone number so we can reach you about your appointment.");
-    if (!b.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(b.email))) return bad(res, "Please add a valid email — your confirmation is sent there.");
-    if (b.forWhom === "friend") {
-      if (!b.guestName || !String(b.guestName).trim()) return bad(res, "Please add your friend's name so we know who is coming.");
-      if (!b.guestPhone || String(b.guestPhone).replace(/[^0-9]/g, "").length < 10) return bad(res, "Please add your friend's phone so we can reach them about the appointment.");
-      if (!b.guestEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(b.guestEmail))) return bad(res, "Please add your friend's email — their confirmation is sent there.");
-    }
-
-    const bookings = await listBookingsForDate(b.date);
-    if (slotTaken(bookings, parseTime(b.time), durationFor(svc))) {
-      return res.status(409).json({ error: "That time was just taken — please choose another time." });
-    }
-
-    // Who sent them? A referral code from a share link (?ref=CODE) or typed
-    // in — it must belong to a real referrer, or the booking is refused.
-    let referredBy = null;
-    if (b.referredBy && String(b.referredBy).trim()) {
-      const rc = normalizeReferralCode(b.referredBy);
-      if (!(await getReferralByCode(rc))) {
-        return bad(res, "That referral code was not found — check the code, or leave it blank.");
-      }
-      referredBy = rc;
-    }
-
-    // Price: base + $15 Private Hours premium, less $10 first-visit offer,
-    // less gift-certificate balance, less referral credit. One code per
-    // booking, entered in the gift-code field: a gift code applies its
-    // balance; a referral code (the referrer's own) applies their credit
-    // after the gift balance would — and makes a Reflexology booking free
-    // if they have a free add-on banked.
-    const first = b.first !== "no";
-    let baseCents = svc.priceNum * 100 + (type === "after" ? QUIET_PREMIUM_CENTS : 0);
-    const firstVisitDiscountCents = svc.priceNum > 0 && first ? FIRST_VISIT_CENTS : 0;
-    let giftCode = null;
-    let giftAppliedCents = 0;
-    let referralCode = null;
-    let referralAppliedCents = 0;
-    let freeReflexologyApplied = false;
-    if (b.giftCode && String(b.giftCode).trim()) {
-      const gift = await getGift(b.giftCode);
-      if (gift) {
-        if (!gift.balanceCents || gift.balanceCents <= 0) return bad(res, "That gift code has no balance left.");
-        giftCode = gift.code;
-        giftAppliedCents = Math.min(gift.balanceCents, Math.max(0, baseCents - firstVisitDiscountCents));
-      } else {
-        const rc = normalizeReferralCode(b.giftCode);
-        const referralRecord = rc ? await getReferralByCode(rc) : null;
-        if (!referralRecord) return bad(res, "That code was not found — check the code and try again.");
-        const em = String(b.email).trim().toLowerCase();
-        const ph = String(b.phone).replace(/[^0-9]/g, "");
-        const owns = (referralRecord.email && referralRecord.email === em)
-          || (referralRecord.phone && referralRecord.phone === ph);
-        if (!owns) return bad(res, "That referral code belongs to another client — only the client who earned it can use it.");
-        referralCode = referralRecord.code;
-        if (svc.id === "reflexology" && (referralRecord.freeReflexology || 0) > 0) {
-          freeReflexologyApplied = true;
-          baseCents -= svc.priceNum * 100; // the treatment itself is free; the Private Hours premium still applies
-        }
-        referralAppliedCents = Math.min(referralRecord.creditCents || 0, Math.max(0, baseCents - firstVisitDiscountCents));
-      }
-    }
-    const amountCents = Math.max(0, baseCents - firstVisitDiscountCents - giftAppliedCents - referralAppliedCents);
-
-    // Every client gets ONE personal referral code automatically at booking —
-    // the code of the person coming (the guest on a friend booking).
-    const attendee = b.forWhom === "friend"
-      ? { name: b.guestName, email: b.guestEmail, phone: b.guestPhone }
-      : { name: b.name, email: b.email, phone: b.phone };
-    const myRef = await getOrCreateReferral(attendee);
-
-    const booking = {
-      id: newId("bk"),
-      service: svc.id,
-      serviceName: svc.name,
-      servicePriceLabel: svc.priceLabel,
-      minsLabel: svc.mins > 0 ? `${svc.mins} minutes` : "By consultation",
-      date: b.date,
-      time: b.time,
-      type,
-      forWhom: b.forWhom === "friend" ? "friend" : "me",
-      name: String(b.name).trim(),
-      phone: String(b.phone).trim(),
-      email: String(b.email).trim(),
-      guestName: b.guestName ? String(b.guestName).trim() : null,
-      guestPhone: b.guestPhone ? String(b.guestPhone).trim() : null,
-      guestEmail: b.guestEmail ? String(b.guestEmail).trim() : null,
-      first: first ? "yes" : "no",
-      firstVisitDiscountCents,
-      giftCode,
-      giftAppliedCents,
-      giftDeducted: false,
-      referralCode,
-      referralAppliedCents,
-      referralDeducted: false,
-      freeReflexologyApplied,
-      freeReflexologyDeducted: false,
-      referredBy,
-      myReferralCode: myRef.code,
-      amountCents,
-      amountPaidCents: 0,
-      status: "pending",
-      emailSent: false,
-      createdAt: new Date().toISOString(),
-    };
-    if (referredBy) await noteReferral(booking);
+    // Shared creation path with the admin walk-in form (same validation,
+    // slot rules incl. live buffer + blocks, and pricing).
+    const { bufferMins, blocks } = await studioForDate(b.date);
+    const booking = await buildBooking(b, { bufferMins, blocks, via: "web" });
+    const svc = findService(booking.service);
 
     // No payment due: custom consultation, or a gift code covering it all.
-    if (amountCents === 0) {
+    if (booking.amountCents === 0) {
       booking.status = svc.priceNum === 0 ? "consultation" : "paid";
       booking.amountPaidCents = 0;
       await saveBooking(booking);
@@ -325,35 +214,7 @@ module.exports = async (req, res) => {
     }
 
     await saveBooking(booking);
-    const stripe = getStripe();
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      currency: "cad",
-      payment_method_types: ["card"],
-      line_items: [{
-        quantity: 1,
-        price_data: {
-          currency: "cad",
-          unit_amount: amountCents,
-          product_data: {
-            name: `${svc.name} — ${b.date} at ${b.time}${type === "after" ? " (Private Hours)" : ""}`,
-            description: `In2Skin · Bolton, Ontario${giftAppliedCents ? ` · ${money(giftAppliedCents)} from gift certificate ${giftCode}` : ""}${referralAppliedCents ? ` · ${money(referralAppliedCents)} from referral credit ${referralCode}` : ""}${freeReflexologyApplied ? " · free reflexology add-on" : ""}${firstVisitDiscountCents ? " · $10 first-visit offer applied" : ""}`,
-          },
-        },
-      }],
-      payment_intent_data: { statement_descriptor: "IN2SKIN" },
-      customer_email: booking.email,
-      metadata: {
-        type: "booking",
-        bookingId: booking.id,
-        giftCode: giftCode || "",
-        giftAppliedCents: String(giftAppliedCents),
-        referralCode: referralCode || "",
-        referralAppliedCents: String(referralAppliedCents),
-      },
-      success_url: `${SITE_URL}/booked.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${SITE_URL}/#book`,
-    });
+    const session = await createBookingCheckout(booking);
     booking.checkoutSessionId = session.id;
     await saveBooking(booking);
     return res.status(200).json({ url: session.url, bookingId: booking.id });
