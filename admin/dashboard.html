@@ -36,6 +36,21 @@
       </section>
 
       <section style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;">Call answering — when the phone agent may put calls through to you</h2>
+        <p class="sub">The voice agent on (289) 212-4124 checks this before every transfer. Outside these hours — or while paused — it takes a message and offers online booking instead.</p>
+        <div id="callStatus" class="summary-box" style="margin-top:12px;">Loading call hours…</div>
+        <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <label for="pauseUntil">Pause transfers until</label>
+          <input id="pauseUntil" type="time" style="font-family:inherit; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink);" />
+          <button class="btn btn-book" id="pauseBtn" type="button">Pause transfers</button>
+          <button class="btn btn-ghost" id="resumeBtn" type="button" style="display:none;">Resume transfers now</button>
+        </div>
+        <p class="sub" style="margin-top:6px;">A couple of hours off, or sleeping — pause and the agent takes messages until the time you picked.</p>
+        <div id="callWeek" style="margin-top:16px;"></div>
+        <p style="margin-top:12px;"><button class="btn btn-book" id="callSave" type="button">Save call hours</button> <span id="callMsg" style="color:#7A3B2E; margin-left:8px;"></span></p>
+      </section>
+
+      <section style="margin-top:36px;">
         <h2 style="font-size:1.4rem;">Pay on the spot</h2>
         <p class="sub">Enter what is owed — the client pays on their own phone by text, email, or QR code.</p>
         <form id="spotForm">
@@ -112,6 +127,87 @@
         }
         document.getElementById("calLoad").addEventListener("click", loadCal);
         loadCal();
+
+        // ---- call answering hours ----
+        var callSettings = null;
+        var DAY_ORDER = ["mon","tue","wed","thu","fri","sat","sun"];
+        var DAY_LABEL = { mon:"Monday", tue:"Tuesday", wed:"Wednesday", thu:"Thursday", fri:"Friday", sat:"Saturday", sun:"Sunday" };
+        function fmtClock(t){ var p = t.split(":"); var h = +p[0]; var ap = h >= 12 ? "PM" : "AM"; h = h % 12 || 12; return h + ":" + p[1] + " " + ap; }
+        function fmtResume(iso){ try { return new Date(iso).toLocaleTimeString("en-CA", { hour:"numeric", minute:"2-digit" }); } catch(e){ return iso; } }
+        function renderCall(){
+          if (!callSettings) return;
+          var st = callSettings.status, s = callSettings.settings;
+          var el = document.getElementById("callStatus");
+          if (st.transferAllowed){
+            el.innerHTML = "<dl><dt>Transfers are ON right now</dt><dd>Calls come through to you until <strong>" + fmtClock(st.until) + "</strong> today.</dd></dl>";
+          } else if (st.reason === "paused"){
+            el.innerHTML = "<dl><dt>Transfers are PAUSED</dt><dd>The agent is taking messages until <strong>" + fmtResume(st.pausedUntil) + "</strong>.</dd></dl>";
+          } else {
+            el.innerHTML = "<dl><dt>Transfers are OFF right now</dt><dd>Outside your call hours — the agent is taking messages" + (st.nextOn ? " until <strong>" + fmtClock(st.nextOn) + "</strong>" : "") + ".</dd></dl>";
+          }
+          document.getElementById("resumeBtn").style.display = st.reason === "paused" ? "" : "none";
+          var rows = DAY_ORDER.map(function(d){
+            var r = s.week[d];
+            return '<div style="display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--line); flex-wrap:wrap;">'
+              + '<label style="min-width:92px;"><input type="checkbox" data-day="' + d + '" class="cw-on"' + (r.on ? " checked" : "") + '> ' + DAY_LABEL[d] + '</label>'
+              + '<label>From <input type="time" data-day="' + d + '" class="cw-start" value="' + r.start + '" style="font-family:inherit; padding:8px 10px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink);"></label>'
+              + '<label>to <input type="time" data-day="' + d + '" class="cw-end" value="' + r.end + '" style="font-family:inherit; padding:8px 10px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink);"></label>'
+              + '</div>';
+          });
+          document.getElementById("callWeek").innerHTML = rows.join("");
+        }
+        function loadCall(){
+          fetch("/api/admin/data?view=transfer-hours")
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ document.getElementById("callStatus").textContent = res.j.error || "Could not load call hours."; return; }
+              callSettings = res.j; renderCall();
+            })
+            .catch(function(){ document.getElementById("callStatus").textContent = "Could not load call hours — check your connection."; });
+        }
+        function collectWeek(){
+          var week = {};
+          DAY_ORDER.forEach(function(d){
+            var on = document.querySelector('.cw-on[data-day="' + d + '"]');
+            var st = document.querySelector('.cw-start[data-day="' + d + '"]');
+            var en = document.querySelector('.cw-end[data-day="' + d + '"]');
+            week[d] = { on: !!(on && on.checked), start: st ? st.value : "09:00", end: en ? en.value : "17:30" };
+          });
+          return week;
+        }
+        function saveCall(settings, note){
+          var m = document.getElementById("callMsg");
+          fetch("/api/admin/data", { method:"POST", headers:{ "Content-Type":"application/json" },
+            body: JSON.stringify({ view:"transfer-hours", settings: settings }) })
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ m.textContent = res.j.error || "Could not save."; return; }
+              callSettings = res.j; renderCall();
+              m.textContent = note || "Saved.";
+            })
+            .catch(function(){ m.textContent = "Could not save — check your connection."; });
+        }
+        document.getElementById("callSave").addEventListener("click", function(){
+          var s = { week: collectWeek(), pausedUntil: callSettings.settings.pausedUntil };
+          saveCall(s, "Call hours saved.");
+        });
+        document.getElementById("pauseBtn").addEventListener("click", function(){
+          var t = document.getElementById("pauseUntil").value;
+          if (!t){ document.getElementById("callMsg").textContent = "Pick a time to resume first."; return; }
+          var d = new Date(); var p = t.split(":");
+          d.setHours(+p[0], +p[1], 0, 0);
+          if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
+          var s = { week: collectWeek(), pausedUntil: d.toISOString() };
+          saveCall(s, "Transfers paused until " + fmtClock(t) + ".");
+        });
+        document.getElementById("resumeBtn").addEventListener("click", function(){
+          var s = { week: collectWeek(), pausedUntil: null };
+          saveCall(s, "Transfers are back on.");
+        });
+        var pu = document.getElementById("pauseUntil");
+        var d2 = new Date(Date.now() + 2*60*60*1000);
+        pu.value = String(d2.getHours()).padStart(2,"0") + ":" + String(d2.getMinutes()).padStart(2,"0");
+        loadCall();
 
         var methodSel = document.getElementById("spMethod");
         var contactWrap = document.getElementById("spContactWrap");

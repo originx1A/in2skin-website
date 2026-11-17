@@ -1,16 +1,31 @@
 // GET /api/admin/data — the admin panel's reads, one function:
 //   ?view=bookings (default) → the admin calendar (was /api/admin/bookings)
 //   ?view=payments → today's payments at a glance (was /api/admin/payments)
+//   ?view=transfer-hours → Sarah's call-answering hours + live status
+// POST /api/admin/data { view:"transfer-hours", settings } → save call hours.
 // Signed in only. Merged because Vercel Hobby allows 12 serverless
 // functions per deployment.
 const { requireAdmin } = require("../../lib/auth");
 const { listBookingsRange, listBookingsForDate, listPayments } = require("../../lib/bookings");
 const { dateKey, money } = require("../../lib/schedule");
+const { getSettings, saveSettings, transferStatus } = require("../../lib/transfer");
 
 module.exports = async (req, res) => {
   const session = await requireAdmin(req, res);
   if (!session) return;
   try {
+    if (req.method === "POST") {
+      const b = req.body || {};
+      if (b.view !== "transfer-hours" || !b.settings) {
+        return res.status(400).json({ error: "Nothing to save — send the call hours." });
+      }
+      const settings = await saveSettings(b.settings);
+      return res.status(200).json({ settings, status: transferStatus(settings) });
+    }
+    if ((req.query || {}).view === "transfer-hours") {
+      const settings = await getSettings();
+      return res.status(200).json({ settings, status: transferStatus(settings) });
+    }
     if ((req.query || {}).view === "payments") {
       const date = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || "") ? req.query.date : dateKey(new Date());
       const spot = await listPayments(date, date);
