@@ -140,7 +140,7 @@
       .offer{ background:linear-gradient(120deg, var(--blush) 0%, #FBEFE8 55%, var(--blush) 100%); color:var(--ink); border:1px solid var(--gold); }
       .offer-in{ display:flex; flex-wrap:wrap; gap:10px 26px; align-items:center; justify-content:center; padding:20px 0; text-align:center; }
       .offer .big{ font-family:"Cormorant Garamond",serif; font-size:1.7rem; font-weight:600; }
-      .offer .small{ font-size:.95rem; color:#DFE7CF; }
+      .offer .small{ font-size:.95rem; color:var(--ink-soft); }
 
       /* ---------- sections ---------- */
       section.block{ padding:92px 0; }

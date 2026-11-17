@@ -79,7 +79,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/assets/site.css?v=20261117d" />
+    <link rel="stylesheet" href="/assets/site.css?v=20261117e" />
     <link rel="stylesheet" href="/assets/motion.css?v=20261117d" />
   </head>
   <body>
@@ -559,8 +559,7 @@
           '<p>' + s.short + '</p>' +
           '<div class="meta"><span class="price-badge"><span class="price">' + s.price + '</span></span><span class="mins">' + s.minsLabel + '</span>' +
           '<a class="go" href="#/' + s.id + '" data-nav="' + s.id + '">Details →</a></div>' +
-          '<div class="book-row"><button class="btn btn-book" data-book="' + s.id + '">' + (s.price === "Custom" ? "Book a Consultation" : "Book — " + s.price) + '</button>' +
-          '<a class="btn btn-ghost" href="' + PHONE_TEL + '">Call</a></div>' +
+          '<div class="book-row"><button class="btn btn-book" data-book="' + s.id + '">' + (s.price === "Custom" ? "Book a Consultation" : "Book — " + s.price) + '</button></div>' +
         '</article>';
       }).join("");
       var addonRows = addons.map(function(s){
