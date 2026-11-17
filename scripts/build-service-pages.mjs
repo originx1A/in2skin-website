@@ -117,7 +117,7 @@ ${JSON.stringify(ld.faq, null, 2)}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/assets/site.css?v=20261117e" />
+    <link rel="stylesheet" href="/assets/site.css?v=20261117f" />
     <link rel="stylesheet" href="/assets/motion.css?v=20261117d" />
   </head>
   <body>
