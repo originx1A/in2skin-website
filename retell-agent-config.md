@@ -28,7 +28,7 @@ to that number. Keep the agent's current voice unless Tony picks another.
 - **Regular hours:** 9:00am–5:30pm.
 - **Booking:** online at boltonfacials.com (live availability, email
   confirmation) or by phone. Advance booking recommended.
-- **15 minutes between appointments** — the room is cleaned and prepped,
+- **30 minutes between appointments** — the room is cleaned and prepped,
   so back-to-back times are never offered.
 - **Gift certificates:** any amount; the balance carries over and never expires.
 - **Payment:** cash or e-transfer; card by a pay link on the client's own
