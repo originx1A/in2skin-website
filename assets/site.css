@@ -57,7 +57,7 @@
         backdrop-filter:blur(10px);
         border-bottom:1px solid var(--line);
       }
-      .header-in{ display:flex; align-items:center; gap:18px; padding:10px 0; }
+      .header-in{ display:flex; align-items:center; gap:18px; padding:10px 20px; }
       .brand{ display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--ink); margin-right:auto; min-height:48px; }
       .brand .wordmark{ font-family:"Cormorant Garamond", Georgia, serif; font-size:1.9rem; font-weight:600; letter-spacing:.01em; line-height:1; }
       .brand .tagline{ display:block; font-family:"Jost",sans-serif; font-size:.68rem; letter-spacing:.32em; text-transform:uppercase; color:var(--ink-soft); margin-top:3px; }
