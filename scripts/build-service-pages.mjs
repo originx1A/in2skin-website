@@ -30,8 +30,8 @@ const SEO_TITLES = extract("SEO_TITLES");
 const SEO_DESCS = extract("SEO_DESCS");
 
 const SITE = "https://boltonfacials.com";
-const PHONE_DISPLAY = "(905) 555-0148";
-const PHONE_TEL = "tel:+19055550148";
+const PHONE_DISPLAY = "(289) 212-4124";
+const PHONE_TEL = "tel:+12892124124";
 
 function esc(s) {
   return String(s)
@@ -79,7 +79,7 @@ function page(s) {
         "@type": "BeautySalon",
         name: "In2Skin",
         url: `${SITE}/`,
-        telephone: "+1-905-555-0148",
+        telephone: "+1-289-212-4124",
         priceRange: "$25 - $475",
         address: { "@type": "PostalAddress", addressLocality: "Bolton", addressRegion: "ON", addressCountry: "CA" },
         areaServed: ["Bolton", "Caledon", "Kleinburg", "Vaughan", "Brampton", "Nobleton", "King City", "Orangeville", "Georgetown", "Toronto"],
