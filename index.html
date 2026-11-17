@@ -561,7 +561,16 @@
           '<a class="go" href="#/' + s.id + '" data-nav="' + s.id + '">Details →</a></div>' +
           '<div class="book-row"><button class="btn btn-book" data-book="' + s.id + '">' + (s.price === "Custom" ? "Book a Consultation" : "Book — " + s.price) + '</button></div>' +
         '</article>';
-      }).join("");
+      }).join("") +
+      '<article class="card">' +
+        '<img class="card-photo" src="assets/works-massage.webp" alt="The Works treatment room — a massage table set with candles, white tulips and a rolled towel, ready for a facial, red light and reflexology session" />' +
+        '<div class="cat">Signature Combo</div>' +
+        '<h3>The Works</h3>' +
+        '<p>Classic Facial + red light + reflexology, all at once while your mask works.</p>' +
+        '<div class="meta"><span class="price-badge"><span class="price">$135</span></span><span class="mins">55 minutes</span>' +
+        '<a class="go" href="#/home" data-nav="home" data-scroll="works">Details →</a></div>' +
+        '<div class="book-row"><button class="btn btn-book" data-book="combo-classic">Book — $135</button></div>' +
+      '</article>';
       var addonRows = addons.map(function(s){
         var thumb = SERVICE_VIDEOS[s.id]
           ? '<video class="addon-thumb" src="' + SERVICE_VIDEOS[s.id] + '" poster="' + s.img + '" autoplay muted loop playsinline preload="auto" aria-label="' + s.imgAlt + '"></video>'
@@ -686,10 +695,10 @@
         '<div class="grow"><div class="over" style="letter-spacing:.28em;text-transform:uppercase;font-size:.75rem;color:#CFE3BC;font-weight:600;margin-bottom:8px;">For Teens · Acne-Prone Skin</div>' +
         '<h2>Teen acne? Start here.</h2>' +
         '<p style="margin:8px 0 0;">Acne care elsewhere can cost hundreds. Our Classic Facial is a gentle, affordable first step — teens (and parents) love it.</p></div>' +
-        '<div style="text-align:center;"><div class="teen-price">$65</div><div style="font-size:.9rem;color:#DFE7CF;margin:4px 0 12px;">Classic Facial · 55 min</div>' +
+        '<div style="text-align:center;"><div class="teen-price">$65</div><div style="font-size:.9rem;color:var(--ink-soft);margin:4px 0 12px;">Classic Facial · 55 min</div>' +
         '<button class="btn btn-light btn-big" data-book="classic-facial">Book — $65</button></div>' +
       '</div></div></section>' +
-      '<section class="block"><div class="wrap">' +
+      '<section class="block" id="works"><div class="wrap">' +
         '<div class="two-col">' +
           '<div class="photo-stack"><img class="framed-img" src="assets/works-massage.webp" alt="The Works treatment room — a massage table set with candles, white tulips and a rolled towel, ready for a facial, red light and reflexology session" /><img class="framed-img small" src="assets/works-mask.jpg" alt="A custom mask being brushed onto a resting client’s face while she relaxes during The Works" loading="lazy" /></div>' +
           '<div>' +
@@ -1365,7 +1374,7 @@
     }
 
     /* ---------------- PAY ON THE SPOT ---------------- */
-    var pay = { step:1, method:"text", amount:"", serviceId:"", serviceLabel:"", clientName:"", contact:"", source:"", touched:false, giftCode:"", payUrl:"", payId:"", smsPending:false };
+    var pay = { step:1, method:"text", amount:"", serviceId:"", items:[], serviceLabel:"", clientName:"", contact:"", source:"", touched:false, giftCode:"", payUrl:"", payId:"", smsPending:false };
     function payMoney(n){
       var v = Math.round(parseFloat(n) * 100) / 100;
       return "$" + (v % 1 === 0 ? v.toString() : v.toFixed(2));
@@ -1425,7 +1434,7 @@
       if (!shell) return;
       if (pay.step === 1 && !pay.touched){
         var pre = payPrefill();
-        if (pre){ pay.amount = pre.amount; pay.serviceId = pre.serviceId; pay.serviceLabel = pre.serviceLabel; pay.source = pre.source; }
+        if (pre){ pay.amount = pre.amount; pay.serviceId = pre.serviceId; pay.serviceLabel = pre.serviceLabel; pay.source = pre.source; pay.items = pre.serviceId ? [pre.serviceId] : []; }
         else if (!pay.amount){ pay.source = ""; }
       }
       var steps = ["Amount & Client","Link Ready","Receipt"];
@@ -1434,14 +1443,19 @@
       }).join("") + '</div>';
       var body = "";
       if (pay.step === 1){
-        var svcOptions = '<option value="">Choose what this payment is for…</option>' +
-          SERVICES.filter(function(s){ return s.priceNum > 0; }).map(function(s){
-            return '<option value="' + s.id + '"' + (pay.serviceId===s.id ? " selected" : "") + '>' + s.name + ' — ' + s.price + '</option>';
-          }).join("") +
-          COMBOS.map(function(c){
-            return '<option value="' + c.id + '"' + (pay.serviceId===c.id ? " selected" : "") + '>' + c.name + ' — ' + c.price + '</option>';
-          }).join("") +
-          '<option value="other"' + (pay.serviceId==="other" ? " selected" : "") + '>Something else — enter the amount</option>';
+        var payItems = SERVICES.filter(function(s){ return s.priceNum > 0; }).concat(COMBOS);
+        var payTotal = (pay.items || []).reduce(function(sum, id){
+          var it = null;
+          for (var i = 0; i < payItems.length; i++) if (payItems[i].id === id) it = payItems[i];
+          return sum + (it ? it.priceNum : 0);
+        }, 0);
+        var payGrid = payItems.map(function(s){
+          var sel = (pay.items || []).indexOf(s.id) >= 0;
+          return '<button type="button" class="pick' + (sel ? " sel" : "") + '" data-pick-payitem="' + s.id + '">' +
+            '<span class="pr">' + s.price + '</span><span class="t">' + s.name + '</span></button>';
+        }).join("") +
+        '<button type="button" class="pick' + ((pay.items || []).indexOf("other") >= 0 ? " sel" : "") + '" data-pick-payitem="other">' +
+          '<span class="t">Something else</span><span class="d">Enter the amount below</span></button>';
         var isEmail = pay.method === "email";
         var isQr = pay.method === "qr";
         var isText = pay.method === "text";
@@ -1449,7 +1463,8 @@
           '<p class="sub">Studio side, at the visit: enter what is owed, choose text, email, or QR code, and the link goes to the client\u2019s own phone.</p>' +
           (pay.source ? '<div class="pay-prefill"><strong>Ready to go:</strong> ' + pay.source + ' Change anything below before sending.</div>' : '') +
           '<form id="payForm" novalidate>' +
-            '<div class="field"><label for="pfService">What is this payment for?</label><select id="pfService">' + svcOptions + '</select></div>' +
+            '<div class="field"><label>What is this payment for? Tick everything they had:</label><div class="pick-grid">' + payGrid + '</div>' +
+            (payTotal > 0 ? '<p class="sub" style="margin:8px 0 0;">Total so far: <strong>' + payMoney(payTotal) + '</strong> — adjust the amount below if needed, for example the exact peel price.</p>' : '') + '</div>' +
             '<div class="form-2col">' +
               '<div class="field"><label for="pfAmount">Amount owed (CAD $)</label><input id="pfAmount" type="number" min="1" step="0.01" inputmode="decimal" placeholder="e.g. 65" value="' + pay.amount + '" /></div>' +
               '<div class="field"><label for="pfName">Client\u2019s name</label><input id="pfName" type="text" autocomplete="off" placeholder="e.g. Alex Taylor" value="' + pay.clientName + '" /></div>' +
@@ -1532,17 +1547,32 @@
           pay.method = b.getAttribute("data-pick-paymethod"); pay.touched = true; renderPay();
         });
       });
-      var svcSel = document.getElementById("pfService");
-      if (svcSel) svcSel.addEventListener("change", function(){
-        pay.serviceId = svcSel.value; pay.touched = true;
-        var s = svcById(svcSel.value);
-        if (s){ pay.serviceLabel = s.name; pay.amount = s.priceNum.toString(); }
-        else {
-          for (var i=0;i<COMBOS.length;i++) if (COMBOS[i].id===svcSel.value){ pay.serviceLabel = COMBOS[i].name; pay.amount = COMBOS[i].priceNum.toString(); s = COMBOS[i]; }
-        }
-        if (svcSel.value === "other"){ pay.serviceLabel = "In2Skin visit"; }
-        if (!s && svcSel.value !== "other"){ pay.serviceLabel = ""; }
-        renderPay();
+      shell.querySelectorAll("[data-pick-payitem]").forEach(function(b){
+        b.addEventListener("click", function(){
+          var amtEl = document.getElementById("pfAmount"); if (amtEl) pay.amount = amtEl.value.trim();
+          var nmEl = document.getElementById("pfName"); if (nmEl) pay.clientName = nmEl.value.trim();
+          var ctEl = document.getElementById("pfContact"); if (ctEl) pay.contact = ctEl.value.trim();
+          var gfEl = document.getElementById("pfGift"); if (gfEl) pay.giftCode = gfEl.value.trim();
+          pay.touched = true;
+          var id = b.getAttribute("data-pick-payitem");
+          if (!pay.items) pay.items = [];
+          var ix = pay.items.indexOf(id);
+          if (ix >= 0) pay.items.splice(ix, 1); else pay.items.push(id);
+          var all = SERVICES.filter(function(s){ return s.priceNum > 0; }).concat(COMBOS);
+          var names = [], total = 0;
+          pay.items.forEach(function(pid){
+            if (pid === "other") return;
+            var it = null;
+            for (var i = 0; i < all.length; i++) if (all[i].id === pid) it = all[i];
+            if (it){ names.push(it.name); total += it.priceNum; }
+          });
+          if (pay.items.indexOf("other") >= 0 && names.length === 0) pay.serviceLabel = "In2Skin visit";
+          else if (pay.items.indexOf("other") >= 0) pay.serviceLabel = names.join(" + ") + " + something else";
+          else pay.serviceLabel = names.join(" + ");
+          pay.serviceId = pay.items.length ? pay.items[0] : "";
+          if (total > 0) pay.amount = total.toString();
+          renderPay();
+        });
       });
       var form = document.getElementById("payForm");
       if (form) form.addEventListener("submit", function(ev){
@@ -1598,7 +1628,7 @@
       });
       var again = document.getElementById("payAgain");
       if (again) again.addEventListener("click", function(){
-        pay = { step:1, method:"text", amount:"", serviceId:"", serviceLabel:"", clientName:"", contact:"", source:"", touched:false, giftCode:"", payUrl:"", payId:"", smsPending:false };
+        pay = { step:1, method:"text", amount:"", serviceId:"", items:[], serviceLabel:"", clientName:"", contact:"", source:"", touched:false, giftCode:"", payUrl:"", payId:"", smsPending:false };
         renderPay();
       });
     }

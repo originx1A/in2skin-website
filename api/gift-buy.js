@@ -69,7 +69,7 @@ module.exports = async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed." });
   try {
     const b = req.body || {};
-    if (b.kind === "voucher") return handleVoucherBuy(req, res, b);
+    if (b.kind === "voucher") return await handleVoucherBuy(req, res, b);
     let amountCents = 0;
     let label = "";
     if (b.option && GIFT_OPTIONS[b.option]) {
