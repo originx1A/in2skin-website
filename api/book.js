@@ -5,17 +5,135 @@
 // bookings fully covered by a gift code need no payment — they are confirmed
 // straight away.
 const { getStripe } = require("../lib/stripe");
-const { kvGet } = require("../lib/kv");
+const { kvGet, kvSet } = require("../lib/kv");
 const {
   findService, parseDateLocal, dateKey, timesFor, parseTime, durationFor,
-  slotTaken, QUIET_PREMIUM_CENTS, FIRST_VISIT_CENTS, money,
+  slotTaken, QUIET_PREMIUM_CENTS, FIRST_VISIT_CENTS, PENDING_HOLD_MS, money,
 } = require("../lib/schedule");
 const {
   SITE_URL, newId, saveBooking, listBookingsForDate,
-  getGift, getBooking, deductGift, sendBookingConfirmation,
+  getGift, getBooking, deductGift, sendBookingConfirmation, sendHoldEmail,
 } = require("../lib/bookings");
 
 function bad(res, msg) { return res.status(400).json({ error: msg }); }
+
+// POST /api/book with { via: "agent" } — the voice agent holds a slot for a
+// caller and gets a Stripe pay link back. Authenticated by the AGENT_API_KEY
+// env var (header x-agent-key). The hold is a normal pending booking, so it
+// blocks the slot for 30 minutes (PENDING_HOLD_MS) and then releases it.
+// No gift codes and no friend bookings on this path — the caller pays the
+// full price less the first-visit offer, on their own phone, via the link.
+async function handleAgentHold(req, res, b) {
+  try {
+    const key = process.env.AGENT_API_KEY;
+    if (!key) return res.status(503).json({ error: "AGENT_API_KEY is not set." });
+    if (req.headers["x-agent-key"] !== key) return res.status(401).json({ error: "Agent key not accepted." });
+    const svc = findService(b.service);
+    if (!svc) return bad(res, "Please choose a treatment.");
+    const type = b.type === "after" ? "after" : "regular";
+    const d = parseDateLocal(b.date);
+    if (!d) return bad(res, "Please choose a day.");
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+    const maxDay = new Date(today); maxDay.setDate(maxDay.getDate() + 60);
+    if (d < tomorrow) return bad(res, "Bookings start from tomorrow — please choose a later day.");
+    if (d > maxDay) return bad(res, "Bookings open up to 60 days ahead — please choose an earlier day.");
+    if (!timesFor(b.date, type).includes(b.time)) return bad(res, "That time is not available for this kind of appointment.");
+    if (!b.name || !String(b.name).trim()) return bad(res, "Please add your name so we know who is coming.");
+    if (!b.phone || String(b.phone).replace(/[^0-9]/g, "").length < 10) return bad(res, "Please add a phone number so we can reach you about your appointment.");
+    if (!b.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(b.email))) return bad(res, "Please add a valid email — your confirmation is sent there.");
+
+    const bookings = await listBookingsForDate(b.date);
+    if (slotTaken(bookings, parseTime(b.time), durationFor(svc))) {
+      return res.status(409).json({ error: "That time was just taken — please choose another time." });
+    }
+
+    const first = b.first !== "no";
+    const baseCents = svc.priceNum * 100 + (type === "after" ? QUIET_PREMIUM_CENTS : 0);
+    const firstVisitDiscountCents = svc.priceNum > 0 && first ? FIRST_VISIT_CENTS : 0;
+    const amountCents = Math.max(0, baseCents - firstVisitDiscountCents);
+    const booking = {
+      id: newId("bk"),
+      service: svc.id,
+      serviceName: svc.name,
+      servicePriceLabel: svc.priceLabel,
+      minsLabel: svc.mins > 0 ? `${svc.mins} minutes` : "By consultation",
+      date: b.date,
+      time: b.time,
+      type,
+      forWhom: "me",
+      name: String(b.name).trim(),
+      phone: String(b.phone).trim(),
+      email: String(b.email).trim(),
+      guestName: null,
+      guestPhone: null,
+      guestEmail: null,
+      first: first ? "yes" : "no",
+      firstVisitDiscountCents,
+      giftCode: null,
+      giftAppliedCents: 0,
+      giftDeducted: false,
+      amountCents,
+      amountPaidCents: 0,
+      status: "pending",
+      via: "agent",
+      emailSent: false,
+      createdAt: new Date().toISOString(),
+    };
+    const holdUntil = new Date(Date.now() + PENDING_HOLD_MS).toISOString();
+
+    // Consultation (or a first-visit discount covering it all): no payment
+    // due — hold the time and let Sarah confirm it.
+    if (amountCents === 0) {
+      booking.status = svc.priceNum === 0 ? "consultation" : "paid";
+      await saveBooking(booking);
+      await sendHoldEmail(booking, null);
+      return res.status(200).json({ hold: true, bookingId: booking.id, consultation: booking.status === "consultation", holdUntil });
+    }
+
+    await saveBooking(booking);
+    const stripe = getStripe();
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      currency: "cad",
+      payment_method_types: ["card"],
+      line_items: [{
+        quantity: 1,
+        price_data: {
+          currency: "cad",
+          unit_amount: amountCents,
+          product_data: {
+            name: `${svc.name} — ${b.date} at ${b.time}${type === "after" ? " (Private Hours)" : ""}`,
+            description: `In2Skin · Bolton, Ontario — held by phone${firstVisitDiscountCents ? " · $10 first-visit offer applied" : ""}`,
+          },
+        },
+      }],
+      payment_intent_data: { statement_descriptor: "IN2SKIN" },
+      customer_email: booking.email,
+      metadata: { type: "booking", bookingId: booking.id, via: "agent", giftCode: "", giftAppliedCents: "0" },
+      success_url: `${SITE_URL}/booked.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${SITE_URL}/#book`,
+    });
+    booking.checkoutSessionId = session.id;
+    booking.checkoutUrl = session.url;
+    await saveBooking(booking);
+    await sendHoldEmail(booking, session.url);
+    return res.status(200).json({
+      hold: true,
+      bookingId: booking.id,
+      serviceName: booking.serviceName,
+      date: booking.date,
+      time: booking.time,
+      type: booking.type,
+      amountCents: booking.amountCents,
+      checkoutUrl: session.url,
+      holdUntil,
+    });
+  } catch (err) {
+    console.error("[book:agent-hold]", err);
+    return res.status(err.status || 500).json({ error: err.message });
+  }
+}
 
 module.exports = async (req, res) => {
   if (req.method === "GET") {
@@ -64,6 +182,8 @@ module.exports = async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed." });
   try {
     const b = req.body || {};
+    // Voice-agent hold: same slot rules, no gift codes, no friend bookings.
+    if (b.via === "agent") return handleAgentHold(req, res, b);
     const svc = findService(b.service);
     if (!svc) return bad(res, "Please choose a treatment.");
     const type = b.type === "after" ? "after" : "regular";
