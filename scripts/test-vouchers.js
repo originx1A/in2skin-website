@@ -63,7 +63,9 @@ async function run() {
   check("Classic + Reflexology regular = $90", p.totalCents, 9000);
   check("label names the treatment", p.label, "Classic Facial + Reflexology — $90");
   p = sched.priceVoucher("classic-facial", ["reflexology"], "after");
-  check("Classic + Reflexology Private Hours = $120", p.totalCents, 12000);
+  check("Classic + Reflexology Private Hours = $105 (premium once)", p.totalCents, 10500);
+  p = sched.priceVoucher("classic-facial", ["light-therapy", "reflexology"], "after");
+  check("Classic + Light + Reflexology Private Hours = $150 (premium once per visit)", p.totalCents, 15000);
   p = sched.priceVoucher("anti-aging-facial", ["nano-needling", "light-therapy"], "regular");
   check("Anti + NANO + Light = $195", p.totalCents, 19500);
   p = sched.priceVoucher("combo-anti", [], "regular");

@@ -70,9 +70,11 @@
 - Regular hours: daytime appointments, by booking.
 - Private Hours (premier appointments, reserved just for you): weekday mornings
   7:00–9:00 AM, weekday evenings after 7:00 PM, and Sundays.
-- Private Hours cost $15 more per treatment. Examples: Classic Facial $80 in
-  Private Hours; Anti-Aging Facial $110; Reflexology $40; The Works $180 (with
-  Classic) / $210 (with Anti-Aging).
+- Private Hours cost $15 more per visit. Examples: Classic Facial $80 in
+  Private Hours; Anti-Aging Facial $110; Reflexology $40; The Works $150 (with
+  Classic) / $180 (with Anti-Aging). Classic Facial + Light Therapy is $125 in
+  Private Hours — the $15 applies once per visit, however many treatments you
+  book.
 - Appointments are spaced with 30 minutes between them so the room is reset for
   each guest.
 - Advance booking is recommended to get the time you want.
