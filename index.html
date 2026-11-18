@@ -236,11 +236,11 @@
 
     <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
     <div class="pkg-bar" id="pkgBar" role="status" aria-live="polite">
-      <span class="pkg-text" id="pkgText">Pick a treatment to start</span>
+      <span class="pkg-text" id="pkgText">Pick a treatment</span>
       <button type="button" class="btn btn-call pkg-go" id="pkgContinue" disabled>Continue →</button>
     </div>
     <div class="pkg-bar" id="giftBar" role="status" aria-live="polite">
-      <span class="pkg-text" id="giftBarText">Pick a kind of gift to start</span>
+      <span class="pkg-text" id="giftBarText">Pick a kind of gift</span>
       <button type="button" class="btn btn-call pkg-go" id="giftBarGo" disabled>Continue →</button>
     </div>
 
@@ -1448,6 +1448,17 @@
       var r = sec.getBoundingClientRect();
       return r.bottom > 0 && r.top < window.innerHeight;
     }
+    /* Wizard bar active (Tony Nov 18, 2026): while the booking or gift
+       summary bar is pinned, the body carries has-wiz-bar — the CSS hides
+       the bottom Book/Call bar and lifts the chat bubble clear above the
+       wizard bar, using the bar's measured height so it never sits on it. */
+    function syncWizBar(){
+      var p = document.getElementById("pkgBar");
+      var g = document.getElementById("giftBar");
+      var bar = (p && p.classList.contains("show")) ? p : ((g && g.classList.contains("show")) ? g : null);
+      document.body.classList.toggle("has-wiz-bar", !!bar);
+      if (bar) document.body.style.setProperty("--wiz-bar-h", bar.offsetHeight + "px");
+    }
     function pkgBarShow(){
       var bar = document.getElementById("pkgBar");
       if (!bar) return;
@@ -1457,8 +1468,9 @@
       bar.classList.toggle("tap", !booking.service);
       var txt = document.getElementById("pkgText");
       var go = document.getElementById("pkgContinue");
-      if (txt) txt.textContent = booking.service ? bookingAddonTotalText() : "Pick a treatment to start";
+      if (txt) txt.textContent = booking.service ? bookingAddonTotalText() : "Pick a treatment";
       if (go) go.disabled = !booking.service;
+      syncWizBar();
     }
     window.addEventListener("scroll", pkgBarShow, { passive:true });
     window.addEventListener("resize", pkgBarShow);
@@ -1490,7 +1502,7 @@
     }
     function giftBarText(){
       if (gift.step === 1){
-        if (!gift.mode) return "Pick a kind of gift to start";
+        if (!gift.mode) return "Pick a kind of gift";
         return gift.mode === "voucher" ? "Treatment voucher — pick a treatment" : "Gift certificate — pick an amount";
       }
       if (gift.mode === "voucher"){
@@ -1522,6 +1534,7 @@
       var go = document.getElementById("giftBarGo");
       if (txt) txt.textContent = giftBarText();
       if (go) go.disabled = !giftBarReady();
+      syncWizBar();
     }
     window.addEventListener("scroll", giftBarShow, { passive:true });
     window.addEventListener("resize", giftBarShow);

@@ -1078,3 +1078,14 @@
         .pkg-bar{ bottom:calc(72px + env(safe-area-inset-bottom)); padding-right:56px; }
         .pkg-text{ font-size:.9rem; }
       }
+      /* Wizard bar active (Tony Nov 18, 2026): while the booking or gift
+         summary bar is pinned, the bottom Book/Call bar hides — you are
+         already booking — and the chat bubble lifts clear above the
+         wizard bar, using the bar's measured height (--wiz-bar-h, set by
+         syncWizBar in index.html) so it never sits on it. The bar also
+         drops its chat-clearance padding, giving the text room. */
+      @media (max-width:860px){
+        body.has-wiz-bar .mobile-bar{ display:none; }
+        body.has-wiz-bar .pkg-bar{ padding-right:14px; }
+        body.has-wiz-bar .chat-fab{ bottom:calc(72px + var(--wiz-bar-h, 96px) + 12px + env(safe-area-inset-bottom)); }
+      }
