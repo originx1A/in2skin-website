@@ -260,7 +260,12 @@
       .extra-chip.sel{ border-color:var(--sage-deep); background:var(--sage-soft); color:var(--sage-deep); font-weight:600; }
       .extra-chip b{ color:var(--sage-deep); }
       /* ---------- compact treatments list (homepage, canonical) ---------- */
-      .tx-group{ font-size:.78rem; letter-spacing:.22em; text-transform:uppercase; color:var(--sage-deep); font-weight:600; margin:20px 0 8px; }
+      /* Services group headings (Tony Nov 18, 2026): bigger + bolder so
+         the sections read clearly, with a short gold rule under each
+         heading to mark the section — the rule stays short, it never
+         runs across the whole screen. */
+      .tx-group{ font-size:.95rem; letter-spacing:.18em; text-transform:uppercase; color:var(--sage-deep); font-weight:700; margin:20px 0 8px; }
+      .tx-group::after{ content:""; display:block; width:56px; height:2px; background:var(--gold); margin-top:6px; }
       .tx-group:first-of-type{ margin-top:0; }
       .tx-list{ display:flex; flex-direction:column; gap:8px; }
       /* PC (Tony Nov 18, 2026): no long boxes — the treatments list sits
