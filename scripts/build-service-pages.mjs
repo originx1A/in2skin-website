@@ -129,6 +129,10 @@ function page(s) {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>${esc(SEO_TITLES[s.id])}</title>
     <meta name="description" content="${esc(SEO_DESCS[s.id])}" />
     <link rel="canonical" href="${SITE}/${s.id}/" />
