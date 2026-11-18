@@ -151,6 +151,18 @@ function page(p) {
     <title>${esc(p.title)}</title>
     <meta name="description" content="${esc(p.desc)}" />
     <link rel="canonical" href="${SITE}/${p.slug}/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="In2Skin" />
+    <meta property="og:locale" content="en_CA" />
+    <meta property="og:url" content="${SITE}/${p.slug}/" />
+    <meta property="og:title" content="${esc(p.title)}" />
+    <meta property="og:description" content="${esc(p.desc)}" />
+    <meta property="og:image" content="${SITE}/assets/${p.img}" />
+    <meta property="og:image:alt" content="${esc(p.imgAlt)}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${esc(p.title)}" />
+    <meta name="twitter:description" content="${esc(p.desc)}" />
+    <meta name="twitter:image" content="${SITE}/assets/${p.img}" />
     <meta name="geo.region" content="CA-ON" />
     <meta name="geo.placename" content="Bolton" />
     <script type="application/ld+json">
@@ -877,6 +889,12 @@ const QUESTIONS = {
     ["Can I book an appointment for a friend?", "Yes — in the online booking wizard, choose 'For a Friend' and add your friend's name, phone and email. The confirmation goes straight to them, and they just show up."],
     ["What payment methods do you take?", "Card online at booking (Visa, Mastercard, American Express, Apple Pay), or cash or Interac e-transfer at the studio. Card charges show as IN2SKIN on the statement. Plain Interac-only debit cards cannot be charged by card — those clients pay by e-transfer."],
     ["What if I need to change my booking?", "Call (289) 212-4124 and the studio will move it for you."],
+    ["What are the benefits of a facial?", "A facial deep-cleanses, exfoliates and hydrates your skin, boosts circulation and leaves skin brighter, softer and glowing. Regular facials keep pores clear, help breakouts settle and slow the look of ageing — and the hour itself is deeply relaxing."],
+    ["What should I expect during a facial?", "A consultation first, then a deep cleanse, steam, gentle exfoliation, a relaxing face, neck and shoulder massage, a custom mask matched to your skin, and serum and moisturizer to finish. Every step is explained as it happens, and you can ask for anything to be gentler or skipped."],
+    ["Why are your facials less expensive than other Bolton spas?", "In2Skin is a small private studio — one room, one guest at a time — so a Classic Facial is $65 for 55 minutes. For comparison, a medi-spa in Bolton lists its 60-minute facials at $120."],
+    ["Is red light therapy safe?", "Yes — red light therapy is non-invasive and painless, with no recovery time. You lie back under warm red light for 15 restful minutes. It supports collagen and a calmer, more even complexion."],
+    ["What is reflexology?", "Reflexology is gentle, rhythmic pressure on points on your feet that map to the rest of your body — the arch to your back, the toes to your head and neck. It helps the whole body unwind, and many clients sleep beautifully that night. It is $25 for 15 minutes, on its own or added to a facial."],
+    ["How much downtime is there after a chemical peel?", "It depends on the strength of the peel. Gentle peels have little to no downtime — skin looks fresh right away. Deeper peels can mean a few days of flaking or peeling as fresh skin emerges. Your consultation matches the peel to your skin and confirms exactly what to expect, before anything begins."],
   ],
   areaServedExtra: "Bolton",
 };

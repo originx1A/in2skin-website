@@ -132,6 +132,18 @@ function page(s) {
     <title>${esc(SEO_TITLES[s.id])}</title>
     <meta name="description" content="${esc(SEO_DESCS[s.id])}" />
     <link rel="canonical" href="${SITE}/${s.id}/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="In2Skin" />
+    <meta property="og:locale" content="en_CA" />
+    <meta property="og:url" content="${SITE}/${s.id}/" />
+    <meta property="og:title" content="${esc(SEO_TITLES[s.id])}" />
+    <meta property="og:description" content="${esc(SEO_DESCS[s.id])}" />
+    <meta property="og:image" content="${SITE}/${s.img}" />
+    <meta property="og:image:alt" content="${esc(s.imgAlt)}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${esc(SEO_TITLES[s.id])}" />
+    <meta name="twitter:description" content="${esc(SEO_DESCS[s.id])}" />
+    <meta name="twitter:image" content="${SITE}/${s.img}" />
     <meta name="geo.region" content="CA-ON" />
     <meta name="geo.placename" content="Bolton" />
     <script type="application/ld+json">
