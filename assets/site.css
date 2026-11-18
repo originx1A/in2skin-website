@@ -263,6 +263,10 @@
       .tx-group{ font-size:.78rem; letter-spacing:.22em; text-transform:uppercase; color:var(--sage-deep); font-weight:600; margin:20px 0 8px; }
       .tx-group:first-of-type{ margin-top:0; }
       .tx-list{ display:flex; flex-direction:column; gap:8px; }
+      /* PC (Tony Nov 18, 2026): no long boxes — the treatments list sits
+         two across on desktop, like the wizard picker rows. Phones keep
+         the single column. */
+      @media (min-width:861px){ .tx-list{ display:grid; grid-template-columns:1fr 1fr; } }
       .tx-row{ display:flex; align-items:center; flex-wrap:wrap; gap:4px 14px; background:var(--cream); border:1.5px solid var(--line); border-radius:8px; padding:12px 14px; }
       .tx-row .tx-name{ font-family:"Cormorant Garamond",serif; font-size:1.25rem; font-weight:600; line-height:1.2; }
       .tx-row .tx-mins{ font-size:.88rem; color:var(--ink-soft); }
@@ -478,6 +482,9 @@
       .cond p{ color:var(--ink-soft); font-size:.97rem; flex:1; margin:0; }
       .cond .rec{ font-weight:500; color:var(--sage-deep); }
       .aud-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:18px; margin-top:18px; }
+      /* PC (Tony Nov 18, 2026): three across on desktop so all three
+         occasion cards sit in one row instead of one wrapping alone. */
+      @media (min-width:861px){ .aud-grid{ grid-template-columns:repeat(3,1fr); } }
       @media (max-width:820px){ .aud-grid{ grid-template-columns:1fr; } }
 
       /* ===== Refined squared shapes (no pills) + phone fit ===== */
@@ -539,6 +546,9 @@
       .review-card .what{ font-size:.88rem; color:var(--ink-soft); letter-spacing:.04em; }
       .review-stars{ color:var(--gold); letter-spacing:4px; font-size:1.05rem; margin-bottom:12px; }
       .review-empty{ grid-column:1 / -1; text-align:center; }
+      /* PC (Tony Nov 18, 2026): the no-reviews-yet card is one wide strip
+         at full width — cap it on desktop so it reads as a panel. */
+      @media (min-width:861px){ .review-empty{ justify-self:center; width:100%; max-width:720px; } }
       .review-empty p{ max-width:36em; margin:0 auto; }
       .town-row{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
       .town-chip{ border:1.5px solid var(--sage); background:var(--paper); color:var(--ink); border-radius:6px; padding:10px 20px; font-weight:500; font-size:.98rem; }
