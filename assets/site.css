@@ -223,6 +223,9 @@
       .pick-group{ font-size:.78rem; letter-spacing:.22em; text-transform:uppercase; color:var(--sage-deep); font-weight:600; margin:14px 0 6px; }
       .pick-group:first-of-type{ margin-top:6px; }
       .pick-list{ display:flex; flex-direction:column; gap:8px; }
+      /* PC (Tony Nov 18, 2026): no long boxes — picker rows sit two
+         across on desktop. Phones keep the single column. */
+      @media (min-width:861px){ .pick-list{ display:grid; grid-template-columns:1fr 1fr; } }
       .pick-row{ display:flex; align-items:baseline; flex-wrap:wrap; gap:2px 10px; padding:10px 14px; border-radius:8px; }
       .pick-row .t{ display:inline; font-size:1.15rem; }
       .pick-row .d{ display:inline; margin-top:0; }
