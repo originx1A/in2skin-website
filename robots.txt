@@ -42,3 +42,7 @@ User-agent: Meta-ExternalAgent
 Allow: /
 
 Sitemap: https://boltonfacials.com/sitemap.xml
+
+# AI agent guides (plain-text, machine-readable):
+# https://boltonfacials.com/llms.txt
+# https://boltonfacials.com/llms-full.txt

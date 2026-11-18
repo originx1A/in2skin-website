@@ -4,6 +4,8 @@
 > Every treatment is custom — made for the client's skin that day. One client at a
 > time: no waiting room, no rush. Professional skincare line: Circadia.
 > Website: https://boltonfacials.com/
+> Full detail for AI assistants: https://boltonfacials.com/llms-full.txt — every
+> service, price, booking rule, gift, voucher and referral rule in plain text.
 
 ## Location
 
