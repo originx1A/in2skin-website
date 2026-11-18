@@ -1454,6 +1454,7 @@
       var chat = document.getElementById("chatPanel");
       var show = pkgBarVisible() && !(chat && !chat.hidden);
       bar.classList.toggle("show", show);
+      bar.classList.toggle("tap", !booking.service);
       var txt = document.getElementById("pkgText");
       var go = document.getElementById("pkgContinue");
       if (txt) txt.textContent = booking.service ? bookingAddonTotalText() : "Pick a treatment to start";
@@ -1516,6 +1517,7 @@
       var chat = document.getElementById("chatPanel");
       var show = giftBarVisible() && !(chat && !chat.hidden);
       bar.classList.toggle("show", show);
+      bar.classList.toggle("tap", !giftBarReady());
       var txt = document.getElementById("giftBarText");
       var go = document.getElementById("giftBarGo");
       if (txt) txt.textContent = giftBarText();
@@ -2304,6 +2306,17 @@
         }
         gift.step = 3; renderGift(); scrollToTopOf("giftShell");
       }
+    });
+    /* A greyed-out Continue used to swallow taps silently (Tony Nov 17:
+       "button seems blocked"). Tapping the bar — or its greyed-out
+       Continue — while nothing is picked jumps to the choices instead. */
+    var pkgBar = document.getElementById("pkgBar");
+    if (pkgBar) pkgBar.addEventListener("click", function(){
+      if (!booking.service) scrollToTopOf("bookShell");
+    });
+    var giftBar = document.getElementById("giftBar");
+    if (giftBar) giftBar.addEventListener("click", function(){
+      if (!giftBarReady()) scrollToTopOf("giftShell");
     });
     window.addEventListener("scroll", toTopShow, { passive:true });
     toTopShow();
