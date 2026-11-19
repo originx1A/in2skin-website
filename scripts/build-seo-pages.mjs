@@ -29,7 +29,7 @@ const TREATMENT_LINKS = [
   ["light-therapy", "Light Therapy", "$55"],
   ["reflexology", "Reflexology", "$35"],
   ["chemical-peels", "Chemical Peels", "$125–$475"],
-  ["microneedling", "Microneedling", "Custom"],
+  ["microneedling", "Microneedling", "From $150"],
   ["skin-tightening", "Skin Tightening", "Custom"],
 ];
 
@@ -893,7 +893,7 @@ const CONDITIONS = [
         ticks: [
           "Anti-Aging Facial — $125 · 80 minutes. Firming massage, targeted anti-aging serums and rich hydration, for firm, youthful skin.",
           "NANO Needling — $65 · 15 minutes. Ultra-fine tips help serums absorb more deeply — fine lines appear softer, skin looks plumper and smoother.",
-          "Microneedling — custom, priced per consultation. Collagen induction therapy for fine lines, acne scarring, uneven texture and enlarged pores.",
+          "Microneedling — from $150. Collagen induction therapy for fine lines, acne scarring, uneven texture and enlarged pores.",
           "Skin Tightening — custom, priced per consultation. Firming care for skin that has lost elasticity, so it looks tighter and more lifted over time.",
         ],
       },
@@ -984,7 +984,7 @@ const QUESTIONS = {
         "The Works — $160 with a Classic Facial (55 min), $195 with an Anti-Aging Facial (80 min)",
         "Add-ons — NANO Needling $65, Microdermabrasion $55, Light Therapy $55, Reflexology $35 (each 15 minutes)",
         "Chemical Peels — $125–$475, 25 minutes, exact price confirmed at consultation",
-        "Microneedling and Skin Tightening — custom, priced per consultation",
+        "Microneedling — from $150; Skin Tightening — custom, priced per consultation",
         "First visit — $10 toward any service · Private Hours — $15 more per visit",
       ],
     },
@@ -1012,13 +1012,13 @@ const QUESTIONS = {
     ["What is reflexology?", "Reflexology is gentle, rhythmic pressure on points on your feet that map to the rest of your body — the arch to your back, the toes to your head and neck. It helps the whole body unwind, and many clients sleep beautifully that night. It is $35 for 15 minutes, on its own or added to a facial."],
     ["How much downtime is there after a chemical peel?", "It depends on the strength of the peel. Gentle peels have little to no downtime — skin looks fresh right away. Deeper peels can mean a few days of flaking or peeling as fresh skin emerges. Your consultation matches the peel to your skin and confirms exactly what to expect, before anything begins."],
     ["What is the best facial in Bolton?", "There is no single best facial — the best first facial at In2Skin is the Classic Facial, $85 for 55 minutes, tailored to your skin that day. If fine lines are your main concern, the Anti-Aging Facial, $125 for 80 minutes, adds firming massage and targeted serums."],
-    ["Where can I get microneedling near Bolton?", "At In2Skin, a private, one-on-one aesthetics studio in Bolton, Ontario — call (289) 212-4124 to book. Microneedling is collagen induction therapy that prompts the skin’s natural repair and new collagen, improving the look of fine lines, acne scarring, uneven texture and enlarged pores over a series of treatments, and pricing is custom, confirmed at consultation before anything begins."],
+    ["Where can I get microneedling near Bolton?", "At In2Skin, a private, one-on-one aesthetics studio in Bolton, Ontario — call (289) 212-4124 to book. Microneedling is collagen induction therapy that prompts the skin’s natural repair and new collagen, improving the look of fine lines, acne scarring, uneven texture and enlarged pores over a series of treatments, and pricing starts at $150, with the exact price confirmed at consultation before anything begins."],
     ["What is the difference between a facial and a chemical peel?", "A facial deep-cleanses, exfoliates, steams, massages and hydrates your skin, finished with a custom mask — the Classic Facial is $85 for 55 minutes. A chemical peel is a professional Circadia peel solution that lifts away dull surface layers so fresher, brighter skin emerges; peels are $125–$475 for 25 minutes, matched to your skin at consultation, with the exact price confirmed up front."],
     ["Do I need to book a facial in advance in Bolton?", "Yes — advance booking is recommended at In2Skin to get the time you want. You can book online anytime on the website or call (289) 212-4124, and you pay in full securely by card when you book online."],
     ["How much does The Works facial cost in Bolton?", "The Works is $160 with a Classic Facial (55 minutes) or $195 with an Anti-Aging Facial (80 minutes) at In2Skin in Bolton. It is a facial, red light therapy and reflexology all at the same time, while the mask works."],
     ["Can I book a facial early in the morning or on a Sunday in Bolton?", "Yes — In2Skin offers Private Hours on weekday mornings from 7 to 9, weekday evenings after 7 PM, and on Sundays, for $15 more per visit. Call (289) 212-4124 or book online to reserve one."],
     ["Is there a facial for teenagers with acne in Bolton?", "Yes — the Classic Facial, $85 for 55 minutes, is the recommended affordable first step for teen acne at In2Skin in Bolton. It focuses on a thorough deep cleanse, gentle exfoliation and calming, hydrating care, with every step explained as it happens."],
-    ["How much does microneedling cost in Bolton?", "Microneedling at In2Skin is priced per consultation — there is no fixed price. Your consultation confirms your quote up front, before anything begins."],
+    ["How much does microneedling cost in Bolton?", "Microneedling at In2Skin starts at $150. Your consultation confirms your exact quote up front, before anything begins."],
   ],
   areaServedExtra: "Bolton",
 };
