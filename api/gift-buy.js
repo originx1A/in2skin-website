@@ -9,6 +9,7 @@ const { getStripe } = require("../lib/stripe");
 const { GIFT_OPTIONS, priceVoucher, money } = require("../lib/schedule");
 const { SITE_URL } = require("../lib/bookings");
 const { sendEmail } = require("../lib/email");
+const { checkLimit } = require("../lib/rate-limit");
 
 async function handleVoucherBuy(req, res, b) {
   let priced;
@@ -188,6 +189,8 @@ async function handleAgentGift(req, res, b) {
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed." });
+  // 10 gift purchases per minute per IP (agent sales are exempt).
+  if (!(await checkLimit(req, res, { scope: "gift-buy", limit: 10, windowSecs: 60 }))) return;
   try {
     const b = req.body || {};
     // Voice-agent sale: the agent collects buyer + friend details on the

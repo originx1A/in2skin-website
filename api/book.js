@@ -18,8 +18,26 @@ const {
   buildBooking, createBookingCheckout,
 } = require("../lib/bookings");
 const { getOrCreateReferral } = require("../lib/referrals");
+const { checkLimit } = require("../lib/rate-limit");
 
 function bad(res, msg) { return res.status(400).json({ error: msg }); }
+
+// Honeypot / too-fast-submit check for the public booking form. A bot
+// fills the hidden "website" field or submits within 3 seconds of the page
+// loading; a real client takes minutes through the multi-step wizard. The
+// rejection is generic on purpose — never tell a bot why it was rejected.
+// A missing timestamp fails open (an old cached page) — the honeypot is
+// the trap that matters. Agent holds (x-agent-key) never come from the
+// form, so this runs on the web path only.
+const BOT_MSG = "Something went wrong — please call us and we will book you in.";
+function botCheck(b) {
+  if (typeof b.website === "string" && b.website.trim() !== "") return false;
+  if (b.formLoadedAt != null) {
+    const loadedAt = Number(b.formLoadedAt);
+    if (Number.isFinite(loadedAt) && Date.now() - loadedAt < 3000) return false;
+  }
+  return true;
+}
 
 // POST /api/book with { via: "agent" } — the voice agent holds a slot for a
 // caller and gets a Stripe pay link back. Authenticated by the AGENT_API_KEY
@@ -206,10 +224,14 @@ module.exports = async (req, res) => {
     }
   }
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed." });
+  // 10 booking attempts per minute per IP (agent calls are exempt — the
+  // voice agent books from shared IPs). Fail open on any limiter error.
+  if (!(await checkLimit(req, res, { scope: "book", limit: 10, windowSecs: 60 }))) return;
   try {
     const b = req.body || {};
     // Voice-agent hold: same slot rules, no gift codes, no friend bookings.
     if (b.via === "agent") return handleAgentHold(req, res, b);
+    if (!botCheck(b)) return res.status(400).json({ error: BOT_MSG });
     // Shared creation path with the admin walk-in form (same validation,
     // slot rules incl. live buffer + blocks, and pricing).
     const { bufferMins, blocks } = await studioForDate(b.date);

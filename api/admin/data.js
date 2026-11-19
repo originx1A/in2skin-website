@@ -48,7 +48,8 @@
 //     checkout-session link). The remaining balance is gone.
 // Signed in only. Merged because Vercel Hobby allows 12 serverless
 // functions per deployment.
-const { requireAdmin } = require("../../lib/auth");
+const { requireAdmin, adminEmails } = require("../../lib/auth");
+const { pipeline, kvGet, kvSet, kvDel } = require("../../lib/kv");
 const {
   listBookingsRange, listBookingsForDate, listPayments, listGifts, deleteGift,
   giftDisplayStatus, getBooking, markBookingOutcome, saveBooking,
@@ -100,9 +101,142 @@ function escapeHtml(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+/* ---------------- audit log + backup (Nov 18, 2026) ---------------- */
+
+const AUDIT_MAX = 500;
+
+// Record one admin action. Never throws — the audit log must never break
+// the action it records.
+async function logAudit(session, action, details) {
+  try {
+    const id = newId("au");
+    const entry = {
+      id,
+      at: new Date().toISOString(),
+      by: (session && session.email) || "studio",
+      action,
+      details: String(details || "").slice(0, 300),
+    };
+    await kvSet(`audit:${id}`, entry);
+    const all = (await kvGet("audit:all")) || [];
+    all.unshift(id);
+    if (all.length > AUDIT_MAX) {
+      const dropped = all.splice(AUDIT_MAX);
+      for (const oldId of dropped) {
+        try { await kvDel(`audit:${oldId}`); } catch { /* best-effort trim */ }
+      }
+    }
+    await kvSet("audit:all", all);
+    return entry;
+  } catch (err) {
+    console.error("[audit]", err.message);
+    return null;
+  }
+}
+
+async function listAudit(limit) {
+  const ids = ((await kvGet("audit:all")) || []).slice(0, limit || 100);
+  const out = [];
+  for (const id of ids) {
+    const e = await kvGet(`audit:${id}`);
+    if (e) out.push(e);
+  }
+  return out;
+}
+
+// Every booking, found by scanning the per-day indexes — a backup must not
+// miss a booking just because it is older than some window. Falls back to
+// a wide date range if SCAN is unavailable.
+async function listAllBookings() {
+  const seen = new Set();
+  const out = [];
+  try {
+    let cursor = "0";
+    do {
+      const [[next, keys]] = await pipeline([["SCAN", cursor, "MATCH", "bookings:date:*", "COUNT", "100"]]);
+      cursor = String(next);
+      for (const key of keys || []) {
+        const ids = (await kvGet(key)) || [];
+        for (const id of ids) {
+          if (seen.has(id)) continue;
+          seen.add(id);
+          const b = await kvGet(`booking:${id}`);
+          if (b) out.push(b);
+        }
+      }
+    } while (cursor !== "0");
+    return out.sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.time || "").localeCompare(b.time || ""));
+  } catch (err) {
+    console.error("[backup] SCAN failed, falling back to date range:", err.message);
+    const to = new Date();
+    to.setDate(to.getDate() + 60);
+    return listBookingsRange("2026-01-01", to.toISOString().slice(0, 10));
+  }
+}
+
+async function exportBackup() {
+  const [bookings, gifts, payments, referrals, transferSettings, bufferMins, blocks] = await Promise.all([
+    listAllBookings(),
+    listGifts(),
+    listPayments(null, null),
+    listReferrals(),
+    getSettings(),
+    getBufferMins(),
+    listBlocks(),
+  ]);
+  return {
+    exportedAt: new Date().toISOString(),
+    version: 1,
+    counts: {
+      bookings: bookings.length,
+      gifts: gifts.length,
+      payments: payments.length,
+      referrals: referrals.length,
+    },
+    bookings,
+    gifts,
+    payments,
+    referrals,
+    settings: { transfer: transferSettings, bufferMins, blocks },
+  };
+}
+
+async function sendBackupEmail(backup) {
+  const to = adminEmails();
+  if (!to.length) return false;
+  const json = JSON.stringify(backup, null, 2);
+  return sendEmail({
+    to,
+    subject: `In2Skin weekly backup — ${backup.counts.bookings} bookings, ${backup.counts.gifts} gift codes (${backup.exportedAt.slice(0, 10)})`,
+    html: `<p>In2Skin weekly backup — ${backup.exportedAt}.</p>`
+      + `<p>Bookings: <strong>${backup.counts.bookings}</strong> · Gift codes: <strong>${backup.counts.gifts}</strong> · Payments: <strong>${backup.counts.payments}</strong> · Referrals: <strong>${backup.counts.referrals}</strong>.</p>`
+      + `<p>The full backup is below as text — save it somewhere safe. You can also download the same file any time from the admin dashboard (Backup section).</p>`
+      + `<pre style="font-size:11px; white-space:pre-wrap; word-break:break-all;">${json.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>`,
+    text: `In2Skin weekly backup — ${backup.exportedAt}.\nBookings: ${backup.counts.bookings} · Gift codes: ${backup.counts.gifts} · Payments: ${backup.counts.payments} · Referrals: ${backup.counts.referrals}.\n\n${json}`,
+  });
+}
+
 const UPCOMING = ["pending", "unpaid", "paid", "consultation"];
 
 module.exports = async (req, res) => {
+  // Weekly backup, fired by the Vercel cron (vercel.json) — a cron call
+  // carries no admin cookie, so it authenticates with the CRON_SECRET env
+  // var, which Vercel sends as a Bearer token. Fail CLOSED: without the
+  // secret set, or with the wrong token, nothing is sent and nothing leaks.
+  if (req.method === "GET" && (req.query || {}).view === "backup" && (req.query || {}).cron === "1") {
+    const secret = process.env.CRON_SECRET;
+    if (!secret) return res.status(503).json({ error: "CRON_SECRET is not set." });
+    if (String(req.headers.authorization || "") !== `Bearer ${secret}`) {
+      return res.status(401).json({ error: "Not authorized." });
+    }
+    try {
+      const backup = await exportBackup();
+      const emailed = await sendBackupEmail(backup);
+      return res.status(200).json({ ok: true, emailed, counts: backup.counts, exportedAt: backup.exportedAt });
+    } catch (err) {
+      return res.status(err.status || 500).json({ error: err.message });
+    }
+  }
   const session = await requireAdmin(req, res);
   if (!session) return;
   try {
@@ -110,6 +244,7 @@ module.exports = async (req, res) => {
       const b = req.body || {};
       if (b.view === "transfer-hours" && b.settings) {
         const settings = await saveSettings(b.settings);
+        await logAudit(session, "settings.transfer-hours", "call hours saved");
         return res.status(200).json({ settings, status: transferStatus(settings) });
       }
       if (b.view === "referrals" && b.action === "create") {
@@ -119,10 +254,12 @@ module.exports = async (req, res) => {
         const referral = await getOrCreateReferral({
           name: String(b.name).trim(), email: String(b.email).trim(), phone: String(b.phone).trim(),
         });
+        await logAudit(session, "referrals.create", `code ${referral.code} for ${String(b.name).trim()}`);
         return res.status(200).json({ referral });
       }
       if (b.view === "settings" && b.action === "buffer") {
         const bufferMins = await setBufferMins(b.bufferMins);
+        await logAudit(session, "settings.buffer", `gap between appointments set to ${bufferMins} minutes`);
         return res.status(200).json({ bufferMins });
       }
       if (b.view === "settings" && b.action === "block-add") {
@@ -138,26 +275,31 @@ module.exports = async (req, res) => {
           const dur = svc ? durationFor(svc) : 60;
           return s < block.endMin && block.startMin < s + dur;
         }).length;
+        await logAudit(session, "settings.block-add", `${block.date} ${block.startLabel || ""}–${block.endLabel || ""}${block.reason ? " — " + block.reason : ""}`);
         return res.status(200).json({ block, overlapping });
       }
       if (b.view === "settings" && b.action === "block-remove") {
         const removed = await removeBlock(b.id);
         if (!removed) return res.status(404).json({ error: "That block is already gone." });
+        await logAudit(session, "settings.block-remove", `block ${b.id}`);
         return res.status(200).json({ ok: true });
       }
       if (b.view === "messages" && b.action === "read") {
         const ok = await markMessageRead(b.id, b.read !== false);
         if (!ok) return res.status(404).json({ error: "Message not found." });
+        await logAudit(session, "messages.read", `message ${b.id} marked ${b.read !== false ? "read" : "unread"}`);
         return res.status(200).json({ ok: true });
       }
       if (b.view === "messages" && b.action === "delete") {
         const ok = await deleteMessage(b.id);
         if (!ok) return res.status(404).json({ error: "Message not found." });
+        await logAudit(session, "messages.delete", `message ${b.id} deleted`);
         return res.status(200).json({ ok: true });
       }
       if (b.view === "codes" && b.action === "delete") {
         const ok = await deleteGift(b.code);
         if (!ok) return res.status(404).json({ error: "That code is already gone." });
+        await logAudit(session, "codes.delete", `gift code ${b.code} deleted`);
         return res.status(200).json({ ok: true });
       }
       if (b.view === "bookings" && b.action === "walk-in") {
@@ -170,6 +312,7 @@ module.exports = async (req, res) => {
           booking.amountPaidCents = 0;
           await saveBooking(booking);
           await finalizePaidBooking(booking);
+          await logAudit(session, "bookings.walk-in", `${booking.serviceName} — ${booking.date} ${booking.time} · no payment due`);
           return res.status(200).json({ booking: publicBooking(booking), paid: true });
         }
         if (payment === "cash" || payment === "e-transfer") {
@@ -184,6 +327,7 @@ module.exports = async (req, res) => {
             method: payment, createdAt: new Date().toISOString(),
           });
           await finalizePaidBooking(booking);
+          await logAudit(session, "bookings.walk-in", `${booking.serviceName} — ${booking.date} ${booking.time} · paid ${payment}`);
           return res.status(200).json({ booking: publicBooking(booking), paid: true });
         }
         if (payment === "pay-link") {
@@ -195,6 +339,7 @@ module.exports = async (req, res) => {
           booking.checkoutUrl = checkout.url;
           await saveBooking(booking);
           const emailed = await sendHoldEmail(booking, checkout.url);
+          await logAudit(session, "bookings.walk-in", `${booking.serviceName} — ${booking.date} ${booking.time} · card pay link sent`);
           return res.status(200).json({ booking: publicBooking(booking), paid: false, checkoutUrl: checkout.url, emailed });
         }
         // Pay later: the appointment is real and holds the slot; the client
@@ -203,6 +348,7 @@ module.exports = async (req, res) => {
         booking.amountPaidCents = 0;
         await saveBooking(booking);
         const emailed = await sendWalkInConfirmation(booking);
+        await logAudit(session, "bookings.walk-in", `${booking.serviceName} — ${booking.date} ${booking.time} · pay at the visit`);
         return res.status(200).json({ booking: publicBooking(booking), paid: false, emailed });
       }
       if (b.view === "bookings" && (b.action === "complete" || b.action === "no-show") && b.bookingId) {
@@ -212,6 +358,7 @@ module.exports = async (req, res) => {
           return res.status(400).json({ error: "Only a paid, consultation or unpaid booking can be marked complete or no-show." });
         }
         const updated = await markBookingOutcome(booking, b.action);
+        await logAudit(session, `bookings.${b.action}`, `${booking.serviceName} — ${booking.date} ${booking.time}`);
         return res.status(200).json({ booking: publicBooking(updated) });
       }
       if (b.view === "bookings" && b.action === "cancel" && b.bookingId) {
@@ -221,6 +368,7 @@ module.exports = async (req, res) => {
           return res.status(400).json({ error: "Only an upcoming booking can be cancelled." });
         }
         const { booking: updated, emailed } = await cancelBooking(booking, b.reason);
+        await logAudit(session, "bookings.cancel", `${booking.serviceName} — ${booking.date} ${booking.time}${b.reason ? " — " + String(b.reason).slice(0, 100) : ""}`);
         return res.status(200).json({ booking: publicBooking(updated), emailed });
       }
       if (b.view === "bookings" && b.action === "move" && b.bookingId) {
@@ -230,9 +378,11 @@ module.exports = async (req, res) => {
           return res.status(400).json({ error: "Only an upcoming booking can be moved." });
         }
         const { bufferMins, blocks } = await studioForDate(b.date);
+        const oldWhen = booking.date + " " + booking.time;
         const { booking: updated, emailed } = await moveBooking(booking, {
           date: b.date, time: b.time, type: b.type, bufferMins, blocks,
         });
+        await logAudit(session, "bookings.move", `${booking.serviceName} — ${oldWhen} → ${updated.date} ${updated.time}`);
         return res.status(200).json({ booking: publicBooking(updated), emailed });
       }
       if (b.view === "bookings" && b.action === "record-payment" && b.bookingId) {
@@ -266,6 +416,7 @@ module.exports = async (req, res) => {
         } else {
           await saveBooking(booking);
         }
+        await logAudit(session, "bookings.record-payment", `${money(amountCents)} ${method} — ${booking.serviceName} ${booking.date} ${booking.time}`);
         return res.status(200).json({ booking: publicBooking(booking), paid: booking.status === "paid", finalized });
       }
       if (b.view === "bookings" && b.action === "set-amount" && b.bookingId) {
@@ -285,6 +436,7 @@ module.exports = async (req, res) => {
         if (b.note) booking.amountNote = String(b.note).slice(0, 200);
         booking.amountSetAt = new Date().toISOString();
         await saveBooking(booking);
+        await logAudit(session, "bookings.set-amount", `${booking.serviceName} — ${booking.date} ${booking.time} · amount now ${money(amountCents)}${b.note ? " — " + String(b.note).slice(0, 100) : ""}`);
         return res.status(200).json({ booking: publicBooking(booking) });
       }
       if (b.view === "bookings" && b.action === "pay-link" && b.bookingId) {
@@ -294,6 +446,7 @@ module.exports = async (req, res) => {
           return res.status(400).json({ error: "This booking is closed — a payment link can't be sent for it." });
         }
         if (booking.status === "pending" && booking.checkoutUrl) {
+          await logAudit(session, "bookings.pay-link", `${booking.serviceName} — ${booking.date} ${booking.time} · card link resent`);
           return res.status(200).json({ url: booking.checkoutUrl, resent: true });
         }
         const due = balanceDue(booking);
@@ -306,6 +459,7 @@ module.exports = async (req, res) => {
         });
         booking.paylinkId = out.id;
         await saveBooking(booking);
+        await logAudit(session, "bookings.pay-link", `${booking.serviceName} — ${booking.date} ${booking.time} · card link sent for ${money(due)}`);
         return res.status(200).json({ url: out.url, paylinkId: out.id, emailed: true });
       }
       if (b.view === "bookings" && b.action === "resend-confirmation" && b.bookingId) {
@@ -313,6 +467,7 @@ module.exports = async (req, res) => {
         if (!booking) return res.status(404).json({ error: "Booking not found." });
         booking.emailSent = false;
         const emailed = await sendBookingConfirmation(booking);
+        await logAudit(session, "bookings.resend-confirmation", `${booking.serviceName} — ${booking.date} ${booking.time}`);
         return res.status(200).json({ ok: true, emailed });
       }
       if (b.view === "bookings" && b.action === "email-client" && b.bookingId) {
@@ -332,6 +487,7 @@ module.exports = async (req, res) => {
           subject: subject.startsWith("In2Skin") ? subject : `In2Skin — ${subject}`,
           html: `<p>Hi ${escapeHtml(String(who.name || "").split(" ")[0] || "there")},</p><p>${escapeHtml(message).replace(/\n/g, "<br/>")}</p><p>— In2Skin, Bolton<br/>${PHONE_DISPLAY}</p>`,
         });
+        await logAudit(session, "bookings.email-client", `note to ${booking.email} — ${subject.slice(0, 100)}`);
         return res.status(200).json({ ok: true, emailed });
       }
       return res.status(400).json({ error: "Nothing to save — check the action and try again." });
@@ -348,6 +504,14 @@ module.exports = async (req, res) => {
     if ((req.query || {}).view === "messages") {
       const messages = await listMessages();
       return res.status(200).json({ messages });
+    }
+    if ((req.query || {}).view === "backup") {
+      const backup = await exportBackup();
+      return res.status(200).json(backup);
+    }
+    if ((req.query || {}).view === "audit") {
+      const entries = await listAudit(100);
+      return res.status(200).json({ entries });
     }
     if ((req.query || {}).view === "catalog") {
       return res.status(200).json({

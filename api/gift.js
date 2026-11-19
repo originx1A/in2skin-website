@@ -9,8 +9,12 @@ const {
   getGift, ensureGiftCode, sendGiftCertificate, sendGiftReceipt, sendVoucherCertificate,
 } = require("../lib/bookings");
 const { getReferralByCode } = require("../lib/referrals");
+const { checkLimit } = require("../lib/rate-limit");
 
 module.exports = async (req, res) => {
+  // 30 balance lookups per minute per IP — generous for real use, tight
+  // enough that guessing gift codes (IN2SKIN-XXXXXX) is impractical.
+  if (!(await checkLimit(req, res, { scope: "gift", limit: 30, windowSecs: 60 }))) return;
   try {
     if (req.query.session_id) {
       const sessionId = req.query.session_id;

@@ -18,8 +18,13 @@
 const { kvGet } = require("../lib/kv");
 const { getStripe } = require("../lib/stripe");
 const { createPayLink, markPaylinkPaid } = require("../lib/bookings");
+const { checkLimit } = require("../lib/rate-limit");
 
 module.exports = async (req, res) => {
+  if (req.method === "POST") {
+    // 10 pay-link creations per minute per IP.
+    if (!(await checkLimit(req, res, { scope: "pay", limit: 10, windowSecs: 60 }))) return;
+  }
   try {
     if (req.method === "GET") {
       if (req.query.session_id) {

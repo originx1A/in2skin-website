@@ -1,9 +1,13 @@
 // POST /api/admin/login { password } — password sign-in (ADMIN_PASSWORD).
 // Sets the same 30-day session cookie as the magic link.
 const { passwordMatches, createSession, sessionCookie, adminEmail } = require("../../lib/auth");
+const { checkLimit } = require("../../lib/rate-limit");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed." });
+  // 10 password attempts per hour per IP — slow enough to make guessing
+  // the admin password impractical, loose enough for real sign-ins.
+  if (!(await checkLimit(req, res, { scope: "admin-login", limit: 10, windowSecs: 3600 }))) return;
   try {
     if (!process.env.ADMIN_PASSWORD) {
       return res.status(503).json({ error: "Password sign-in is not configured yet: set ADMIN_PASSWORD in the Vercel project settings, then redeploy." });

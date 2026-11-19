@@ -59,6 +59,7 @@ function footer() {
               <li>Booking: by phone, or online anytime</li>
               <li>First visit? $10 toward any service</li>
               <li><a href="/questions/">Questions about facials? See our answers</a></li>
+              <li><a href="/privacy.html">Privacy — how we handle your information</a></li>
             </ul>
           </div>
         </div>

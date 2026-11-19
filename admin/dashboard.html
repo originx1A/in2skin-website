@@ -118,6 +118,12 @@
       </section>
 
       <section style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;">Backup — bookings, gift codes &amp; payments</h2>
+        <p class="sub">Downloads everything as one file — every booking, gift certificate, payment and referral, plus the studio settings. A copy is also emailed to the studio every Monday morning.</p>
+        <p style="margin-top:12px;"><button class="btn btn-book" id="backupBtn" type="button">Download full backup</button> <span id="backupMsg" style="color:var(--ink-soft); margin-left:8px;"></span></p>
+      </section>
+
+      <section style="margin-top:36px;">
         <h2 style="font-size:1.4rem;">Referrals — $15 credit + free reflexology every 3 friends</h2>
         <p class="sub">When three friends book and pay in full with a client's code, that client earns $15 treatment credit and a free reflexology add-on. No cash value — credit is for treatments only.</p>
         <div id="refList" style="margin-top:12px;">Loading referrals…</div>
@@ -161,6 +167,13 @@
         <h2 style="font-size:1.4rem;">Messages — from callers</h2>
         <p class="sub">Messages the phone assistant took when it couldn't put a caller through. Newest first — tap the number to call back.</p>
         <div id="msgList" style="margin-top:12px;">Loading messages…</div>
+      </section>
+
+      <section style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;">Activity — what changed, and when</h2>
+        <p class="sub">Every change made in this dashboard — bookings moved or cancelled, payments recorded, codes deleted, settings changed. Newest first.</p>
+        <p style="margin-top:12px;"><button class="btn btn-ghost" id="auditRefresh" type="button">Refresh</button></p>
+        <div id="auditList" style="margin-top:12px;">Loading activity…</div>
       </section>
 
       <section style="margin-top:36px;">
@@ -901,6 +914,42 @@
           URL.revokeObjectURL(a.href);
         });
         document.getElementById("repPrint").addEventListener("click", function(){ window.print(); });
+
+        // ---- backup + activity ----
+        function fmtAuditTime(iso){
+          try { return new Date(iso).toLocaleString("en-CA", { month:"short", day:"numeric", hour:"numeric", minute:"2-digit" }); } catch(e){ return iso; }
+        }
+        function loadAudit(){
+          fetch("/api/admin/data?view=audit")
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ document.getElementById("auditList").textContent = res.j.error || "Could not load activity."; return; }
+              var rows = res.j.entries.map(function(e){
+                return '<div class="after-item"><div>' + fmtAuditTime(e.at) + ' · <strong>' + esc(e.action) + '</strong> — ' + esc(e.details || "") + '<br/><span style="color:var(--ink-soft);">by ' + esc(e.by || "studio") + '</span></div></div>';
+              });
+              document.getElementById("auditList").innerHTML = rows.length ? rows.join("") : "<p style='color:var(--ink-soft);'>No admin activity recorded yet — the next change you make shows up here.</p>";
+            })
+            .catch(function(){ document.getElementById("auditList").textContent = "Could not load activity — check your connection."; });
+        }
+        document.getElementById("auditRefresh").addEventListener("click", loadAudit);
+        loadAudit();
+        document.getElementById("backupBtn").addEventListener("click", function(){
+          var m = document.getElementById("backupMsg");
+          m.textContent = "Preparing your backup…";
+          fetch("/api/admin/data?view=backup")
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ m.textContent = res.j.error || "Could not make the backup."; return; }
+              var blob = new Blob([JSON.stringify(res.j, null, 2)], { type: "application/json" });
+              var a = document.createElement("a");
+              a.href = URL.createObjectURL(blob);
+              a.download = "in2skin-backup-" + (res.j.exportedAt || "").slice(0, 10) + ".json";
+              a.click();
+              URL.revokeObjectURL(a.href);
+              m.textContent = "Downloaded — " + res.j.counts.bookings + " bookings, " + res.j.counts.gifts + " gift codes, " + res.j.counts.payments + " payments. A copy is also emailed every Monday morning.";
+            })
+            .catch(function(){ m.textContent = "Could not make the backup — check your connection."; });
+        });
       })();
     </script>
   </body>

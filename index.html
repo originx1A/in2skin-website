@@ -199,6 +199,7 @@
               <li>Booking: by phone, or online anytime</li>
               <li>First visit? $10 toward any service</li>
               <li><a href="/questions/">Questions about facials? See our answers</a></li>
+              <li><a href="/privacy.html">Privacy — how we handle your information</a></li>
               <li>Facials near: <a href="/facials-caledon/">Caledon</a> · <a href="/facials-kleinburg/">Kleinburg</a> · <a href="/facials-vaughan/">Vaughan</a> · <a href="/facials-brampton/">Brampton</a> · <a href="/facials-nobleton/">Nobleton</a> · <a href="/facials-king-city/">King City</a> · <a href="/facials-orangeville/">Orangeville</a> · <a href="/facials-georgetown/">Georgetown</a></li>
             </ul>
           </div>
@@ -914,6 +915,7 @@
     }
 
     /* ---------------- BOOKING WIZARD ---------------- */
+    var PAGE_LOAD_MS = Date.now();
     var booking = { service:null, addons:[], date:null, time:null, step:1, type:"regular", forWhom:"me" };
     var TIMES = ["9:00 AM","10:00 AM","11:00 AM","12:30 PM","1:30 PM","2:30 PM","3:30 PM","4:30 PM","5:30 PM"];
     var TIMES_MORNING = ["7:00 AM","7:45 AM","8:30 AM"];
@@ -1172,6 +1174,10 @@
             '<button type="button" class="pick' + (friendMode ? " sel" : "") + '" data-pick-for="friend"><span class="t">For a Friend</span><span class="d">They get the confirmation — they just show up</span></button>' +
           '</div>' +
           '<form id="bookForm" novalidate>' + fieldsHTML +
+            /* Honeypot (bots fill it; people never see it) + the page-load
+               timestamp the server checks against too-fast submits. */
+            '<input type="text" name="website" id="bfWebsite" value="" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" />' +
+            '<input type="hidden" id="bfTs" value="" />' +
             '<div class="err" id="bookErr"></div>' +
             '<div class="book-nav"><button type="button" class="btn btn-ghost" id="backTo2">← Back</button><span class="spacer"></span>' +
             '<button type="submit" class="btn btn-call btn-big">' + (friendMode ? "Confirm — Book for My Friend" : "Confirm My Booking") + '</button></div>' +
@@ -1369,6 +1375,8 @@
       var back2 = document.getElementById("backTo2");
       if (back2) back2.addEventListener("click", function(){ booking.step = 2; renderBooking(); scrollToTopOf("bookShell"); });
       var form = document.getElementById("bookForm");
+      var tsField = document.getElementById("bfTs");
+      if (tsField) tsField.value = String(PAGE_LOAD_MS);
       if (form) form.addEventListener("submit", function(ev){
         ev.preventDefault();
         var name = document.getElementById("bfName").value.trim();
@@ -1405,7 +1413,9 @@
           body: JSON.stringify({ service: booking.service, addons: booking.addons, date: booking.date, time: booking.time, type: booking.type,
             forWhom: booking.forWhom, name: booking.name, phone: booking.phone, email: booking.email,
             guestName: booking.guestName, guestPhone: booking.guestPhone, guestEmail: booking.guestEmail,
-            first: booking.first, giftCode: booking.giftCode, referredBy: booking.referredBy }) })
+            first: booking.first, giftCode: booking.giftCode, referredBy: booking.referredBy,
+            website: (document.getElementById("bfWebsite") || {}).value || "",
+            formLoadedAt: (document.getElementById("bfTs") || {}).value || "" }) })
         .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
         .then(function(res){
           if (!res.ok){
