@@ -1385,19 +1385,23 @@
           var fName = document.getElementById("bfFName").value.trim();
           var fPhone = document.getElementById("bfFPhone").value.trim();
           var fEmail = document.getElementById("bfFEmail").value.trim();
-          if (!name){ bookErr("Please add your name — you are making this booking."); return; }
-          if (email && email.indexOf("@") < 1){ bookErr("That email doesn't look right — check it, or leave it blank."); return; }
-          if (!fName){ bookErr("Please add your friend\u2019s name so we know who is coming."); return; }
-          if (!fPhone){ bookErr("Please add your friend\u2019s phone so we can reach them about the appointment."); return; }
-          if (fEmail && fEmail.indexOf("@") < 1){ bookErr("Your friend's email doesn't look right — check it, or leave it blank."); return; }
+          var misses = [];
+          if (!name) misses.push({ sel:"#bfName", msg:"Please add your name — you are making this booking." });
+          if (email && email.indexOf("@") < 1) misses.push({ sel:"#bfEmail", msg:"That email doesn't look right — check it, or leave it blank." });
+          if (!fName) misses.push({ sel:"#bfFName", msg:"Please add your friend\u2019s name so we know who is coming." });
+          if (!fPhone) misses.push({ sel:"#bfFPhone", msg:"Please add your friend\u2019s phone so we can reach them about the appointment." });
+          if (fEmail && fEmail.indexOf("@") < 1) misses.push({ sel:"#bfFEmail", msg:"Your friend's email doesn't look right — check it, or leave it blank." });
+          if (guideMissed(misses, bookErr)) return;
           booking.name = name; booking.email = email;
           booking.guestName = fName; booking.guestPhone = fPhone; booking.guestEmail = fEmail;
           booking.phone = fPhone;
         } else {
           var phone = document.getElementById("bfPhone").value.trim();
-          if (!name){ bookErr("Please add your name so we know who is coming."); return; }
-          if (!phone){ bookErr("Please add a phone number so we can reach you about your appointment."); return; }
-          if (email && email.indexOf("@") < 1){ bookErr("That email doesn't look right — check it, or leave it blank."); return; }
+          var misses = [];
+          if (!name) misses.push({ sel:"#bfName", msg:"Please add your name so we know who is coming." });
+          if (!phone) misses.push({ sel:"#bfPhone", msg:"Please add a phone number so we can reach you about your appointment." });
+          if (email && email.indexOf("@") < 1) misses.push({ sel:"#bfEmail", msg:"That email doesn't look right — check it, or leave it blank." });
+          if (guideMissed(misses, bookErr)) return;
           booking.name = name; booking.phone = phone; booking.email = email;
           booking.guestName = null; booking.guestEmail = null;
         }
@@ -1436,6 +1440,11 @@
           bookErr("Could not reach the booking service — please check your connection or call us.");
           if (bookBtn){ bookBtn.disabled = false; bookBtn.textContent = booking.forWhom === "friend" ? "Confirm — Book for My Friend" : "Confirm My Booking"; }
         });
+      });
+      if (form) form.addEventListener("input", function(ev){
+        /* Typing into a glowing field clears that field's halo — the
+           person found it, so it can stop glowing. */
+        if (ev.target && ev.target.classList) ev.target.classList.remove("glow-pick");
       });
       var again = document.getElementById("bookAgain");
       if (again) again.addEventListener("click", function(){
@@ -1513,6 +1522,19 @@
         window.scrollTo({ top: y < 0 ? 0 : y, behavior:"smooth" });
       }
       GLOW_TIMER = setTimeout(clearGlow, 30000);
+    }
+    /* Missed required fields on the submit steps (Tony Nov 18, 2026):
+       same golden halo as the pick steps — the page comes back to the
+       FIRST missed field and EVERY missed field glows until it is
+       typed into. misses is an array of {sel, msg} in the validator's
+       check order; the first message is the error shown. */
+    function guideMissed(misses, errFn){
+      if (!misses.length) return false;
+      errFn(misses[0].msg);
+      var first = document.querySelector(misses[0].sel);
+      var wrap = (first && first.closest) ? first.closest(".field") : first;
+      glowPick(misses.map(function(m){ return m.sel; }).join(", "), wrap || first);
+      return true;
     }
     function guideBookingStep1(){
       glowPick("#bookShell [data-pick-service], #bookShell [data-pick-addon]", document.getElementById("bookShell"));
@@ -1811,10 +1833,12 @@
         var email = document.getElementById("gfEmail").value.trim();
         var rName = document.getElementById("gfRName").value.trim();
         var rEmail = document.getElementById("gfREmail").value.trim();
-        if (!name){ giftErr("Please add your name."); return; }
-        if (!email || email.indexOf("@") < 1){ giftErr("Please add your email — your confirmation is sent there."); return; }
-        if (!rName){ giftErr("Please add your friend\u2019s name — it goes on the certificate."); return; }
-        if (!rEmail || rEmail.indexOf("@") < 1){ giftErr("Please add your friend\u2019s email — the certificate code is sent there."); return; }
+        var misses = [];
+        if (!name) misses.push({ sel:"#gfName", msg:"Please add your name." });
+        if (!email || email.indexOf("@") < 1) misses.push({ sel:"#gfEmail", msg:"Please add your email — your confirmation is sent there." });
+        if (!rName) misses.push({ sel:"#gfRName", msg:"Please add your friend\u2019s name — it goes on the certificate." });
+        if (!rEmail || rEmail.indexOf("@") < 1) misses.push({ sel:"#gfREmail", msg:"Please add your friend\u2019s email — the certificate code is sent there." });
+        if (guideMissed(misses, giftErr)) return;
         gift.buyerName = name; gift.buyerEmail = email;
         gift.recipientName = rName; gift.recipientEmail = rEmail;
         gift.message = document.getElementById("gfMsg").value.trim();
@@ -1841,6 +1865,11 @@
           giftErr("Could not reach the gift service — please check your connection or call us.");
           if (giftBtn){ giftBtn.disabled = false; giftBtn.textContent = "Send This Gift"; }
         });
+      });
+      if (form) form.addEventListener("input", function(ev){
+        /* Typing into a glowing field clears that field's halo — the
+           person found it, so it can stop glowing. */
+        if (ev.target && ev.target.classList) ev.target.classList.remove("glow-pick");
       });
       var again = document.getElementById("giftAgain");
       if (again) again.addEventListener("click", function(){
@@ -2060,15 +2089,17 @@
         var name = document.getElementById("pfName").value.trim();
         var contactEl = document.getElementById("pfContact");
         var contact = contactEl ? contactEl.value.trim() : "";
-        if (!amt || amt < 1){ payErr("Please enter the amount owed — $1 or more."); return; }
-        if (!name){ payErr("Please add the client\u2019s name."); return; }
+        var misses = [];
+        if (!amt || amt < 1) misses.push({ sel:"#pfAmount", msg:"Please enter the amount owed — $1 or more." });
+        if (!name) misses.push({ sel:"#pfName", msg:"Please add the client\u2019s name." });
         if (pay.method === "email"){
-          if (!contact || contact.indexOf("@") < 1){ payErr("Please add the client\u2019s email — the payment link is sent there."); return; }
+          if (!contact || contact.indexOf("@") < 1) misses.push({ sel:"#pfContact", msg:"Please add the client\u2019s email — the payment link is sent there." });
         } else if (pay.method === "qr"){
           contact = "";
         } else {
-          if (!contact || contact.replace(/[^0-9]/g,"").length < 10){ payErr("Please add the client\u2019s mobile number — the payment link is texted there."); return; }
+          if (!contact || contact.replace(/[^0-9]/g,"").length < 10) misses.push({ sel:"#pfContact", msg:"Please add the client\u2019s mobile number — the payment link is texted there." });
         }
+        if (guideMissed(misses, payErr)) return;
         pay.amount = amt.toString(); pay.clientName = name; pay.contact = contact; pay.touched = true;
         if (!pay.serviceLabel) pay.serviceLabel = "In2Skin visit";
         var pfGiftEl = document.getElementById("pfGift");
@@ -2097,6 +2128,11 @@
           payErr("Could not reach the payment service — please check your connection and try again.");
           if (payBtn){ payBtn.disabled = false; payBtn.textContent = pay.method === "qr" ? "Show QR Code →" : "Send Payment Link →"; }
         });
+      });
+      if (form) form.addEventListener("input", function(ev){
+        /* Typing into a glowing field clears that field's halo — the
+           person found it, so it can stop glowing. */
+        if (ev.target && ev.target.classList) ev.target.classList.remove("glow-pick");
       });
       var back = document.getElementById("payBack");
       if (back) back.addEventListener("click", function(){ pay.step = 1; renderPay(); });
