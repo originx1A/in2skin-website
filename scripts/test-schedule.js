@@ -42,9 +42,9 @@ check("Add-on 9:00 -> 10:00 add-on free", taken([B("9:00 AM", "reflexology")], "
 check("Classic + Light is 70 min", durationForBooking("classic-facial", ["light-therapy"]), 70);
 check("Classic + 2 add-ons is 85 min", durationForBooking("classic-facial", ["light-therapy", "reflexology"]), 85);
 check("Consult + Light is 75 min (60-min hold + 15)", durationForBooking("microneedling", ["light-therapy"]), 75);
-check("Classic + Light regular is $110", baseCentsFor("classic-facial", ["light-therapy"], "regular"), 11000);
-check("Classic + Light Private Hours is $125 (premium once)", baseCentsFor("classic-facial", ["light-therapy"], "after"), 12500);
-check("Classic + 2 add-ons Private Hours is $150", baseCentsFor("classic-facial", ["light-therapy", "reflexology"], "after"), 15000);
+check("Classic + Light regular is $140", baseCentsFor("classic-facial", ["light-therapy"], "regular"), 14000);
+check("Classic + Light Private Hours is $155 (premium once)", baseCentsFor("classic-facial", ["light-therapy"], "after"), 15500);
+check("Classic + 2 add-ons Private Hours is $190", baseCentsFor("classic-facial", ["light-therapy", "reflexology"], "after"), 19000);
 check("normalizeAddons dedupes", normalizeAddons(["light-therapy", "light-therapy"]).length, 1);
 let threw = false;
 try { normalizeAddons(["nope"]); } catch (e) { threw = true; }

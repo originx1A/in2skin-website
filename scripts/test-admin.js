@@ -211,8 +211,8 @@ async function run() {
   check("walk-in cash -> 200", res.statusCode, 200);
   const walkIn = res.body.booking;
   check("walk-in paid", walkIn.status, "paid");
-  check("walk-in amount $65", walkIn.amountCents, 6500);
-  check("walk-in paid in full", walkIn.amountPaidCents, 6500);
+  check("walk-in amount $85", walkIn.amountCents, 8500);
+  check("walk-in paid in full", walkIn.amountPaidCents, 8500);
   check("walk-in balance $0", walkIn.balanceDueCents, 0);
   check("walk-in via admin", walkIn.via, "admin");
   check("walk-in got a referral code", !!walkIn.myReferralCode, true);
@@ -226,7 +226,7 @@ async function run() {
   check("walk-in later -> 200", res.statusCode, 200);
   const laterBk = res.body.booking;
   check("walk-in later status unpaid", laterBk.status, "unpaid");
-  check("walk-in later balance $65", laterBk.balanceDueCents, 6500);
+  check("walk-in later balance $85", laterBk.balanceDueCents, 8500);
 
   res = await callAdmin({
     view: "bookings", action: "walk-in",
@@ -294,7 +294,7 @@ async function run() {
   check("old slot free after move", sched.slotTaken(day1, sched.parseTime("9:00 AM"), 55), false);
   res = await callAdmin({ view: "bookings", action: "move", bookingId: walkIn.id, date: d1, time: "7:00 PM", type: "after" });
   check("move regular -> Private Hours -> 200", res.statusCode, 200);
-  check("Private Hours adds $15", res.body.booking.amountCents, 8000);
+  check("Private Hours adds $15", res.body.booking.amountCents, 10000);
   check("balance due $15 after move", res.body.booking.balanceDueCents, 1500);
   // Blocked time blocks a move.
   const blk2 = await studio.addBlock({ date: d1, start: "12:00", end: "13:00", reason: "lunch" });
@@ -353,7 +353,7 @@ async function run() {
   check("reports revenue collected > 0", rep.body.totals.revenueCollectedCents > 0, true);
   const walkClient = rep.body.clients.find((c) => c.email === "walkin@example.com");
   check("reports groups by client email", !!walkClient, true);
-  check("reports client paid total", walkClient ? walkClient.totalPaidCents : 0, 6500);
+  check("reports client paid total", walkClient ? walkClient.totalPaidCents : 0, 8500);
 
   // ---------- 9. agentMode ----------
   check("agentMode default is agent", transfer.defaultSettings().agentMode, "agent");
@@ -444,7 +444,7 @@ async function run() {
   await webhook(whReq, res);
   check("webhook -> 200", res.statusCode, 200);
   const afterPay = await bookingsLib.getBooking(payWalkIn.id);
-  check("webhook adds to amountPaid", afterPay.amountPaidCents, 8000);
+  check("webhook adds to amountPaid", afterPay.amountPaidCents, 10000);
   check("webhook flips to paid", afterPay.status, "paid");
 
   // ---------- 12. public booking still works through the shared path ----------
@@ -458,7 +458,7 @@ async function run() {
   res = mockRes();
   await book(mockReq({
     method: "POST", headers: {},
-    body: { service: "microneedling", type: "regular", date: d3, time: "9:00 AM", name: "Consult", phone: "(905) 555-0201", email: "consult@example.com", first: "no" },
+    body: { service: "skin-tightening", type: "regular", date: d3, time: "9:00 AM", name: "Consult", phone: "(905) 555-0201", email: "consult@example.com", first: "no" },
   }), res);
   check("public consultation -> 200", res.statusCode, 200);
   check("consultation paid immediately", res.body.paid, true);
@@ -519,14 +519,14 @@ async function run() {
   res = mockRes();
   await payHandler(mockReq({ method: "GET", query: { session_id: "cs_spot_bk" } }), res);
   check("booking link settles -> paid", res.body.paid, true);
-  check("booking amount adds once", (await bookingsLib.getBooking(payWalkIn.id)).amountPaidCents, 9500);
+  check("booking amount adds once", (await bookingsLib.getBooking(payWalkIn.id)).amountPaidCents, 11500);
   const whEvent2 = { type: "checkout.session.completed", data: { object: { id: "cs_spot_bk", amount_total: 1500, payment_intent: "pi_spot2", metadata: { type: "payspot", paylinkId: spot2.id, giftCode: "", giftAppliedCents: "0" } } } };
   const whReq2 = mockReq({ method: "POST", headers: { "stripe-signature": "sig" } });
   whReq2[Symbol.asyncIterator] = async function* () { yield Buffer.from(JSON.stringify(whEvent2)); };
   res = mockRes();
   await webhook(whReq2, res);
   check("webhook after GET -> 200", res.statusCode, 200);
-  check("webhook replay adds nothing", (await bookingsLib.getBooking(payWalkIn.id)).amountPaidCents, 9500);
+  check("webhook replay adds nothing", (await bookingsLib.getBooking(payWalkIn.id)).amountPaidCents, 11500);
   // Wrong session type -> 400, unknown link -> 404.
   retrieveOverride = { id: "cs_wrong", payment_status: "paid", amount_total: 6500, payment_intent: "pi_x", metadata: { type: "booking", bookingId: "bk_x" } };
   res = mockRes();

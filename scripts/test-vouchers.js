@@ -60,37 +60,37 @@ function voucherSession(id, label, totalCents) {
 async function run() {
   // --- pricing (mirrors the booking math) ---
   let p = sched.priceVoucher("classic-facial", ["reflexology"], "regular");
-  check("Classic + Reflexology regular = $90", p.totalCents, 9000);
-  check("label names the treatment", p.label, "Classic Facial + Reflexology — $90");
+  check("Classic + Reflexology regular = $120", p.totalCents, 12000);
+  check("label names the treatment", p.label, "Classic Facial + Reflexology — $120");
   p = sched.priceVoucher("classic-facial", ["reflexology"], "after");
-  check("Classic + Reflexology Private Hours = $105 (premium once)", p.totalCents, 10500);
+  check("Classic + Reflexology Private Hours = $135 (premium once)", p.totalCents, 13500);
   p = sched.priceVoucher("classic-facial", ["light-therapy", "reflexology"], "after");
-  check("Classic + Light + Reflexology Private Hours = $150 (premium once per visit)", p.totalCents, 15000);
+  check("Classic + Light + Reflexology Private Hours = $190 (premium once per visit)", p.totalCents, 19000);
   p = sched.priceVoucher("anti-aging-facial", ["nano-needling", "light-therapy"], "regular");
-  check("Anti + NANO + Light = $195", p.totalCents, 19500);
+  check("Anti + NANO + Light = $245", p.totalCents, 24500);
   p = sched.priceVoucher("combo-anti", [], "regular");
-  check("The Works Anti alone = $165", p.totalCents, 16500);
+  check("The Works Anti alone = $195", p.totalCents, 19500);
   p = sched.priceVoucher("classic-facial", ["reflexology", "reflexology"], "regular");
-  check("duplicate add-on counted once", p.totalCents, 9000);
+  check("duplicate add-on counted once", p.totalCents, 12000);
   checkThrows("chemical peel cannot be a voucher main", () => sched.priceVoucher("chemical-peels", [], "regular"));
   checkThrows("microneedling cannot be a voucher main", () => sched.priceVoucher("microneedling", [], "regular"));
   checkThrows("a facial cannot be an add-on", () => sched.priceVoucher("classic-facial", ["classic-facial"], "regular"));
   checkThrows("unknown add-on rejected", () => sched.priceVoucher("classic-facial", ["nope"], "regular"));
 
   // --- issue: voucher record carries the rules ---
-  const gift = await bookingsLib.ensureGiftCode(voucherSession("cs_voucher1", "Classic Facial + Reflexology — $90", 9000));
+  const gift = await bookingsLib.ensureGiftCode(voucherSession("cs_voucher1", "Classic Facial + Reflexology — $120", 12000));
   check("voucher kind", gift.kind, "voucher");
-  check("voucher label", gift.voucherLabel, "Classic Facial + Reflexology — $90");
+  check("voucher label", gift.voucherLabel, "Classic Facial + Reflexology — $120");
   check("voucherFor service", gift.voucherFor.service, "classic-facial");
   check("voucherFor add-on", gift.voucherFor.addons[0].id, "reflexology");
-  check("voucher balance $90", gift.balanceCents, 9000);
+  check("voucher balance $120", gift.balanceCents, 12000);
   check("voucher uses[] starts empty", gift.uses.length, 0);
   check("voucher status active", gift.status, "active");
   const useBy = new Date(Date.now() + 120 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   check("suggested use-by is +120 days", gift.suggestedUseBy, useBy);
   check("voucher never expires", gift.expiresAt, null);
   check("holder starts as the recipient", gift.holderEmail, "sam@example.com");
-  const again = await bookingsLib.ensureGiftCode(voucherSession("cs_voucher1", "Classic Facial + Reflexology — $90", 9000));
+  const again = await bookingsLib.ensureGiftCode(voucherSession("cs_voucher1", "Classic Facial + Reflexology — $120", 12000));
   check("ensureGiftCode idempotent", again.code, gift.code);
   const all = await bookingsLib.listGifts();
   check("gift:all index lists the voucher", all.some((g) => g.code === gift.code), true);
@@ -113,7 +113,7 @@ async function run() {
   const deducted = await bookingsLib.deductGift(booking);
   check("deductGift returns 6500", deducted, 6500);
   const afterUse = await bookingsLib.getGift(gift.code);
-  check("voucher balance after $65 use", afterUse.balanceCents, 2500);
+  check("voucher balance after $65 use", afterUse.balanceCents, 5500);
   check("uses[] has 1 entry", afterUse.uses.length, 1);
   check("use entry amount", afterUse.uses[0].amountCents, 6500);
   check("use entry booking", afterUse.uses[0].bookingId, "bk-v1");
@@ -127,10 +127,10 @@ async function run() {
   const partial = await bookingsLib.getGift(gift.code);
   check("partial voucher NOT voided at completion", partial.status, "active");
 
-  // Use the remaining $25 on a reflexology booking, then complete it.
+  // Use the remaining $55 on a reflexology booking, then complete it.
   const booking2 = {
     id: "bk-v2", status: "paid", forWhom: "me", name: "Sam Friend", email: "sam@example.com", phone: "(905) 555-0505",
-    giftCode: gift.code, giftAppliedCents: 2500, giftDeducted: false,
+    giftCode: gift.code, giftAppliedCents: 5500, giftDeducted: false,
   };
   await bookingsLib.saveBooking(booking2);
   await bookingsLib.deductGift(booking2);

@@ -57,22 +57,22 @@ const base = (over) => Object.assign({
 }, over || {});
 
 async function run() {
-  // 1. Classic + Light Therapy: $65 + $45, first visit -$10 -> $100. 70 minutes.
+  // 1. Classic + Light Therapy: $85 + $55, first visit -$10 -> $130. 70 minutes.
   let b = await buildBooking(base({ addons: ["light-therapy"] }), { bufferMins: 30, blocks: [], via: "web" });
-  assert.equal(b.amountCents, 10000, "Classic + Light first visit is $100, got " + b.amountCents);
+  assert.equal(b.amountCents, 13000, "Classic + Light first visit is $130, got " + b.amountCents);
   assert.equal(b.serviceLabel, "Classic Facial + Light Therapy", "serviceLabel joins add-ons");
   assert.equal(b.minsLabel, "70 minutes", "minsLabel is the full appointment");
   assert.deepEqual(b.addons, ["light-therapy"]);
 
-  // 2. Classic + Light + Reflexology, Private Hours: 65+45+25+15 premium -10 -> $140. 85 minutes.
+  // 2. Classic + Light + Reflexology, Private Hours: 85+55+35+15 premium -10 -> $180. 85 minutes.
   b = await buildBooking(base({ addons: ["light-therapy", "reflexology"], type: "after", date: futureDate(6), time: "7:00 PM" }), { bufferMins: 30, blocks: [], via: "web" });
-  assert.equal(b.amountCents, 14000, "Classic + 2 add-ons Private Hours is $140, got " + b.amountCents);
+  assert.equal(b.amountCents, 18000, "Classic + 2 add-ons Private Hours is $180, got " + b.amountCents);
   assert.equal(b.minsLabel, "85 minutes");
 
   // 3. An add-on on its own IS a booking (Tony Nov 17, 2026: some people
-  //    just come for the reflexology). $25 - $10 first visit = $15. 15 min.
+  //    just come for the reflexology). $35 - $10 first visit = $25. 15 min.
   b = await buildBooking(base({ service: "reflexology" }), { bufferMins: 30, blocks: [], via: "web" });
-  assert.equal(b.amountCents, 1500, "Reflexology alone first visit is $15, got " + b.amountCents);
+  assert.equal(b.amountCents, 2500, "Reflexology alone first visit is $25, got " + b.amountCents);
   assert.equal(b.serviceLabel, "Reflexology", "standalone label is just the treatment");
   assert.equal(b.minsLabel, "15 minutes", "standalone reflexology is 15 minutes");
 
@@ -85,7 +85,7 @@ async function run() {
   // 5. Duplicate add-ons collapse to one.
   b = await buildBooking(base({ addons: ["light-therapy", "light-therapy"], date: futureDate(7) }), { bufferMins: 30, blocks: [], via: "web" });
   assert.deepEqual(b.addons, ["light-therapy"]);
-  assert.equal(b.amountCents, 10000, "duplicated add-on charged once");
+  assert.equal(b.amountCents, 13000, "duplicated add-on charged once");
 
   // 6. The buffer wraps the whole appointment: a 70-min booking at 9:00
   //    blocks the 10:00 slot for the next client (ends 10:10 + 30-min buffer).
@@ -109,14 +109,14 @@ async function run() {
     addons: ["reflexology"], giftCode: ref.myReferralCode,
   }), { bufferMins: 30, blocks: [], via: "web" });
   assert.equal(b.freeReflexologyApplied, true, "free reflexology applied to the add-on");
-  assert.equal(b.amountCents, 5500, "Classic $65 + free reflexology - $10 first visit = $55, got " + b.amountCents);
+  assert.equal(b.amountCents, 7500, "Classic $85 + free reflexology - $10 first visit = $75, got " + b.amountCents);
 
   // 8. Voice-agent hold with add-ons: same price math, hold created.
   const res = mockRes();
   await book({ method: "POST", headers: { "x-agent-key": "test-agent-key" },
     body: { via: "agent", service: "classic-facial", addons: ["light-therapy"], date: futureDate(11), time: "9:00 AM", type: "regular", name: "Agent Caller", phone: "(905) 555-0300", email: "caller@test.example", first: "yes" } }, res);
   assert.equal(res.statusCode, 200, "agent hold with add-ons -> 200, got " + res.statusCode + " " + JSON.stringify(res.body));
-  assert.equal(res.body.amountCents, 10000, "agent hold total is $100");
+  assert.equal(res.body.amountCents, 13000, "agent hold total is $130");
   assert.equal(res.body.serviceLabel, "Classic Facial + Light Therapy");
 
   // 9. Voice-agent hold for a standalone add-on.
@@ -124,14 +124,14 @@ async function run() {
   await book({ method: "POST", headers: { "x-agent-key": "test-agent-key" },
     body: { via: "agent", service: "reflexology", date: futureDate(12), time: "9:00 AM", type: "regular", name: "Reflex Only", phone: "(905) 555-0400", email: "reflex@test.example", first: "yes" } }, res2);
   assert.equal(res2.statusCode, 200, "agent hold for standalone reflexology -> 200, got " + res2.statusCode + " " + JSON.stringify(res2.body));
-  assert.equal(res2.body.amountCents, 1500, "agent standalone reflexology total is $15");
+  assert.equal(res2.body.amountCents, 2500, "agent standalone reflexology total is $25");
   assert.equal(res2.body.serviceLabel, "Reflexology");
 
   // 10. Email is optional (Tony Nov 17, 2026): a booking with no email
   //     succeeds, stores "", and still gets a referral code.
   b = await buildBooking(base({ email: "", phone: "(905) 555-0600", date: futureDate(13) }), { bufferMins: 30, blocks: [], via: "web" });
   assert.equal(b.email, "", "no-email booking stores an empty email");
-  assert.equal(b.amountCents, 5500, "Classic first visit, no email, is $55, got " + b.amountCents);
+  assert.equal(b.amountCents, 7500, "Classic first visit, no email, is $75, got " + b.amountCents);
   assert.ok(b.myReferralCode, "no-email booking still gets a referral code");
 
   // 11. An email that IS given must still look like an email.
@@ -146,7 +146,7 @@ async function run() {
     { bufferMins: 30, blocks: [], via: "web" });
   assert.equal(b.email, "", "friend booking stores an empty booker email");
   assert.equal(b.guestEmail, null, "friend booking stores a null guest email");
-  assert.equal(b.amountCents, 5500, "friend booking, no emails, is $55");
+  assert.equal(b.amountCents, 7500, "friend booking, no emails, is $75");
 
   // 13. POST /api/book with no email key at all: 200 + checkout URL, and
   //     Stripe never sees an empty customer_email.

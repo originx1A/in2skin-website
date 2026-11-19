@@ -43,7 +43,7 @@ function tomorrowKey() {
 }
 
 function paidBooking(id, friend, referredBy, amounts) {
-  const a = amounts || { amountCents: 6500, firstVisitDiscountCents: 0, giftAppliedCents: 0 };
+  const a = amounts || { amountCents: 8500, firstVisitDiscountCents: 0, giftAppliedCents: 0 };
   return {
     id, status: "paid", forWhom: "me", name: friend.name, email: friend.email,
     phone: friend.phone, guestName: null, guestEmail: null, guestPhone: null,
@@ -112,8 +112,8 @@ async function run() {
   check("consultation not issued", consultRes.issued, false);
   check("consultation reason", consultRes.reason, "not-paid");
 
-  // --- $65 floor: a $25 add-on alone does not count, and does not burn the friend's new status ---
-  const small = await refs.issueReferralCredit(paidBooking("bk-small", { name: "Sam Small", email: "sam@example.com", phone: "(905) 555-0404" }, alex.code, { amountCents: 2500, firstVisitDiscountCents: 0, giftAppliedCents: 0 }));
+  // --- $85 floor: a $35 add-on alone does not count, and does not burn the friend's new status ---
+  const small = await refs.issueReferralCredit(paidBooking("bk-small", { name: "Sam Small", email: "sam@example.com", phone: "(905) 555-0404" }, alex.code, { amountCents: 3500, firstVisitDiscountCents: 0, giftAppliedCents: 0 }));
   check("below-floor not issued", small.issued, false);
   check("below-floor reason", small.reason, "below-minimum");
   const alexSmall = await refs.getReferralByCode(alex.code);
@@ -122,8 +122,8 @@ async function run() {
   check("same friend later full facial counts", smallLater.issued, true);
   check("paidCount 7 after later full facial", smallLater.paidCount, 7);
 
-  // --- $65 floor: first-visit Classic ($55 charged on a $65 value) still counts ---
-  const firstVisit = await refs.issueReferralCredit(paidBooking("bk-first", { name: "Fay First", email: "fay@example.com", phone: "(905) 555-0505" }, alex.code, { amountCents: 5500, firstVisitDiscountCents: 1000, giftAppliedCents: 0 }));
+  // --- $85 floor: first-visit Classic ($75 charged on an $85 value) still counts ---
+  const firstVisit = await refs.issueReferralCredit(paidBooking("bk-first", { name: "Fay First", email: "fay@example.com", phone: "(905) 555-0505" }, alex.code, { amountCents: 7500, firstVisitDiscountCents: 1000, giftAppliedCents: 0 }));
   check("first-visit Classic counts", firstVisit.issued, true);
   check("paidCount 8 after first-visit Classic", firstVisit.paidCount, 8);
 
@@ -142,9 +142,9 @@ async function run() {
   check("deductReferral twice -> 0", deducted2, 0);
 
   // --- booking integration: gift-covered $0 booking, referred friend ---
-  // Seed a $65 gift code in the stub KV.
+  // Seed an $85 gift code in the stub KV.
   await mem.set("gift:IN2SKIN-TEST01", {
-    code: "IN2SKIN-TEST01", kind: "gift", balanceCents: 6500, originalCents: 6500,
+    code: "IN2SKIN-TEST01", kind: "gift", balanceCents: 8500, originalCents: 8500,
     buyerName: "Buyer", buyerEmail: "buyer@example.com",
     recipientName: "Casey Friend", recipientEmail: "casey@example.com",
     holderName: "Casey Friend", holderEmail: "casey@example.com",
@@ -171,7 +171,7 @@ async function run() {
   const giftAfter = await bookingsLib.getGift("IN2SKIN-TEST01");
   check("gift balance 0 after use", giftAfter.balanceCents, 0);
   check("gift uses[] has 1 entry", giftAfter.uses.length, 1);
-  check("gift use amount 6500", giftAfter.uses[0].amountCents, 6500);
+  check("gift use amount 8500", giftAfter.uses[0].amountCents, 8500);
   const alexPaid = await refs.getReferralByCode(alex.code);
   check("Casey paid -> Alex paidCount 9", alexPaid.paidCount, 9);
 

@@ -72,7 +72,7 @@ async function run() {
   await giftBuy({ method: "POST", headers: { "x-agent-key": "wrong" }, body: { via: "agent", option: "gift-classic" } }, res);
   assert.equal(res.statusCode, 401, "wrong key -> 401, got " + res.statusCode);
 
-  // 3. Certificate via the agent: Classic $65 for a friend.
+  // 3. Certificate via the agent: Classic $85 for a friend.
   sentEmails.length = 0;
   res = mockRes();
   await giftBuy(agentReq({
@@ -82,7 +82,7 @@ async function run() {
   }), res);
   assert.equal(res.statusCode, 200, "agent cert -> 200, got " + res.statusCode + " " + JSON.stringify(res.body));
   assert.equal(res.body.sent, true, "agent cert reports sent");
-  assert.equal(res.body.amountCents, 6500, "Classic certificate is $65");
+  assert.equal(res.body.amountCents, 8500, "Classic certificate is $85");
   assert.equal(lastSessionArgs.metadata.type, "gift", "checkout metadata type is gift");
   assert.equal(lastSessionArgs.customer_email, "buyer@test.example", "checkout goes to the buyer");
   assert.equal(lastSessionArgs.metadata.recipientEmail, "friend@test.example", "friend is the recipient");
@@ -100,7 +100,7 @@ async function run() {
     recipientName: "Alex Taylor", recipientEmail: "friend@test.example",
   }), res);
   assert.equal(res.statusCode, 200, "agent voucher -> 200, got " + res.statusCode + " " + JSON.stringify(res.body));
-  assert.equal(res.body.amountCents, 9000, "Classic + Reflexology voucher is $90");
+  assert.equal(res.body.amountCents, 12000, "Classic + Reflexology voucher is $120");
   assert.equal(lastSessionArgs.metadata.kind, "voucher", "checkout metadata kind is voucher");
   const voucherFor = JSON.parse(lastSessionArgs.metadata.voucherFor);
   assert.equal(voucherFor.service, "classic-facial", "voucher is for the Classic Facial");
