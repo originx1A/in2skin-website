@@ -1368,8 +1368,8 @@
       if (back1) back1.addEventListener("click", function(){ booking.step = 1; renderBooking(); scrollToTopOf("bookShell"); });
       var to3 = document.getElementById("toStep3");
       if (to3) to3.addEventListener("click", function(){
-        if (!booking.date){ bookErr("Please choose a day to continue."); return; }
-        if (!booking.time){ bookErr("Please choose a time to continue."); return; }
+        if (!booking.date){ bookErr("Please choose a day to continue."); guideBookingDate(); return; }
+        if (!booking.time){ bookErr("Please choose a time to continue."); guideBookingTime(); return; }
         booking.step = 3; renderBooking(); scrollToTopOf("bookShell");
       });
       var back2 = document.getElementById("backTo2");
@@ -1491,6 +1491,60 @@
       if (!el) return;
       var y = el.getBoundingClientRect().top + window.scrollY - 72;
       window.scrollTo({ top: y < 0 ? 0 : y, behavior:"smooth" });
+    }
+
+    /* Golden halo guide (Tony Nov 18, 2026): a Continue tapped with
+       nothing picked brings the person back to the choices and lights
+       them up gold until one is picked. The OPTIONS glow, not the
+       button. Picking re-renders the wizard, which drops the glow;
+       the timer is a safety net so it never glows forever. */
+    var GLOW_TIMER = null;
+    function clearGlow(){
+      if (GLOW_TIMER){ clearTimeout(GLOW_TIMER); GLOW_TIMER = null; }
+      document.querySelectorAll(".glow-pick").forEach(function(el){ el.classList.remove("glow-pick"); });
+    }
+    function glowPick(selector, scrollEl){
+      clearGlow();
+      var els = document.querySelectorAll(selector);
+      if (!els.length) return;
+      els.forEach(function(el){ el.classList.add("glow-pick"); });
+      if (scrollEl){
+        var y = scrollEl.getBoundingClientRect().top + window.scrollY - 72;
+        window.scrollTo({ top: y < 0 ? 0 : y, behavior:"smooth" });
+      }
+      GLOW_TIMER = setTimeout(clearGlow, 30000);
+    }
+    function guideBookingStep1(){
+      glowPick("#bookShell [data-pick-service], #bookShell [data-pick-addon]", document.getElementById("bookShell"));
+    }
+    function guideBookingDate(){
+      glowPick("#bookShell .cal-day:not(:disabled)", document.querySelector("#bookShell .cal"));
+    }
+    function guideBookingTime(){
+      glowPick("#bookShell [data-pick-time]", document.getElementById("timesHead"));
+    }
+    function guideGiftPick(){
+      if (gift.step === 1){
+        glowPick("#giftShell [data-pick-giftmode]", document.getElementById("giftShell"));
+        return;
+      }
+      if (gift.step === 2){
+        if (gift.mode === "voucher"){
+          if (!voucherMain()) glowPick("#giftShell [data-pick-vmain]", document.querySelector("#giftShell .pick-list"));
+          return;
+        }
+        if (!giftOption()){
+          glowPick("#giftShell [data-pick-gift]", document.querySelector("#giftShell .pick-grid"));
+          return;
+        }
+        if (giftOption().id === "gift-custom" && giftCustomAmount() == null){
+          var amt = document.getElementById("gfAmount");
+          if (amt) glowPick("#gfAmount", amt);
+          giftErr("Please enter an amount of $10 or more for a custom certificate.");
+          return;
+        }
+      }
+      scrollToTopOf("giftShell");
     }
 
     /* Gift summary bar: same pinned pattern as the booking package bar —
@@ -1741,7 +1795,10 @@
       if (backKind) backKind.addEventListener("click", function(){ gift.step = 1; renderGift(); scrollToTopOf("giftShell"); });
       var amt = document.getElementById("gfAmount");
       if (amt) amt.addEventListener("input", function(){
-        /* Live bar update only — no re-render, or typing would lose focus. */
+        /* Live bar update only — no re-render, or typing would lose focus.
+           Typing here means the person found the amount box, so the
+           golden halo can stop. */
+        clearGlow();
         gift.amount = amt.value.trim();
         giftBarShow();
       });
@@ -2316,12 +2373,12 @@
     function toTopShow(){ if (toTop) toTop.classList.toggle("show", window.scrollY > 500 && !pkgBarVisible() && !giftBarVisible()); }
     var pkgContinue = document.getElementById("pkgContinue");
     if (pkgContinue) pkgContinue.addEventListener("click", function(){
-      if (!booking.service) return;
+      if (!booking.service){ guideBookingStep1(); return; }
       booking.step = 2; renderBooking(); scrollToTopOf("bookShell");
     });
     var giftBarGo = document.getElementById("giftBarGo");
     if (giftBarGo) giftBarGo.addEventListener("click", function(){
-      if (!giftBarReady()) return;
+      if (!giftBarReady()){ guideGiftPick(); return; }
       if (gift.step === 1){ gift.step = 2; renderGift(); scrollToTopOf("giftShell"); return; }
       if (gift.step === 2){
         if (gift.mode !== "voucher" && giftOption() && giftOption().id === "gift-custom"){
@@ -2337,11 +2394,11 @@
        Continue — while nothing is picked jumps to the choices instead. */
     var pkgBar = document.getElementById("pkgBar");
     if (pkgBar) pkgBar.addEventListener("click", function(){
-      if (!booking.service) scrollToTopOf("bookShell");
+      if (!booking.service) guideBookingStep1();
     });
     var giftBar = document.getElementById("giftBar");
     if (giftBar) giftBar.addEventListener("click", function(){
-      if (!giftBarReady()) scrollToTopOf("giftShell");
+      if (!giftBarReady()) guideGiftPick();
     });
     window.addEventListener("scroll", toTopShow, { passive:true });
     toTopShow();

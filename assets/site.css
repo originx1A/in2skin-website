@@ -234,13 +234,29 @@
       .book-summary{ background:var(--cream); border:1px solid var(--line); border-radius:8px; padding:12px 14px; font-size:.98rem; margin:0 0 18px; }
       .book-summary .linklike{ background:none; border:0; color:#96702F; font:inherit; font-weight:600; cursor:pointer; padding:0 0 0 6px; text-decoration:underline; }
       /* Package bar (booking + gift): fixed at the bottom of the viewport,
-         above the mobile bar. Hidden until .show — JS decides when. */
-      .pkg-bar{ position:fixed; left:50%; transform:translateX(-50%); width:min(680px, calc(100% - 32px)); bottom:16px; z-index:60; display:none; align-items:center; gap:12px; background:var(--paper); border:1.5px solid var(--gold); border-radius:10px; box-shadow:0 16px 36px rgba(60,52,38,.28); padding:12px 14px; }
+         above the mobile bar. Hidden until .show — JS decides when.
+         Centred with left/right + margin auto — no transform on the fixed
+         element (Tony Nov 18, 2026: the gift bar floated mid-page on a
+         real iPhone; the transform on a fixed element is the one
+         remaining suspect, so it goes). */
+      .pkg-bar{ position:fixed; left:0; right:0; margin:0 auto; width:min(680px, calc(100% - 32px)); bottom:16px; z-index:60; display:none; align-items:center; gap:12px; background:var(--paper); border:1.5px solid var(--gold); border-radius:10px; box-shadow:0 16px 36px rgba(60,52,38,.28); padding:12px 14px; }
       .pkg-bar.show{ display:flex; }
       .pkg-bar.tap{ cursor:pointer; }
       .pkg-text{ flex:1; min-width:0; font-size:.95rem; color:var(--ink); }
       .pkg-go{ flex:none; }
       .pkg-go:disabled{ opacity:.45; cursor:not-allowed; }
+      /* Golden halo guide (Tony Nov 18, 2026): when a Continue is tapped
+         with nothing picked, the page comes back to the choices and the
+         OPTIONS glow gold — a halo around their edges, never through the
+         card — pulsing gently until one is picked. */
+      .glow-pick{ animation:glow-pulse 1.6s ease-in-out infinite; }
+      @keyframes glow-pulse{
+        0%, 100%{ box-shadow:0 0 0 2px rgba(176,141,79,.55), 0 0 18px 4px rgba(201,162,75,.35); }
+        50%{ box-shadow:0 0 0 3px rgba(176,141,79,.95), 0 0 28px 9px rgba(201,162,75,.55); }
+      }
+      @media (prefers-reduced-motion: reduce){
+        .glow-pick{ animation:none; box-shadow:0 0 0 3px rgba(176,141,79,.95); }
+      }
       /* Date availability dots (Tony Nov 17, 2026): one dot per day chip. */
       .date-chip .dot{ display:block; width:6px; height:6px; border-radius:50%; background:transparent; margin:5px auto 0; }
       .date-chip.st-open .dot{ background:var(--sage); }
