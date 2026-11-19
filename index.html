@@ -633,11 +633,155 @@
       { id:"combo-classic", name:"The Works — with Classic Facial", mins:55, minsLabel:"55 minutes", price:"$160", priceNum:160 },
       { id:"combo-anti", name:"The Works — with Anti-Aging Facial", mins:80, minsLabel:"80 minutes", price:"$195", priceNum:195 }
     ];
+    /* Guided add-ons (Tony Nov 19, 2026): once a main is picked, the
+       picker and the wizard point at the add-ons that fit it, so nobody
+       misses the extras that go with their treatment. One map, both
+       places — the wizard's guided hints and the services-list highlight
+       read the same GUIDED. */
+    var GUIDED = {
+      "classic-facial": ["light-therapy", "reflexology", "nano-needling", "microdermabrasion"],
+      "anti-aging-facial": ["light-therapy", "reflexology", "nano-needling", "microdermabrasion"],
+      "combo-classic": ["nano-needling", "microdermabrasion"],
+      "combo-anti": ["nano-needling", "microdermabrasion"]
+    };
+    function guidedFor(mainId){ return GUIDED[mainId] || []; }
     function currentService(){
       if (!booking.service) return null;
       if (booking.service === CONSULT.id) return CONSULT;
       for (var i=0;i<COMBOS.length;i++) if (COMBOS[i].id===booking.service) return COMBOS[i];
       return svcById(booking.service);
+    }
+
+    /* Services-list picker (Tony Nov 19, 2026): the list IS the picker.
+       Tapping a main row picks it as the main and lights its compatible
+       add-ons gold, right there on the list; tapping a lit add-on adds
+       it (sage + "Added ✓"). Tapping a service NAME expands its details
+       in place — never navigates away. The Book button books the picked
+       main plus any added add-ons, into the wizard steps. The booking
+       object is the source of truth: the list renders from it, and the
+       wizard's step-1 pick-list stays in step with it (syncPicker). */
+    function txNeedleBlocked(id){
+      // Needling is one treatment: microneedling and NANO needling are
+      // the same thing, just the needle size — never both.
+      var hasNano = (booking.addons || []).indexOf("nano-needling") >= 0;
+      if (id === "microneedling") return booking.service === "nano-needling" || hasNano;
+      if (id === "nano-needling") return booking.service === "microneedling";
+      return false;
+    }
+    function txNeedleNoteOn(){
+      return booking.service === "microneedling" || booking.service === "nano-needling" || (booking.addons || []).indexOf("nano-needling") >= 0;
+    }
+    function txState(id){
+      var cls = "";
+      if (booking.service === id) cls += " sel";
+      if ((booking.addons || []).indexOf(id) >= 0) cls += " added";
+      if (booking.service && booking.service !== id && guidedFor(booking.service).indexOf(id) >= 0 && (booking.addons || []).indexOf(id) < 0) cls += " rec";
+      if (txNeedleBlocked(id)) cls += " off";
+      return cls;
+    }
+    function pickerPick(id){
+      booking.addons = booking.addons || [];
+      if (txNeedleBlocked(id)) return;
+      // A consultation is just the consultation — no add-ons, and never
+      // booked for a friend.
+      if (id === CONSULT.id){ booking.addons = []; booking.forWhom = "me"; booking.service = id; syncPicker(); return; }
+      var svc = svcById(id);
+      var isAddon = svc && svc.cat.indexOf("Enhancement") === 0;
+      if (isAddon){
+        if (isConsult()) return;
+        if (!booking.service){ booking.service = id; }
+        else if (booking.service === id){
+          booking.service = null;
+          if (booking.addons.length){ booking.service = booking.addons[0]; booking.addons = booking.addons.slice(1); }
+        } else {
+          var i = booking.addons.indexOf(id);
+          if (i >= 0) booking.addons.splice(i, 1); else booking.addons.push(id);
+        }
+      } else {
+        // A main: tapping the picked main removes it (the first extra,
+        // if any, is promoted); tapping another main swaps it, extras stay.
+        if (booking.service === id){
+          booking.service = null;
+          if (booking.addons.length){ booking.service = booking.addons[0]; booking.addons = booking.addons.slice(1); }
+        } else {
+          var ai = booking.addons.indexOf(id);
+          if (ai >= 0) booking.addons.splice(ai, 1);
+          booking.service = id;
+        }
+      }
+      syncPicker();
+    }
+    function syncPicker(){
+      // Re-paint the visible services list from the booking state — in
+      // place, no re-render, so the page never jumps and the videos
+      // never restart. A view change re-renders the list from the same
+      // booking state anyway.
+      document.querySelectorAll(".tx-row[data-tx-id]").forEach(function(row){
+        var id = row.getAttribute("data-tx-id");
+        var wasOpen = row.classList.contains("open");
+        row.className = "tx-row" + txState(id) + (wasOpen ? " open" : "");
+        var exp = row.querySelector("[data-tx-expand]");
+        if (exp) exp.setAttribute("aria-expanded", wasOpen ? "true" : "false");
+      });
+      var note = document.getElementById("txNeedleNote");
+      if (note) note.hidden = !txNeedleNoteOn();
+      // The consult format buttons in an open details panel.
+      document.querySelectorAll("[data-tx-format]").forEach(function(b){
+        b.classList.toggle("sel", (b.getAttribute("data-tx-format") === "in-person") === (booking.format === "in-person"));
+      });
+      pkgBarShow();
+      // Keep the wizard's own step-1 pick-list in step with the picker
+      // while the client is still picking (step 1 only — never touch a
+      // later step, the client may be typing in it).
+      if (booking.step === 1) renderBooking();
+    }
+    function txDetailsHTML(id){
+      if (id === CONSULT.id){
+        return "<p>20 minutes with Sarah, on video or in person at the studio. $30, credited in full toward any treatment you book after. For first-time clients — one consultation per client.</p>" +
+          '<div class="pick-grid" style="margin:10px 0 14px;">' +
+            '<button type="button" class="pick' + (booking.format !== "in-person" ? " sel" : "") + '" data-tx-format="video"><span class="t">Video call</span><span class="d">Google Meet — your link arrives by email; no app needed</span></button>' +
+            '<button type="button" class="pick' + (booking.format === "in-person" ? " sel" : "") + '" data-tx-format="in-person"><span class="t">In person</span><span class="d">At the studio in Bolton — come as you are</span></button>' +
+          '</div>' +
+          '<button class="btn btn-book" data-book="' + CONSULT.id + '">Book Consultation — $30</button>';
+      }
+      var c = null;
+      for (var i = 0; i < COMBOS.length; i++) if (COMBOS[i].id === id) c = COMBOS[i];
+      if (c){
+        var base = c.id === "combo-classic" ? "Classic Facial" : "Anti-Aging Facial";
+        return "<p>" + base + " + red light therapy + reflexology, all at the same time while your mask works. So relaxing, clients fall asleep.</p>" +
+          '<button class="btn btn-book" data-book="' + c.id + '">Book The Works — ' + c.price + '</button>';
+      }
+      var s = svcById(id);
+      if (!s) return "";
+      return s.intro.map(function(p){ return "<p>" + p + "</p>"; }).join("") +
+        "<h4>What\u2019s included</h4>" + tickList(s.includes) +
+        '<button class="btn btn-book" data-book="' + s.id + '">Book ' + s.name + ' — ' + s.price + '</button>';
+    }
+    function toggleTxDetails(id){
+      var row = document.querySelector('.tx-row[data-tx-id="' + id + '"]');
+      if (!row) return;
+      var btn = row.querySelector("[data-tx-expand]");
+      var panel = row.querySelector(".tx-details");
+      if (panel){
+        panel.remove();
+        row.classList.remove("open");
+        if (btn) btn.setAttribute("aria-expanded", "false");
+        return;
+      }
+      // One open at a time — close any other.
+      document.querySelectorAll(".tx-row.open").forEach(function(r){
+        var p = r.querySelector(".tx-details");
+        if (p) p.remove();
+        r.classList.remove("open");
+        var b = r.querySelector("[data-tx-expand]");
+        if (b) b.setAttribute("aria-expanded", "false");
+      });
+      var div = document.createElement("div");
+      div.className = "tx-details";
+      div.innerHTML = txDetailsHTML(id);
+      row.appendChild(div);
+      row.classList.add("open");
+      if (btn) btn.setAttribute("aria-expanded", "true");
     }
 
     var ICON_PHONE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a12 12 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" fill="currentColor"/></svg>';
@@ -655,14 +799,31 @@
       // ONE canonical treatments list: every treatment + price, once, as
       // compact rows. The wizard has its own pick-list; condition cards and
       // the footer link to treatments instead of listing them.
+      //
+      // Services-list picker (Tony Nov 19, 2026): the list IS the picker.
+      // Every row carries a plain "what it's for" line under the name —
+      // the service's own short line, plain text, never a link. Tapping
+      // a main row picks it and lights its compatible add-ons gold, right
+      // here on the list; tapping a lit add-on adds it (sage + "Added ✓").
+      // Tapping a service NAME expands its details in place — never
+      // navigates away. The Book button books the picked main plus any
+      // added add-ons, into the wizard steps.
       function txRow(s){
-        return '<div class="tx-row"><span><a class="tx-link" href="#/' + s.id + '" data-nav="' + s.id + '"><span class="tx-name">' + s.name + '</span></a> <span class="tx-mins">· ' + s.minsLabel + '</span></span>' +
-          '<span class="tx-price"><b>' + s.price + '</b></span>' +
-          '<button class="btn btn-book btn-book-sm" data-book="' + s.id + '">' + (s.price === "Custom" ? "Book a Consultation" : "Book") + '</button></div>';
+        return '<div class="tx-row' + txState(s.id) + '" data-tx-id="' + s.id + '">' +
+          '<div class="tx-info"><div class="tx-top"><button type="button" class="tx-name-btn" data-tx-expand="' + s.id + '" aria-expanded="false"><span class="tx-name">' + s.name + '</span></button> <span class="tx-mins">· ' + s.minsLabel + '</span></div>' +
+          '<div class="tx-for">' + s.short + '</div></div>' +
+          '<span class="tx-price"><b>' + s.price + '</b><span class="tx-added">Added ✓</span></span>' +
+          '<button class="btn btn-book btn-book-sm" data-book="' + s.id + '">Book</button></div>';
       }
+      var COMBO_WHAT = {
+        "combo-classic": "Classic Facial + red light + reflexology, all at once while your mask works.",
+        "combo-anti": "Anti-Aging Facial + red light + reflexology, all at once while your mask works."
+      };
       function txCombo(c){
-        return '<div class="tx-row"><span><a class="tx-link" href="#/home" data-nav="home" data-scroll="works"><span class="tx-name">' + c.name + '</span></a> <span class="tx-mins">· ' + c.minsLabel + '</span></span>' +
-          '<span class="tx-price"><b>' + c.price + '</b></span>' +
+        return '<div class="tx-row' + txState(c.id) + '" data-tx-id="' + c.id + '">' +
+          '<div class="tx-info"><div class="tx-top"><button type="button" class="tx-name-btn" data-tx-expand="' + c.id + '" aria-expanded="false"><span class="tx-name">' + c.name + '</span></button> <span class="tx-mins">· ' + c.minsLabel + '</span></div>' +
+          '<div class="tx-for">' + COMBO_WHAT[c.id] + '</div></div>' +
+          '<span class="tx-price"><b>' + c.price + '</b><span class="tx-added">Added ✓</span></span>' +
           '<button class="btn btn-book btn-book-sm" data-book="' + c.id + '">Book</button></div>';
       }
       function txGroup(title, rows){
@@ -670,17 +831,22 @@
       }
       // Video consultation: no service page, so no treatment link — the
       // button opens the wizard with it picked (startBooking knows it).
+      // It lives in Advanced now (Tony Nov 19, 2026): the Skin Tightening
+      // row is gone, and the consultation takes its place. The old
+      // "New to In2Skin?" group goes away — one consultation row, here.
       function txConsult(c){
-        return '<div class="tx-row"><span><span class="tx-name">' + c.name + '</span> <span class="tx-mins">· ' + c.minsLabel + '</span></span>' +
+        return '<div class="tx-row' + txState(c.id) + '" data-tx-id="' + c.id + '">' +
+          '<div class="tx-info"><div class="tx-top"><button type="button" class="tx-name-btn" data-tx-expand="' + c.id + '" aria-expanded="false"><span class="tx-name">' + c.name + '</span></button> <span class="tx-mins">· ' + c.minsLabel + '</span></div>' +
+          '<div class="tx-for">New to In2Skin? 20 minutes with Sarah — $30, credited in full toward your first treatment. First-time clients only.</div></div>' +
           '<span class="tx-price"><b>' + c.price + '</b></span>' +
           '<button class="btn btn-book btn-book-sm" data-book="' + c.id + '">Book</button></div>';
       }
       var txList =
         txGroup("Facials", SERVICES.filter(function(s){ return s.cat.indexOf("Signature")===0; }).map(txRow)) +
-        txGroup("Advanced", SERVICES.filter(function(s){ return s.cat.indexOf("Advanced")===0; }).map(txRow)) +
+        txGroup("Advanced", SERVICES.filter(function(s){ return s.cat.indexOf("Advanced")===0; }).map(txRow).concat([txConsult(CONSULT)])) +
+        '<p class="fine needling-note" id="txNeedleNote"' + (txNeedleNoteOn() ? "" : " hidden") + '>Needling is already in your booking — Sarah picks micro or nano at the visit.</p>' +
         txGroup("Combos", COMBOS.map(txCombo)) +
-        txGroup("Just one thing? Quick visits", SERVICES.filter(function(s){ return s.cat.indexOf("Enhancement")===0; }).map(txRow)) +
-        txGroup("New to In2Skin? Talk it over first", [txConsult(CONSULT)]);
+        txGroup("Just one thing? Quick visits", SERVICES.filter(function(s){ return s.cat.indexOf("Enhancement")===0; }).map(txRow));
       return '' +
       '<section class="hero" data-ambient>' +
         '<video class="hero-img" src="assets/video-hero-stones.mp4" poster="assets/hero-stones.jpg" autoplay muted loop playsinline preload="auto" aria-label="Three stacked grey spa stones with In2Skin engraved in white, among fresh green leaves — flowers blooming softly in the background"></video>' +
@@ -1040,14 +1206,8 @@
         var quick = SERVICES.filter(function(s){ return s.cat.indexOf("Enhancement")===0; });
         // Guided add-ons (Tony Nov 19, 2026): once a main is picked, the
         // wizard points at the add-ons that fit it, so nobody misses the
-        // extras that go with their treatment.
-        var GUIDED = {
-          "classic-facial": ["light-therapy", "reflexology", "nano-needling", "microdermabrasion"],
-          "anti-aging-facial": ["light-therapy", "reflexology", "nano-needling", "microdermabrasion"],
-          "combo-classic": ["nano-needling", "microdermabrasion"],
-          "combo-anti": ["nano-needling", "microdermabrasion"]
-        };
-        function guidedFor(mainId){ return GUIDED[mainId] || []; }
+        // extras that go with their treatment. GUIDED + guidedFor live at
+        // top level now — the wizard and the services-list picker share it.
         // Needling is one treatment (Tony Nov 19, 2026): microneedling
         // and NANO needling are the same thing, just the needle size —
         // a booking picks one or the other, never both.
@@ -1329,7 +1489,7 @@
             if (ai >= 0) booking.addons.splice(ai, 1);
             booking.service = id;
           }
-          renderBooking();
+          syncPicker();
         });
       });
       shell.querySelectorAll("[data-pick-addon]").forEach(function(b){
@@ -1350,7 +1510,7 @@
             var i = booking.addons.indexOf(id);
             if (i >= 0) booking.addons.splice(i, 1); else booking.addons.push(id);
           }
-          renderBooking();
+          syncPicker();
         });
       });
       shell.querySelectorAll("[data-pick-type]").forEach(function(b){
@@ -1385,7 +1545,7 @@
           /* Consultation format (Tony Nov 19, 2026): video call or in
              person at the studio — same $30, same rules. */
           booking.format = b.getAttribute("data-pick-format") === "in-person" ? "in-person" : "video";
-          renderBooking();
+          syncPicker();
         });
       });
       shell.querySelectorAll("[data-pick-for]").forEach(function(b){
@@ -1591,10 +1751,10 @@
        of the booking wizard is in view (and the chat is closed). */
     function pkgBarVisible(){
       if (booking.step !== 1) return false;
-      var sec = document.getElementById("book");
-      if (!sec) return false;
-      var r = sec.getBoundingClientRect();
-      return r.bottom > 0 && r.top < window.innerHeight;
+      // The package bar follows the picking, wherever it happens: the
+      // services list is the picker too, not just the wizard.
+      var inView = function(el){ if (!el) return false; var r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < window.innerHeight; };
+      return inView(document.getElementById("book")) || inView(document.getElementById("services"));
     }
     /* Wizard bar active (Tony Nov 18, 2026): while the booking or gift
        summary bar is pinned, the body carries has-wiz-bar — the CSS hides
@@ -1670,7 +1830,14 @@
       return true;
     }
     function guideBookingStep1(){
-      glowPick("#bookShell [data-pick-service], #bookShell [data-pick-addon]", document.getElementById("bookShell"));
+      // The choices live in two places now: the services list (the
+      // picker) and the wizard's own step 1. Glow the one the client
+      // is looking at.
+      var svc = document.getElementById("services");
+      var inSvc = false;
+      if (svc){ var r = svc.getBoundingClientRect(); inSvc = r.bottom > 0 && r.top < window.innerHeight; }
+      if (inSvc) glowPick("#services .tx-row", svc);
+      else glowPick("#bookShell [data-pick-service], #bookShell [data-pick-addon]", document.getElementById("bookShell"));
     }
     function guideBookingDate(){
       glowPick("#bookShell .cal-day:not(:disabled)", document.querySelector("#bookShell .cal"));
@@ -1770,6 +1937,13 @@
          step 1, pick a treatment. */
       var svc = serviceId && (svcById(serviceId) || serviceId === CONSULT.id || COMBOS.some(function(c){ return c.id===serviceId; }) || ADDONS.some(function(a){ return a.id===serviceId; }));
       booking.service = svc ? serviceId : null;
+      if (serviceId === CONSULT.id){
+        // A consultation is just the consultation — no add-ons, and never
+        // booked for a friend (the server refuses both). Clear anything
+        // the client had picked before tapping its Book button.
+        booking.addons = [];
+        booking.forWhom = "me";
+      }
       booking.step = svc ? 2 : 1;
       calMonth = null;
       showView("home", "book");
@@ -2357,6 +2531,27 @@
       }
       var bk = ev.target.closest("[data-book]");
       if (bk){ startBooking(bk.getAttribute("data-book")); }
+    });
+
+    /* Services-list picker taps (Tony Nov 19, 2026): the list IS the
+       picker. Format buttons in the consultation's expanded details set
+       the format; a service NAME expands its details in place; a row
+       tap picks the main or toggles an add-on. Book buttons own their
+       tap (startBooking) and are skipped here; taps inside an open
+       details panel do nothing. */
+    document.addEventListener("click", function(ev){
+      var fmt = ev.target.closest("[data-tx-format]");
+      if (fmt){
+        booking.format = fmt.getAttribute("data-tx-format") === "in-person" ? "in-person" : "video";
+        syncPicker();
+        return;
+      }
+      var exp = ev.target.closest("[data-tx-expand]");
+      if (exp){ toggleTxDetails(exp.getAttribute("data-tx-expand")); return; }
+      if (ev.target.closest("[data-book]")) return;
+      if (ev.target.closest(".tx-details")) return;
+      var row = ev.target.closest(".tx-row[data-tx-id]");
+      if (row) pickerPick(row.getAttribute("data-tx-id"));
     });
 
     /* A nav link to the page you are already on (Tony Nov 18, 2026):
