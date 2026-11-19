@@ -21,18 +21,25 @@ module.exports = async (req, res) => {
   if (!(await checkLimit(req, res, { scope: "admin-magic-ip", limit: 10, windowSecs: 3600 }))) return;
   try {
     const studios = adminEmails();
-    if (studios.length && email && studios.includes(email)) {
-      const token = crypto.randomBytes(32).toString("hex");
-      await kvSet(`admin:magic:${token}`, { email, exp: Date.now() + MAGIC_LINK_MINUTES * 60 * 1000 });
-      await sendEmail({
-        to: email,
-        subject: "Your In2Skin admin sign-in link",
-        html: `<h2 style="font-family:Georgia,serif;color:#2F4A2C;">Sign in to In2Skin admin</h2><p>Tap the link below — it signs you in for 30 days, no password needed. It expires in ${MAGIC_LINK_MINUTES} minutes.</p><p><a href="${SITE_URL}/admin/?token=${token}">${SITE_URL}/admin/?token=${token}</a></p><p>If you did not ask for this, just ignore it.</p><p>— In2Skin</p>`,
-      });
-    } else if (!studios.length) {
+    if (!studios.length) {
       return res.status(503).json({ error: "Admin email is not configured yet: set ADMIN_EMAIL in the Vercel project settings, then redeploy." });
     }
-    return res.status(200).json({ ok: true, message: "If that email is the studio email, a sign-in link is on its way." });
+    // Tony Nov 19, 2026: the old generic reply ("if that email is the
+    // studio email…") left him wondering — no link ever arrived and the
+    // page never said why. This page is private and not linked from the
+    // public site, so say it straight: only the studio emails get a link,
+    // and a wrong one is told so on the spot.
+    if (!email || !studios.includes(email)) {
+      return res.status(400).json({ error: "That email is not a studio email — use rzgun6122@gmail.com or sdmadsen@live.com." });
+    }
+    const token = crypto.randomBytes(32).toString("hex");
+    await kvSet(`admin:magic:${token}`, { email, exp: Date.now() + MAGIC_LINK_MINUTES * 60 * 1000 });
+    await sendEmail({
+      to: email,
+      subject: "Your In2Skin admin sign-in link",
+      html: `<h2 style="font-family:Georgia,serif;color:#2F4A2C;">Sign in to In2Skin admin</h2><p>Tap the link below — it signs you in for 30 days, no password needed. It expires in ${MAGIC_LINK_MINUTES} minutes.</p><p><a href="${SITE_URL}/admin/?token=${token}">${SITE_URL}/admin/?token=${token}</a></p><p>If you did not ask for this, just ignore it.</p><p>— In2Skin</p>`,
+    });
+    return res.status(200).json({ ok: true, message: `Sign-in link sent to ${email} — check your inbox (and spam). It expires in ${MAGIC_LINK_MINUTES} minutes.` });
   } catch (err) {
     return res.status(err.status || 500).json({ error: err.message });
   }
