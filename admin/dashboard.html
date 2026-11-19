@@ -1155,6 +1155,13 @@
             + '<label>Reason (optional, shown to the client)</label><input type="text" id="cxReason" placeholder="e.g. Studio closed that day">'
             + '<p><button class="btn btn-book" type="button" data-cx-save="' + b.id + '">Yes, cancel this booking</button> <span id="cxMsg" style="color:#7A3B2E;"></span></p></div>';
         }
+        function deletePanel(b){
+          var label = b.serviceName + " · " + fmtDate(b.date) + " " + b.time + " · " + (b.guestName || b.name || "");
+          return '<div class="act-panel"><h3 style="margin:0 0 6px;">Delete this booking for good?</h3>'
+            + '<p class="sub">' + label + '<br>It won\'t come back.</p>'
+            + '<p><button class="btn btn-book" type="button" data-del-yes="' + b.id + '">Yes, delete it</button> '
+            + '<button class="btn btn-ghost" type="button" data-del-no="' + b.id + '">Keep it</button> <span id="delMsg" style="color:#7A3B2E;"></span></p></div>';
+        }
         function emailPanel(b){
           return '<div class="act-panel"><h3 style="margin:0 0 6px;">Email — ' + (b.guestName || b.name) + '</h3>'
             + '<p><button class="btn btn-ghost" type="button" data-em-resend="' + b.id + '">Resend confirmation email</button> <span id="emMsg" style="color:#7A3B2E;"></span></p>'
@@ -1211,20 +1218,24 @@
             } else if (kind === "cancel"){ openPanel(b.id, cancelPanel(b)); }
             else if (kind === "email"){ openPanel(b.id, emailPanel(b)); }
             else if (kind === "pay"){ openPanel(b.id, payPanel(b)); }
-            else if (kind === "delete"){
-              var label = b.serviceName + " · " + fmtDate(b.date) + " " + b.time + " · " + (b.guestName || b.name || "");
-              if (!confirm("Delete this booking for good?\n" + label + "\nIt won't come back.")) return;
-              actBtn.disabled = true;
-              postAdmin({ view:"bookings", action:"delete", bookingId: b.id })
-                .then(function(res){
-                  if (!res.ok){ msg.textContent = res.j.error || "Could not delete the booking."; return; }
-                  msg.textContent = "Booking deleted.";
-                  loadCal(); loadPayments();
-                })
-                .catch(function(){ msg.textContent = "Could not delete the booking — check your connection."; });
-            }
+            else if (kind === "delete"){ openPanel(b.id, deletePanel(b)); }
             return;
           }
+          var delYes = ev.target.closest("[data-del-yes]");
+          if (delYes){
+            var did = delYes.getAttribute("data-del-yes");
+            delYes.disabled = true;
+            postAdmin({ view:"bookings", action:"delete", bookingId: did })
+              .then(function(res){
+                if (!res.ok){ var dm = document.getElementById("delMsg"); if (dm) dm.textContent = res.j.error || "Could not delete the booking."; delYes.disabled = false; return; }
+                msg.textContent = "Booking deleted.";
+                loadCal(); loadPayments();
+              })
+              .catch(function(){ var dm2 = document.getElementById("delMsg"); if (dm2) dm2.textContent = "Could not delete the booking — check your connection."; delYes.disabled = false; });
+            return;
+          }
+          var delNo = ev.target.closest("[data-del-no]");
+          if (delNo){ closePanels(); return; }
           var mvBtn = ev.target.closest("[data-mv-save]");
           if (mvBtn){
             var mid = mvBtn.getAttribute("data-mv-save");
