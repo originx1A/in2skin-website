@@ -221,6 +221,7 @@ ${JSON.stringify(ld.faq, null, 2)}
             <p style="font-family:'Cormorant Garamond',serif; font-size:1.5rem; font-weight:600; margin-bottom:8px;">In2Skin</p>
             <p>Facials &amp; skin treatments by appointment in Bolton, Ontario.</p>
             <a class="btn btn-call" href="${PHONE_TEL}" style="margin-top:8px;">Call to Book · ${PHONE_DISPLAY}</a>
+            <p style="margin-top:10px;"><a href="https://www.facebook.com/profile.php?id=61596402642954" target="_blank" rel="noopener">Follow us on Facebook</a></p>
           </div>
           <div>
             <h4>Treatments</h4>
