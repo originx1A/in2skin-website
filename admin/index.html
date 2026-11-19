@@ -26,10 +26,7 @@
         </form>
 
         <h3 style="font-size:1.2rem; margin:26px 0 8px;">Or sign in with a password</h3>
-        <form id="passForm">
-          <div class="field"><label for="pwPass">Password</label><input id="pwPass" type="password" autocomplete="current-password" placeholder="Studio password" /></div>
-          <button type="submit" class="btn btn-call btn-big" style="width:100%;">Sign in →</button>
-        </form>
+        <p class="sub">Password sign-in is not set up yet — use the magic link above.</p>
         <p class="fine" style="margin-top:20px;">This page is private — it is not linked from the public site.</p>
       </div>
     </main>
@@ -63,19 +60,8 @@
             .then(function(res){ show(res.j.message || res.j.error || "Done.", res.ok); })
             .catch(function(){ show("Could not reach the sign-in service — check your connection and try again."); });
         });
-        document.getElementById("passForm").addEventListener("submit", function(ev){
-          ev.preventDefault();
-          var pw = document.getElementById("pwPass").value;
-          if (!pw){ show("Please enter the password."); return; }
-          show("Signing in…", true);
-          fetch("/api/admin/login", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ password: pw }) })
-            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
-            .then(function(res){
-              if (res.ok){ window.location.href = "/admin/dashboard.html"; }
-              else show(res.j.error || "Sign-in failed.");
-            })
-            .catch(function(){ show("Could not reach the sign-in service — check your connection and try again."); });
-        });
+        // Password sign-in is not set up yet (no ADMIN_PASSWORD) — the
+        // password form is hidden until one is set; magic link only.
       })();
     </script>
   </body>
