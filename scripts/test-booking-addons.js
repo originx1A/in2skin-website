@@ -57,24 +57,24 @@ const base = (over) => Object.assign({
 }, over || {});
 
 async function run() {
-  // 1. Classic + Light Therapy: $85 + $55, first visit -$10 -> $130. 70 minutes.
+  // 1. Classic + Light Therapy: $85 + $55, first visit -$10 -> $130. 75 minutes.
   let b = await buildBooking(base({ addons: ["light-therapy"] }), { bufferMins: 30, blocks: [], via: "web" });
   assert.equal(b.amountCents, 13000, "Classic + Light first visit is $130, got " + b.amountCents);
   assert.equal(b.serviceLabel, "Classic Facial + Light Therapy", "serviceLabel joins add-ons");
-  assert.equal(b.minsLabel, "70 minutes", "minsLabel is the full appointment");
+  assert.equal(b.minsLabel, "75 minutes", "minsLabel is the full appointment");
   assert.deepEqual(b.addons, ["light-therapy"]);
 
-  // 2. Classic + Light + Reflexology, Private Hours: 85+55+35+15 premium -10 -> $180. 85 minutes.
+  // 2. Classic + Light + Reflexology, Private Hours: 85+55+35+15 premium -10 -> $180. 95 minutes.
   b = await buildBooking(base({ addons: ["light-therapy", "reflexology"], type: "after", date: futureDate(6), time: "7:00 PM" }), { bufferMins: 30, blocks: [], via: "web" });
   assert.equal(b.amountCents, 18000, "Classic + 2 add-ons Private Hours is $180, got " + b.amountCents);
-  assert.equal(b.minsLabel, "85 minutes");
+  assert.equal(b.minsLabel, "95 minutes");
 
   // 3. An add-on on its own IS a booking (Tony Nov 17, 2026: some people
-  //    just come for the reflexology). $35 - $10 first visit = $25. 15 min.
+  //    just come for the reflexology). $35 - $10 first visit = $25. 20 min.
   b = await buildBooking(base({ service: "reflexology" }), { bufferMins: 30, blocks: [], via: "web" });
   assert.equal(b.amountCents, 2500, "Reflexology alone first visit is $25, got " + b.amountCents);
   assert.equal(b.serviceLabel, "Reflexology", "standalone label is just the treatment");
-  assert.equal(b.minsLabel, "15 minutes", "standalone reflexology is 15 minutes");
+  assert.equal(b.minsLabel, "20 minutes", "standalone reflexology is 20 minutes");
 
   // 4. Unknown add-on id is refused.
   await assert.rejects(

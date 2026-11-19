@@ -31,12 +31,13 @@ plain words. Prices, hours, and booking rules come from there.
   treatment for fine lines and uneven tone, rich finishing hydration.
   Good for fine lines looking softer, skin looking firmer, brighter and
   more youthful.
-- **Add-ons (15 min each, with any facial):** NANO Needling $55 — ultra-fine
+- **Add-ons (NANO Needling, Light Therapy, and Reflexology 20 min each;
+  Microdermabrasion 15 min; with any facial):** NANO Needling $55 — ultra-fine
   nano tips help serums absorb deeply, a soft gliding sensation, for
   plumper, smoother, more radiant skin. Microdermabrasion $45 — a polishing
   wand sweeps away dull surface skin, skin feels smoother right away, a
   favourite before events and photos. Light Therapy (red light) $45 — lie
-  back under warm red light for fifteen restful minutes; supports collagen,
+  back under warm red light for twenty restful minutes; supports collagen,
   calms skin, evens tone; many clients nap. Reflexology $25 — gentle,
   skilled pressure across the reflex points of the feet (arch to back,
   toes to head and neck); deep relaxation through the whole body.
