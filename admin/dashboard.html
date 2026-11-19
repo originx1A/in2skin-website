@@ -901,12 +901,20 @@
                 return '<div class="after-item"><div><strong>' + r.code + '</strong> — ' + (r.name || "Client") + ' · ' + (r.email || "") + ' · ' + (r.phone || "")
                   + '<br/>Credit: <strong>' + money(r.creditCents) + '</strong> (used ' + money(r.creditUsedCents) + ') · Free reflexology banked: <strong>' + r.freeReflexology + '</strong> · Paid referrals: <strong>' + r.paidCount + '</strong>'
                   + (friends ? '<br/><span style="color:var(--ink-soft);">Referred: ' + friends + '</span>' : '<br/><span style="color:var(--ink-soft);">No referrals yet.</span>')
-                  + '</div></div>';
+                  + '</div><div style="margin-top:8px;"><button class="btn btn-ghost btn-book-sm" type="button" data-ref-del="' + r.code + '">Delete</button></div></div>';
               });
               document.getElementById("refList").innerHTML = rows.length ? rows.join("") : "<p style='color:var(--ink-soft);'>No referral codes yet — the first one is created when a client books.</p>";
             })
             .catch(function(){ document.getElementById("refList").textContent = "Could not load referrals — check your connection."; });
         }
+        document.getElementById("refList").addEventListener("click", function(ev){
+          var delBtn = ev.target.closest("[data-ref-del]");
+          if (!delBtn) return;
+          var code = delBtn.getAttribute("data-ref-del");
+          if (!confirm("Delete this referral code (" + code + ")? Any credit or banked free reflexology on it is gone for good.")) return;
+          postAdmin({ view:"referrals", action:"delete", code: code })
+            .then(function(){ loadReferrals(); });
+        });
         document.getElementById("refCreate").addEventListener("click", function(){
           var m = document.getElementById("refMsg");
           var name = document.getElementById("refName").value.trim();

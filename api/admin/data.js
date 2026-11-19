@@ -11,6 +11,9 @@
 // POST /api/admin/data { view:"transfer-hours", settings } → save call hours.
 // POST /api/admin/data { view:"referrals", action:"create", name, email, phone }
 //   → create a referral code for a walk-in client.
+// POST /api/admin/data { view:"referrals", action:"delete", code }
+//   → delete a referral code for good (record, ref:all entry, email/phone
+//     indexes). Any credit or banked free reflexology on it is gone.
 // POST /api/admin/data { view:"bookings", action:"complete"|"no-show", bookingId }
 //   → mark a booking's outcome (complete voids a $0 voucher; no-show restores it).
 // POST /api/admin/data { view:"bookings", action:"cancel", bookingId, reason }
@@ -72,7 +75,7 @@ const {
   parseTime, durationFor, findService,
 } = require("../../lib/schedule");
 const { getSettings, saveSettings, transferStatus } = require("../../lib/transfer");
-const { listReferrals, getOrCreateReferral, attendeeOf } = require("../../lib/referrals");
+const { listReferrals, getOrCreateReferral, deleteReferral, normalizeReferralCode, attendeeOf } = require("../../lib/referrals");
 const {
   getBufferMins, setBufferMins, listBlocks, addBlock, removeBlock, studioForDate,
 } = require("../../lib/studio");
@@ -270,6 +273,12 @@ module.exports = async (req, res) => {
         });
         await logAudit(session, "referrals.create", `code ${referral.code} for ${String(b.name).trim()}`);
         return res.status(200).json({ referral });
+      }
+      if (b.view === "referrals" && b.action === "delete") {
+        const ok = await deleteReferral(b.code);
+        if (!ok) return res.status(404).json({ error: "That referral code is already gone." });
+        await logAudit(session, "referrals.delete", `code ${normalizeReferralCode(b.code)} deleted`);
+        return res.status(200).json({ ok: true });
       }
       if (b.view === "settings" && b.action === "buffer") {
         const bufferMins = await setBufferMins(b.bufferMins);

@@ -208,6 +208,20 @@ async function run() {
   check("listReferrals has Alex + Blair + Casey", all.length, 3);
   check("listReferrals includes Alex", all.some((r) => r.code === alex.code), true);
 
+  // --- delete a referral code (Tony Nov 19, 2026 — Sarah clears test codes) ---
+  const delBlair = await refs.deleteReferral(blair.code);
+  check("delete Blair -> true", delBlair, true);
+  check("Blair gone from list", (await refs.listReferrals()).some((r) => r.code === blair.code), false);
+  check("Blair lookup by code -> null", await refs.getReferralByCode(blair.code), null);
+  check("Blair lookup by email -> null", await refs.getReferralByEmailOrPhone("blair@example.com", ""), null);
+  check("Blair lookup by phone -> null", await refs.getReferralByEmailOrPhone("", "(905) 555-0202"), null);
+  check("ref:all drops Blair", (await refs.listReferrals()).length, 2);
+  const delAlex = await refs.deleteReferral(alex.code);
+  check("delete Alex (has credit) -> true", delAlex, true);
+  check("Alex gone from list", (await refs.listReferrals()).some((r) => r.code === alex.code), false);
+  check("delete unknown code -> false", await refs.deleteReferral("NOPE-9999"), false);
+  check("delete already-deleted -> false", await refs.deleteReferral(blair.code), false);
+
   console.log(`referral tests: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }
