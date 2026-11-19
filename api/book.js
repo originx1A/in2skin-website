@@ -251,6 +251,13 @@ module.exports = async (req, res) => {
     const session = await createBookingCheckout(booking);
     booking.checkoutSessionId = session.id;
     await saveBooking(booking);
+    // Web hold warning (Tony Nov 19): web bookers get the same 30-minute
+    // hold email the phone callers get — but only when an email was given
+    // (email is optional on the web form). Email failure must never break
+    // the checkout redirect.
+    if (booking.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(booking.email))) {
+      try { await sendHoldEmail(booking, session.url); } catch (e) { console.error("[book:hold-email]", e); }
+    }
     return res.status(200).json({ url: session.url, bookingId: booking.id });
   } catch (err) {
     console.error("[book]", err);
