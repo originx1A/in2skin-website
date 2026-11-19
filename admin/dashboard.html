@@ -13,6 +13,22 @@
       .act-panel label { display: block; font-size: .9rem; margin: 8px 0 4px; }
       .act-panel input, .act-panel select, .act-panel textarea { font-family: inherit; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); width: 100%; box-sizing: border-box; }
       .gap-btn[aria-pressed="true"] { background: var(--sage-deep); color: #fff; }
+      /* Dashboard sections (Tony Nov 19, 2026): one small Sections button
+         opens the list; picking one jumps there and closes it. Sections
+         alternate soft palette backgrounds inside a gold frame, each with
+         its symbol, so they never blur into one long scroll. */
+      .dash-sec { border:2px solid rgba(176,141,79,.45); border-radius:12px; padding:18px 16px; scroll-margin-top:130px; }
+      main > section:nth-of-type(3n+1) { background:var(--cream); }
+      main > section:nth-of-type(3n+2) { background:var(--blush); }
+      main > section:nth-of-type(3n) { background:rgba(94,114,99,.12); }
+      .dash-sec h2 { margin-top:0; }
+      .sec-sym { color:var(--gold); margin-right:6px; }
+      .dash-nav { position:sticky; top:68px; z-index:55; background:var(--paper); padding:8px 0 6px; border-bottom:1px solid var(--line); }
+      .dash-nav-toggle { font-size:.85rem; padding:6px 12px; min-height:0; }
+      .dash-nav-panel { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-top:8px; }
+      .dash-nav-panel[hidden] { display:none; }
+      .dash-nav-item { font-size:.8rem; padding:7px 6px; min-height:0; text-align:left; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink); font-family:inherit; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .dash-nav-item .sec-sym { margin-right:4px; }
       @media print {
         body * { visibility: hidden; }
         #reportPrint, #reportPrint * { visibility: visible; }
@@ -31,16 +47,33 @@
       <h1 style="font-family:'Cormorant Garamond',serif; font-size:2rem; margin-bottom:4px;">Studio dashboard</h1>
       <p class="sub" id="dashSub">Signed in — loading today…</p>
       <div id="dashMsg" style="min-height:1.4em; color:#7A3B2E; margin-bottom:10px;"></div>
+      <nav class="dash-nav" aria-label="Dashboard sections">
+        <button class="btn btn-ghost dash-nav-toggle" id="dashNavToggle" type="button" aria-expanded="false">&#9776; Sections</button>
+        <div class="dash-nav-panel" id="dashNavPanel" hidden>
+          <button type="button" class="dash-nav-item" data-goto="sec-payments"><span class="sec-sym" aria-hidden="true">$</span>Payments</button>
+          <button type="button" class="dash-nav-item" data-goto="sec-settings"><span class="sec-sym" aria-hidden="true">&#9881;</span>Settings</button>
+          <button type="button" class="dash-nav-item" data-goto="sec-walkin"><span class="sec-sym" aria-hidden="true">+</span>Walk-in</button>
+          <button type="button" class="dash-nav-item" data-goto="sec-calendar"><span class="sec-sym" aria-hidden="true">&#9638;</span>Calendar</button>
+          <button type="button" class="dash-nav-item" data-goto="sec-reports"><span class="sec-sym" aria-hidden="true">&#9646;</span>Reports</button>
+          <button type="button" class="dash-nav-item" data-goto="sec-backup"><span class="sec-sym" aria-hidden="true">&#8681;</span>Backup</button>
+          <button type="button" class="dash-nav-item" data-goto="sec-referrals"><span class="sec-sym" aria-hidden="true">&#8599;</span>Referrals</button>
+          <button type="button" class="dash-nav-item" data-goto="sec-gifts"><span class="sec-sym" aria-hidden="true">&#10022;</span>Gifts</button>
+          <button type="button" class="dash-nav-item" data-goto="sec-calls"><span class="sec-sym" aria-hidden="true">&#9742;</span>Calls</button>
+          <button type="button" class="dash-nav-item" data-goto="sec-messages"><span class="sec-sym" aria-hidden="true">&#9993;</span>Messages</button>
+          <button type="button" class="dash-nav-item" data-goto="sec-activity"><span class="sec-sym" aria-hidden="true">&#8635;</span>Activity</button>
+          <button type="button" class="dash-nav-item" data-goto="sec-spot"><span class="sec-sym" aria-hidden="true">&#8677;</span>Pay</button>
+        </div>
+      </nav>
 
-      <section style="margin-top:24px;">
-        <h2 style="font-size:1.4rem;">Today's payments at a glance</h2>
+      <section class="dash-sec" id="sec-payments" style="margin-top:24px;">
+        <h2 style="font-size:1.4rem;"><span class="sec-sym" aria-hidden="true">$</span> Today's payments at a glance</h2>
         <p><label for="payDate">Day</label> <input id="payDate" type="date" style="font-family:inherit; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink);" /></p>
         <div id="paySummary" class="summary-box" style="margin-top:12px;"></div>
         <div id="payList" style="margin-top:12px;"></div>
       </section>
 
-      <section style="margin-top:36px;">
-        <h2 style="font-size:1.4rem;">Studio settings — gap between appointments &amp; blocked-off time</h2>
+      <section class="dash-sec" id="sec-settings" style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;"><span class="sec-sym" aria-hidden="true">&#9881;</span> Studio settings — gap between appointments &amp; blocked-off time</h2>
         <p class="sub">The gap is the room reset time between appointments. Blocked-off time stops new bookings — bookings already in that window stay.</p>
         <h3 style="font-size:1.1rem; margin:18px 0 8px;">Gap between appointments</h3>
         <p><span id="gapBtns">
@@ -63,8 +96,8 @@
         <div id="blkList" style="margin-top:12px;">Loading blocks…</div>
       </section>
 
-      <section style="margin-top:36px;">
-        <h2 style="font-size:1.4rem;">Book a walk-in</h2>
+      <section class="dash-sec" id="sec-walkin" style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;"><span class="sec-sym" aria-hidden="true">+</span> Book a walk-in</h2>
         <p class="sub">Book a client yourself — same prices, same gift / referral / first-visit rules as online booking.</p>
         <form id="walkForm">
           <div class="form-2col">
@@ -98,16 +131,16 @@
         <div id="walkResult" style="margin-top:16px;"></div>
       </section>
 
-      <section style="margin-top:36px;">
-        <h2 style="font-size:1.4rem;">Calendar — all bookings</h2>
+      <section class="dash-sec" id="sec-calendar" style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;"><span class="sec-sym" aria-hidden="true">&#9638;</span> Calendar — all bookings</h2>
         <p><label for="calFrom">From</label> <input id="calFrom" type="date" style="font-family:inherit; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink);" />
         <label for="calTo">to</label> <input id="calTo" type="date" style="font-family:inherit; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink);" />
         <button class="btn btn-book" id="calLoad" type="button">Show</button></p>
         <div id="calList" style="margin-top:12px;"></div>
       </section>
 
-      <section style="margin-top:36px;" id="reportSection">
-        <h2 style="font-size:1.4rem;">Reports — clients, treatments &amp; payments</h2>
+      <section class="dash-sec" id="sec-reports" style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;"><span class="sec-sym" aria-hidden="true">&#9646;</span> Reports — clients, treatments &amp; payments</h2>
         <p class="sub">Client history for your records. Download it as a spreadsheet file, or print it.</p>
         <p><label for="repFrom">From</label> <input id="repFrom" type="date" style="font-family:inherit; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink);" />
         <label for="repTo">to</label> <input id="repTo" type="date" style="font-family:inherit; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink);" />
@@ -117,14 +150,14 @@
         <div id="reportPrint" style="margin-top:12px;"><p style="color:var(--ink-soft);">Pick a date range and load the report.</p></div>
       </section>
 
-      <section style="margin-top:36px;">
-        <h2 style="font-size:1.4rem;">Backup — bookings, gift codes &amp; payments</h2>
+      <section class="dash-sec" id="sec-backup" style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;"><span class="sec-sym" aria-hidden="true">&#8681;</span> Backup — bookings, gift codes &amp; payments</h2>
         <p class="sub">Downloads everything as one file — every booking, gift certificate, payment and referral, plus the studio settings. A copy is also emailed to the studio every Monday morning.</p>
         <p style="margin-top:12px;"><button class="btn btn-book" id="backupBtn" type="button">Download full backup</button> <span id="backupMsg" style="color:var(--ink-soft); margin-left:8px;"></span></p>
       </section>
 
-      <section style="margin-top:36px;">
-        <h2 style="font-size:1.4rem;">Referrals — $15 credit + free reflexology every 3 friends</h2>
+      <section class="dash-sec" id="sec-referrals" style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;"><span class="sec-sym" aria-hidden="true">&#8599;</span> Referrals — $15 credit + free reflexology every 3 friends</h2>
         <p class="sub">When three friends book and pay in full with a client's code, that client earns $15 treatment credit and a free reflexology add-on. No cash value — credit is for treatments only.</p>
         <div id="refList" style="margin-top:12px;">Loading referrals…</div>
         <h3 style="font-size:1.1rem; margin:22px 0 8px;">Create a code for a walk-in client</h3>
@@ -136,14 +169,14 @@
         <p style="margin-top:12px;"><button class="btn btn-book" id="refCreate" type="button">Create Referral Code</button> <span id="refMsg" style="color:#7A3B2E; margin-left:8px;"></span></p>
       </section>
 
-      <section style="margin-top:36px;">
-        <h2 style="font-size:1.4rem;">Gift certificates &amp; treatment vouchers</h2>
+      <section class="dash-sec" id="sec-gifts" style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;"><span class="sec-sym" aria-hidden="true">&#10022;</span> Gift certificates &amp; treatment vouchers</h2>
         <p class="sub">Every code — who bought it, who holds it now, what was spent and where, and what is left. A voucher dies when its full total is used and the treatment is marked complete; a no-show puts the value back on the voucher. Delete removes a code for good.</p>
         <div id="codeList" style="margin-top:12px;">Loading codes…</div>
       </section>
 
-      <section style="margin-top:36px;">
-        <h2 style="font-size:1.4rem;">Call answering — when the phone agent may put calls through to you</h2>
+      <section class="dash-sec" id="sec-calls" style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;"><span class="sec-sym" aria-hidden="true">&#9742;</span> Call answering — when the phone agent may put calls through to you</h2>
         <p class="sub">The voice agent on (289) 212-4124 checks this before every transfer. Outside these hours — or while paused — it takes a message and offers online booking instead.</p>
         <div id="callStatus" class="summary-box" style="margin-top:12px;">Loading call hours…</div>
         <h3 style="font-size:1.1rem; margin:22px 0 8px;">Who answers the phone?</h3>
@@ -163,21 +196,21 @@
         <p style="margin-top:12px;"><button class="btn btn-book" id="callSave" type="button">Save call hours</button> <span id="callMsg" style="color:#7A3B2E; margin-left:8px;"></span></p>
       </section>
 
-      <section style="margin-top:36px;">
-        <h2 style="font-size:1.4rem;">Messages — from callers</h2>
+      <section class="dash-sec" id="sec-messages" style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;"><span class="sec-sym" aria-hidden="true">&#9993;</span> Messages — from callers</h2>
         <p class="sub">Messages the phone assistant took when it couldn't put a caller through. Newest first — tap the number to call back.</p>
         <div id="msgList" style="margin-top:12px;">Loading messages…</div>
       </section>
 
-      <section style="margin-top:36px;">
-        <h2 style="font-size:1.4rem;">Activity — what changed, and when</h2>
+      <section class="dash-sec" id="sec-activity" style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;"><span class="sec-sym" aria-hidden="true">&#8635;</span> Activity — what changed, and when</h2>
         <p class="sub">Every change made in this dashboard — bookings moved or cancelled, payments recorded, codes deleted, settings changed. Newest first.</p>
         <p style="margin-top:12px;"><button class="btn btn-ghost" id="auditRefresh" type="button">Refresh</button></p>
         <div id="auditList" style="margin-top:12px;">Loading activity…</div>
       </section>
 
-      <section style="margin-top:36px;">
-        <h2 style="font-size:1.4rem;">Pay on the spot</h2>
+      <section class="dash-sec" id="sec-spot" style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;"><span class="sec-sym" aria-hidden="true">&#8677;</span> Pay on the spot</h2>
         <p class="sub">Enter what is owed — the client pays on their own phone by text, email, or QR code.</p>
         <form id="spotForm">
           <div class="form-2col">
@@ -197,6 +230,38 @@
     </main>
     <script>
       (function(){
+        // ---- section menu (Tony Nov 19, 2026): one small button opens the
+        // section list; picking one jumps there and closes it again. ----
+        var navToggle = document.getElementById("dashNavToggle");
+        var navPanel = document.getElementById("dashNavPanel");
+        function closeNav(){ if (navPanel){ navPanel.hidden = true; } if (navToggle){ navToggle.setAttribute("aria-expanded", "false"); } }
+        if (navToggle && navPanel){
+          navToggle.addEventListener("click", function(){
+            var open = navPanel.hidden;
+            navPanel.hidden = !open;
+            navToggle.setAttribute("aria-expanded", open ? "true" : "false");
+          });
+          navPanel.addEventListener("click", function(ev){
+            var btn = ev.target.closest("[data-goto]");
+            if (!btn) return;
+            var sec = document.getElementById(btn.getAttribute("data-goto"));
+            closeNav();
+            if (sec) sec.scrollIntoView({ behavior:"smooth", block:"start" });
+          });
+        }
+        // ---- golden glow (Tony Nov 19, 2026): a missed field scrolls back
+        // into view and glows gold, same guide as the booking wizard. ----
+        function glowMiss(el){
+          if (!el) return;
+          el.scrollIntoView({ behavior:"smooth", block:"center" });
+          el.classList.remove("glow-pick");
+          void el.offsetWidth;
+          el.classList.add("glow-pick");
+          var clear = function(){ el.classList.remove("glow-pick"); el.removeEventListener("input", clear); el.removeEventListener("change", clear); };
+          el.addEventListener("input", clear);
+          el.addEventListener("change", clear);
+          setTimeout(function(){ el.classList.remove("glow-pick"); }, 6000);
+        }
         var msg = document.getElementById("dashMsg");
         function money(c){ return "$" + (c/100).toFixed(2).replace(/\.00$/, ""); }
         function todayKey(){ var d = new Date(); return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
@@ -496,7 +561,7 @@
           var name = document.getElementById("refName").value.trim();
           var email = document.getElementById("refEmail").value.trim();
           var phone = document.getElementById("refPhone").value.trim();
-          if (!name || !email || !phone){ m.textContent = "Add the client's name, email and phone."; return; }
+          if (!name || !email || !phone){ m.textContent = "Add the client's name, email and phone."; glowMiss(document.getElementById(!name ? "refName" : !email ? "refEmail" : "refPhone")); return; }
           m.textContent = "";
           fetch("/api/admin/data", { method:"POST", headers:{ "Content-Type":"application/json" },
             body: JSON.stringify({ view:"referrals", action:"create", name: name, email: email, phone: phone }) })
@@ -703,8 +768,9 @@
           var amt = parseFloat(document.getElementById("spAmount").value);
           var name = document.getElementById("spName").value.trim();
           var contact = document.getElementById("spContact").value.trim();
-          if (!amt || amt < 1){ err.textContent = "Please enter the amount owed — $1 or more."; return; }
-          if (!name){ err.textContent = "Please add the client's name."; return; }
+          if (!amt || amt < 1){ err.textContent = "Please enter the amount owed — $1 or more."; glowMiss(document.getElementById("spAmount")); return; }
+          if (!name){ err.textContent = "Please add the client's name."; glowMiss(document.getElementById("spName")); return; }
+          if (methodSel.value !== "qr" && !contact){ err.textContent = methodSel.value === "email" ? "Please add the client's email." : "Please add the client's mobile number."; glowMiss(document.getElementById("spContact")); return; }
           err.textContent = "";
           fetch("/api/pay-spot", { method:"POST", headers:{ "Content-Type":"application/json" },
             body: JSON.stringify({ amount: amt, clientName: name, contact: contact, method: methodSel.value,
@@ -727,10 +793,17 @@
                 if (q.isDark(r, c)) rects += '<rect x="' + ((c+quiet)*cell) + '" y="' + ((r+quiet)*cell) + '" width="' + cell + '" height="' + cell + '"/>';
               qr = '<svg viewBox="0 0 ' + size + ' ' + size + '" style="max-width:280px; width:100%; height:auto; background:#fff; border-radius:8px;" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="QR code for the payment link"><rect width="' + size + '" height="' + size + '" fill="#FFFFFF"/><g fill="#1E241B">' + rects + '</g></svg>';
             }
+            var smsBtn = "";
+            if (methodSel.value === "text" && contact){
+              var digits = contact.replace(/[^0-9+]/g, "");
+              var smsText = "Hi " + name + ", here is your In2Skin payment link for " + money(Math.round(amt*100)) + ": " + res.j.url;
+              smsBtn = '<p><a class="btn btn-book" href="sms:' + digits + '?&body=' + encodeURIComponent(smsText) + '">Text it to the client →</a></p>';
+            }
             out.innerHTML = '<div class="book-step on" style="text-align:center;"><h3>Payment link ready — ' + money(Math.round(amt*100)) + '</h3>'
-              + (res.j.sms === "not_configured" ? '<p style="color:var(--ink-soft);">Automatic texting is not set up yet — please text the link below to the client from the studio phone.</p>' : '')
+              + (res.j.sms === "not_configured" ? '<p style="color:var(--ink-soft);">' + (methodSel.value === "text" ? "Tap Text it below — it opens your Messages app with the link ready to send." : "Automatic texting is not set up yet — please text the link below to the client from the studio phone.") + '</p>' : '')
               + '<div class="pay-qr-box">' + qr + '</div>'
               + '<div class="pay-link">' + res.j.url + '</div>'
+              + smsBtn
               + '<p><a class="btn btn-book" href="' + res.j.url + '" target="_blank" rel="noopener">Open the pay page →</a></p></div>';
             loadPayments();
           })
@@ -782,7 +855,7 @@
           var date = document.getElementById("blkDate").value;
           var start = document.getElementById("blkStart").value;
           var end = document.getElementById("blkEnd").value;
-          if (!date || !start || !end){ m.textContent = "Pick a day, a start time and an end time."; return; }
+          if (!date || !start || !end){ m.textContent = "Pick a day, a start time and an end time."; glowMiss(document.getElementById(!date ? "blkDate" : !start ? "blkStart" : "blkEnd")); return; }
           m.textContent = "";
           fetch("/api/admin/data", { method:"POST", headers:{ "Content-Type":"application/json" },
             body: JSON.stringify({ view:"settings", action:"block-add", date: date, start: start, end: end, reason: document.getElementById("blkReason").value.trim() }) })
@@ -846,7 +919,9 @@
             referredBy: document.getElementById("wkRef").value.trim(),
             payment: document.getElementById("wkPay").value,
           };
-          if (!body.time){ err.textContent = "Pick a free time for the appointment."; return; }
+          if (!body.name){ err.textContent = "Please add the client's name."; glowMiss(document.getElementById("wkName")); return; }
+          if (!body.phone){ err.textContent = "Please add the client's phone."; glowMiss(document.getElementById("wkPhone")); return; }
+          if (!body.time){ err.textContent = "Pick a free time for the appointment."; glowMiss(document.getElementById("wkTime")); return; }
           err.textContent = "";
           postAdmin(body)
             .then(function(res){
