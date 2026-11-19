@@ -245,6 +245,24 @@
       .pkg-text{ flex:1; min-width:0; font-size:.95rem; color:var(--ink); }
       .pkg-go{ flex:none; }
       .pkg-go:disabled{ opacity:.45; cursor:not-allowed; }
+      /* Looks inactive but still tappable (Tony Nov 18, 2026): the bar
+         Continue buttons are never disabled any more — the greyed look
+         is a class now, so the tap reaches the handler and the guide
+         fires instead of the tap vanishing. */
+      .pkg-go.is-disabled{ opacity:.45; cursor:not-allowed; }
+      /* Mobile menu open (Tony Nov 18, 2026): the menu is taller than a
+         phone screen, so it scrolls within the viewport instead of
+         pinning its bottom links out of reach — and the floating bars
+         hide while it is open so nothing sits on top of it. */
+      @media (max-width:860px){
+        nav.main.open{ max-height:calc(100dvh - 70px); overflow-y:auto; }
+        body.nav-open .pkg-bar, body.nav-open .mobile-bar, body.nav-open .chat-fab, body.nav-open .to-top{ display:none !important; }
+      }
+      /* Short bars on PC (Tony Nov 18, 2026): the bars only need to be
+         as wide as what is in them — no more 680px of mostly empty bar. */
+      @media (min-width:861px){
+        .pkg-bar{ width:fit-content; max-width:min(680px, calc(100% - 32px)); }
+      }
       /* Golden halo guide (Tony Nov 18, 2026): when a Continue is tapped
          with nothing picked, the page comes back to the choices and the
          OPTIONS glow gold — a halo around their edges, never through the
@@ -622,7 +640,11 @@
       }
       .chat-fab{ position:fixed; right:20px; bottom:24px; z-index:95; display:inline-flex; align-items:center; gap:10px; background:linear-gradient(135deg,#E9C876 0%,#CFA855 55%,#A9853F 100%); color:#2A1E05; border:1px solid #A9853F; border-radius:8px; padding:14px 22px; min-height:58px; font-family:"Jost",sans-serif; font-weight:600; font-size:1rem; cursor:pointer; box-shadow:0 16px 36px rgba(120,86,20,.35); }
       .chat-fab:hover{ filter:brightness(1.07); }
-      .chat-panel{ position:fixed; right:20px; bottom:94px; z-index:96; width:min(384px, calc(100vw - 24px)); height:min(580px, calc(100dvh - 140px)); background:var(--paper); border:1px solid var(--line); border-radius:12px; box-shadow:0 30px 60px rgba(31,40,24,.38); display:flex; flex-direction:column; overflow:hidden; }
+      /* PC chat panel bigger (Tony Nov 18, 2026): plenty of room on a
+         desktop screen, so the panel — and the message area inside it
+         that flexes to fill it — is wider and taller. Mobile keeps its
+         full-screen sheet rule below, untouched. */
+      .chat-panel{ position:fixed; right:20px; bottom:94px; z-index:96; width:min(460px, calc(100vw - 24px)); height:min(700px, calc(100dvh - 110px)); background:var(--paper); border:1px solid var(--line); border-radius:12px; box-shadow:0 30px 60px rgba(31,40,24,.38); display:flex; flex-direction:column; overflow:hidden; }
       .chat-panel[hidden]{ display:none; }
       .chat-head{ background:var(--sage-deep); color:#F5F1E4; padding:16px 18px; display:flex; align-items:flex-start; gap:10px; }
       .chat-head strong{ font-family:"Cormorant Garamond",serif; font-size:1.4rem; display:block; line-height:1.1; }

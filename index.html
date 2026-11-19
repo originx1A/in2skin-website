@@ -238,11 +238,11 @@
     <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
     <div class="pkg-bar" id="pkgBar" role="status" aria-live="polite">
       <span class="pkg-text" id="pkgText">Pick a treatment</span>
-      <button type="button" class="btn btn-call pkg-go" id="pkgContinue" disabled>Continue →</button>
+      <button type="button" class="btn btn-call pkg-go" id="pkgContinue">Continue →</button>
     </div>
     <div class="pkg-bar" id="giftBar" role="status" aria-live="polite">
       <span class="pkg-text" id="giftBarText">Pick a kind of gift</span>
-      <button type="button" class="btn btn-call pkg-go" id="giftBarGo" disabled>Continue →</button>
+      <button type="button" class="btn btn-call pkg-go" id="giftBarGo">Continue →</button>
     </div>
 
     <script src="assets/qrcode.min.js"></script>
@@ -1488,7 +1488,11 @@
       var txt = document.getElementById("pkgText");
       var go = document.getElementById("pkgContinue");
       if (txt) txt.textContent = booking.service ? bookingAddonTotalText() : "Pick a treatment";
-      if (go) go.disabled = !booking.service;
+      /* Never disable the button (Tony Nov 18, 2026): a disabled button
+         swallows the tap entirely, so the guide below it never fires.
+         It only LOOKS inactive — the click handler decides: nothing
+         picked → scroll back + glow; picked → advance. */
+      if (go){ go.disabled = false; go.classList.toggle("is-disabled", !booking.service); go.setAttribute("aria-disabled", !booking.service ? "true" : "false"); }
       syncWizBar();
     }
     window.addEventListener("scroll", pkgBarShow, { passive:true });
@@ -1619,7 +1623,11 @@
       var txt = document.getElementById("giftBarText");
       var go = document.getElementById("giftBarGo");
       if (txt) txt.textContent = giftBarText();
-      if (go) go.disabled = !giftBarReady();
+      /* Never disable the button (Tony Nov 18, 2026): a disabled button
+         swallows the tap entirely, so the guide below it never fires.
+         It only LOOKS inactive — the click handler decides: nothing
+         picked → scroll back + glow; picked → advance. */
+      if (go){ go.disabled = false; go.classList.toggle("is-disabled", !giftBarReady()); go.setAttribute("aria-disabled", !giftBarReady() ? "true" : "false"); }
       syncWizBar();
     }
     window.addEventListener("scroll", giftBarShow, { passive:true });
@@ -2224,12 +2232,29 @@
       if (bk){ startBooking(bk.getAttribute("data-book")); }
     });
 
+    /* A nav link to the page you are already on (Tony Nov 18, 2026):
+       the hash does not change, so no hashchange fires and the page
+       just sits there. Same-page nav taps scroll back to the top.
+       Scroll-target links are skipped — their own handler above owns
+       those taps. */
+    document.addEventListener("click", function(ev){
+      var a = ev.target.closest("a[data-nav]");
+      if (!a || a.hasAttribute("data-scroll")) return;
+      var href = a.getAttribute("href") || "";
+      if (href.charAt(0) === "#" && href === location.hash){
+        ev.preventDefault();
+        closeMenus();
+        window.scrollTo({ top:0, behavior:"smooth" });
+      }
+    });
+
     /* ---------------- MENUS / NAV POPULATION ---------------- */
     function closeMenus(){
       var m = document.getElementById("svcMenu"); if (m) m.classList.remove("open");
       var n = document.getElementById("mainNav"); if (n) n.classList.remove("open");
       var t = document.getElementById("svcToggle"); if (t) t.setAttribute("aria-expanded","false");
       var b = document.getElementById("burger"); if (b) b.setAttribute("aria-expanded","false");
+      document.body.classList.remove("nav-open");
     }
     (function initNav(){
       var menu = document.getElementById("svcMenu");
@@ -2248,12 +2273,24 @@
       });
       document.addEventListener("click", function(ev){
         if (!ev.target.closest(".nav-drop")) menu.classList.remove("open");
+        /* Tapping anywhere outside the header closes the mobile menu
+           (Tony Nov 18, 2026: the menu stayed stuck open). The burger
+           and the links live inside the header, so they are untouched. */
+        if (!ev.target.closest("header.site")){
+          nav.classList.remove("open");
+          document.body.classList.remove("nav-open");
+          burger.setAttribute("aria-expanded","false");
+        }
       });
       var burger = document.getElementById("burger");
       var nav = document.getElementById("mainNav");
       burger.addEventListener("click", function(){
         var open = nav.classList.toggle("open");
         burger.setAttribute("aria-expanded", open ? "true" : "false");
+        /* While the menu is open the floating bars hide (Tony Nov 18,
+           2026): the Pick-a-treatment bar sat on top of the menu's
+           bottom links and the menu could not be scrolled past it. */
+        document.body.classList.toggle("nav-open", open);
       });
       nav.addEventListener("click", function(ev){
         if (ev.target.closest("a")) closeMenus();
