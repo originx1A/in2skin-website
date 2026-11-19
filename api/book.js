@@ -1,9 +1,8 @@
 // POST /api/book — create a booking + Stripe Checkout session.
 // Full payment at booking. Accepts an optional gift code (its balance comes
 // off the total; anything left stays on the code) and the $10 first-visit
-// offer. Custom-priced consultations (skin tightening) and
-// bookings fully covered by a gift code need no payment — they are confirmed
-// straight away.
+// offer. Bookings fully covered by a gift code need no payment — they are
+// confirmed straight away.
 const { getStripe } = require("../lib/stripe");
 const { kvGet, kvSet } = require("../lib/kv");
 const {

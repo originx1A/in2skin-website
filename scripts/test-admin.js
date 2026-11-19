@@ -469,14 +469,16 @@ async function run() {
   }), res);
   check("public booking -> 200", res.statusCode, 200);
   check("public booking returns checkout url", res.body.url, "https://checkout.stripe.test/pay/cs_test_1");
+  // The consultation books through the same shared path — $30 by card,
+  // checkout link back, first-time client. (Skin Tightening, the old
+  // custom-priced consultation, was removed Nov 19, 2026.)
   res = mockRes();
   await book(mockReq({
     method: "POST", headers: {},
-    body: { service: "skin-tightening", type: "regular", date: d4, time: "10:00 AM", name: "Consult", phone: "(905) 555-0201", email: "consult@example.com", first: "no" },
+    body: { service: "consultation", format: "video", type: "regular", date: d4, time: "10:00 AM", name: "Consult", phone: "(905) 555-0201", email: "consult@example.com", first: "no" },
   }), res);
   check("public consultation -> 200", res.statusCode, 200);
-  check("consultation paid immediately", res.body.paid, true);
-  check("consultation flagged", res.body.consultation, true);
+  check("public consultation returns checkout url", res.body.url, "https://checkout.stripe.test/pay/cs_test_1");
 
   // ---------- 13. settings round-trip via the admin path ----------
   res = await callAdmin({ view: "settings", action: "buffer", bufferMins: 75 });

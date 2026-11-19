@@ -18,9 +18,6 @@ steps need a browser (Vercel dashboard, Stripe, DNS). Do them in order.
       starting price** (the preview's `priceNum`); the exact price ($95–$475)
       is confirmed at consultation and any balance is settled at the visit.
       Confirm Tony is happy with that, or set a different online price.
-- [ ] **Consultation hold:** microneedling / skin-tightening bookings hold
-      **60 minutes** of studio time (the preview lists them as "By
-      consultation" with no duration). Confirm, or set the real duration.
 
 ## 1. Environment variables
 

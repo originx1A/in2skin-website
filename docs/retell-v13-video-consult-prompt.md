@@ -93,6 +93,11 @@ Add `consultation` to the service IDs the agent can book
 `book_appointment` also needs a `format` field — `"video"` or
 `"in-person"` — so the agent can book either format.
 
+**Skin Tightening is gone (Nov 19, 2026):** the service was removed
+from the website — do not offer it. If a caller asks for it, say it is
+no longer offered and offer the consultation instead (first-time
+clients) or another treatment.
+
 ## Dashboard step — the request needs a function flag
 
 The after-hours request is a different call from a hold: POST

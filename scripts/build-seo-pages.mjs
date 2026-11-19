@@ -30,7 +30,6 @@ const TREATMENT_LINKS = [
   ["reflexology", "Reflexology", "$35"],
   ["chemical-peels", "Chemical Peels", "$125–$475"],
   ["microneedling", "Microneedling", "$65"],
-  ["skin-tightening", "Skin Tightening", "Custom"],
 ];
 
 const FOOT_TREATMENTS = TREATMENT_LINKS.map(
@@ -881,13 +880,12 @@ const CONDITIONS = [
         ticks: [
           "Anti-Aging Facial — $125 · 80 minutes. Firming massage, targeted anti-aging serums and rich hydration, for firm, youthful skin.",
           "Needling (micro or nano) — $65 · 20 minutes. Sarah picks the needle size for your face — ultra-fine tips help serums absorb more deeply, and fine needles prompt new collagen, improving the look of fine lines, acne scarring, uneven texture and enlarged pores.",
-          "Skin Tightening — custom, priced per consultation. Firming care for skin that has lost elasticity, so it looks tighter and more lifted over time.",
         ],
       },
       {
         h: "Good to know",
         body: [
-          "First visit? Take $10 toward any service. Microneedling is $65 for 20 minutes; skin tightening is priced at consultation — the exact price is confirmed up front, before anything begins. Private Hours, early mornings and evenings by request, are the regular price plus $15 per visit.",
+          "First visit? Take $10 toward any service. Microneedling is $65 for 20 minutes. Private Hours, early mornings and evenings by request, are the regular price plus $15 per visit.",
         ],
       },
     ],
@@ -971,7 +969,7 @@ const QUESTIONS = {
         "The Works — $160 with a Classic Facial (55 min), $195 with an Anti-Aging Facial (80 min)",
         "Add-ons — NANO Needling $65, Microdermabrasion $55, Light Therapy $55, Reflexology $35 (all four add-ons 20 minutes)",
         "Chemical Peels — $125–$475, 55 minutes, exact price confirmed at consultation",
-        "Microneedling — $65 for 20 minutes; Skin Tightening — custom, priced per consultation",
+        "Microneedling — $65 for 20 minutes",
         "First visit — $10 toward any service · Private Hours — the regular price plus $15 per visit",
       ],
     },
@@ -979,7 +977,7 @@ const QUESTIONS = {
   leadPrice: "$85",
   leadMins: "Classic Facial · 55 minutes",
   faq: [
-    ["How much does a facial cost in Bolton?", "At In2Skin, the Classic Facial is $85 for 55 minutes and the Anti-Aging Facial is $125 for 80 minutes. Add-ons run $35 to $65, chemical peels run $125 to $475, and microneedling is $65 while skin tightening is priced per consultation. First visits get $10 off any service."],
+    ["How much does a facial cost in Bolton?", "At In2Skin, the Classic Facial is $85 for 55 minutes and the Anti-Aging Facial is $125 for 80 minutes. Add-ons run $35 to $65, chemical peels run $125 to $475, and microneedling is $65. First visits get $10 off any service."],
     ["What does a facial do?", "A facial deep-cleanses, exfoliates, steams, massages and hydrates your skin, finished with a mask matched to your skin that day. Skin leaves brighter, fresher and more hydrated — with a glow that lasts for days."],
     ["How long does a facial take?", "The Classic Facial takes 55 minutes and the Anti-Aging Facial takes 80 minutes. Add-ons take 20 minutes each, and can be added to a facial or booked on their own."],
     ["How often should I get a facial?", "Every 4 to 6 weeks. Most clients make it a monthly ritual."],
