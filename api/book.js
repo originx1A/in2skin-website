@@ -9,14 +9,16 @@ const { kvGet, kvSet } = require("../lib/kv");
 const {
   findService, parseDateLocal, timesFor, parseTime, normalizeAddons,
   durationForBooking, baseCentsFor,
-  slotTaken, FIRST_VISIT_CENTS, PENDING_HOLD_MS, dayIsFull,
+  slotTaken, FIRST_VISIT_CENTS, PENDING_HOLD_MS, dayIsFull, countsTowardCap,
 } = require("../lib/schedule");
 const { studioForDate } = require("../lib/studio");
 const {
   SITE_URL, newId, saveBooking, listBookingsForDate,
   getBooking, finalizePaidBooking, sendHoldEmail, notifyStudioBooking,
-  buildBooking, createBookingCheckout,
+  buildBooking, createBookingCheckout, createConsultRequest, CONSULT_ID,
+  CONSULT_FORMATS, consultFormatOf, consultName,
 } = require("../lib/bookings");
+const { getReferralByEmailOrPhone } = require("../lib/referrals");
 const { getOrCreateReferral } = require("../lib/referrals");
 const { checkLimit } = require("../lib/rate-limit");
 
@@ -55,9 +57,23 @@ async function handleAgentHold(req, res, b) {
     if (!svc) return bad(res, "Please choose a treatment.");
     let addons;
     try { addons = normalizeAddons(b.addons); } catch (err) { return bad(res, err.message); }
+    // A consultation is just the consultation — no add-ons.
+    if (svc.id === CONSULT_ID && addons.length) return bad(res, "A consultation is just the consultation — pick your add-ons with your treatment.");
+    // The format (Tony Nov 19, 2026): video call or in person at the
+    // studio. An invalid format is refused, not guessed.
+    if (svc.id === CONSULT_ID && b.format != null && b.format !== "" && !CONSULT_FORMATS.includes(b.format)) return bad(res, "Pick video or in person for your consultation.");
+    const format = svc.id === CONSULT_ID ? consultFormatOf(b) : null;
+    // First-time clients only (Tony Nov 19, 2026): one consultation per
+    // client, ever. The agent cannot see caller history (the V13 prompt
+    // tells it to ask first); this is the backstop if it offers one to
+    // a returning client anyway.
+    if (svc.id === CONSULT_ID) {
+      const prior = await getReferralByEmailOrPhone(b.email, b.phone);
+      if (prior) return bad(res, "You've already had your consultation with Sarah — book your treatment directly.");
+    }
     const totalMins = durationForBooking(svc.id, addons);
     const addonNames = addons.map((id) => findService(id).name);
-    const serviceLabel = addonNames.length ? `${svc.name} + ${addonNames.join(" + ")}` : svc.name;
+    const serviceLabel = svc.id === CONSULT_ID ? consultName(format) : (addonNames.length ? `${svc.name} + ${addonNames.join(" + ")}` : svc.name);
     const type = b.type === "after" ? "after" : "regular";
     // Early mornings and evenings are by request through Sarah — the voice
     // agent never books them; it takes a message instead (Tony Nov 19).
@@ -69,7 +85,7 @@ async function handleAgentHold(req, res, b) {
     const maxDay = new Date(today); maxDay.setDate(maxDay.getDate() + 60);
     if (d < tomorrow) return bad(res, "Bookings start from tomorrow — please choose a later day.");
     if (d > maxDay) return bad(res, "Bookings open up to 60 days ahead — please choose an earlier day.");
-    if (!timesFor(b.date, type).includes(b.time)) return bad(res, "That time is not available for this kind of appointment.");
+    if (!timesFor(b.date, type, svc.id).includes(b.time)) return bad(res, "That time is not available for this kind of appointment.");
     if (!b.name || !String(b.name).trim()) return bad(res, "Please add your name so we know who is coming.");
     if (!b.phone || String(b.phone).replace(/[^0-9]/g, "").length < 10) return bad(res, "Please add a phone number so we can reach you about your appointment.");
     if (!b.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(b.email))) return bad(res, "Please add a valid email — your confirmation is sent there.");
@@ -80,20 +96,23 @@ async function handleAgentHold(req, res, b) {
       return res.status(409).json({ error: "That time was just taken — please choose another time." });
     }
     // Four appointments a day, whatever they are (Tony Nov 19, 2026).
-    if (dayIsFull(bookings)) {
+    // Consultations never count toward the cap.
+    if (countsTowardCap(svc.id) && dayIsFull(bookings)) {
       return res.status(409).json({ error: "That day is fully booked — Sarah takes four appointments a day. Please choose another day." });
     }
 
     const first = b.first !== "no";
     const baseCents = baseCentsFor(svc.id, addons, type);
-    const firstVisitDiscountCents = svc.priceNum > 0 && first ? FIRST_VISIT_CENTS : 0;
+    // The $10 first-visit offer never applies to a consultation.
+    const firstVisitDiscountCents = svc.priceNum > 0 && first && !svc.noFirstVisit ? FIRST_VISIT_CENTS : 0;
     const amountCents = Math.max(0, baseCents - firstVisitDiscountCents);
     const myRef = await getOrCreateReferral({ name: b.name, email: b.email, phone: b.phone });
     const booking = {
       id: newId("bk"),
       service: svc.id,
-      serviceName: svc.name,
+      serviceName: svc.id === CONSULT_ID ? consultName(format) : svc.name,
       serviceLabel,
+      format,
       addons,
       addonNames,
       servicePriceLabel: svc.priceLabel,
@@ -112,6 +131,7 @@ async function handleAgentHold(req, res, b) {
       firstVisitDiscountCents,
       giftCode: null,
       giftAppliedCents: 0,
+      giftKind: null,
       giftDeducted: false,
       referralCode: null,
       referralAppliedCents: 0,
@@ -143,6 +163,7 @@ async function handleAgentHold(req, res, b) {
 
     await saveBooking(booking);
     const stripe = getStripe();
+    const isConsult = svc.id === CONSULT_ID;
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       currency: "cad",
@@ -153,8 +174,12 @@ async function handleAgentHold(req, res, b) {
           currency: "cad",
           unit_amount: amountCents,
           product_data: {
-            name: `${serviceLabel} — ${b.date} at ${b.time}${type === "after" ? " (Private Hours)" : ""}`,
-            description: `In2Skin · Bolton, Ontario — held by phone${firstVisitDiscountCents ? " · $10 first-visit offer applied" : ""}`,
+            // The consultation's checkout names the service plainly
+            // (Tony Nov 19, 2026); the statement descriptor is IN2SKIN.
+            name: isConsult ? `${consultName(format)} — In2Skin` : `${serviceLabel} — ${b.date} at ${b.time}${type === "after" ? " (Private Hours)" : ""}`,
+            description: isConsult
+              ? `Payment for ${consultName(format)} · In2Skin, Bolton, Ontario — ${b.date} at ${b.time}`
+              : `In2Skin · Bolton, Ontario — held by phone${firstVisitDiscountCents ? " · $10 first-visit offer applied" : ""}`,
           },
         },
       }],
@@ -174,6 +199,7 @@ async function handleAgentHold(req, res, b) {
       bookingId: booking.id,
       serviceName: booking.serviceName,
       serviceLabel: booking.serviceLabel,
+      format: booking.format || null,
       addons: booking.addons,
       date: booking.date,
       time: booking.time,
@@ -216,6 +242,7 @@ module.exports = async (req, res) => {
         paid: true,
         booking: {
           serviceName: booking.serviceName,
+          format: booking.format || null,
           date: booking.date,
           time: booking.time,
           type: booking.type,
@@ -224,6 +251,7 @@ module.exports = async (req, res) => {
           email: booking.email,
           amountPaidCents: booking.amountPaidCents,
           giftAppliedCents: booking.giftAppliedCents,
+          giftKind: booking.giftKind || null,
           myReferralCode: booking.myReferralCode || null,
         },
       });
@@ -238,6 +266,24 @@ module.exports = async (req, res) => {
   if (!(await checkLimit(req, res, { scope: "book", limit: 10, windowSecs: 60 }))) return;
   try {
     const b = req.body || {};
+    // Consultation request (after hours) — no payment, no slot
+    // hold; Sarah answers it on the dashboard. The voice agent may
+    // submit one too (same key as holds); the web form uses the honeypot.
+    if (b.consultRequest === true) {
+      if (b.via === "agent") {
+        const key = process.env.AGENT_API_KEY;
+        if (!key) return res.status(503).json({ error: "AGENT_API_KEY is not set." });
+        if (req.headers["x-agent-key"] !== key) return res.status(401).json({ error: "Agent key not accepted." });
+      } else if (!botCheck(b)) {
+        return res.status(400).json({ error: BOT_MSG });
+      }
+      try {
+        const created = await createConsultRequest(b);
+        return res.status(200).json({ ok: true, requestId: created.id, format: created.format || "video", date: created.date, time: created.time });
+      } catch (err) {
+        return res.status(err.status || 500).json({ error: err.message });
+      }
+    }
     // Voice-agent hold: same slot rules, no gift codes, no friend bookings.
     if (b.via === "agent") return handleAgentHold(req, res, b);
     if (!botCheck(b)) return res.status(400).json({ error: BOT_MSG });

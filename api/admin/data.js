@@ -4,8 +4,9 @@
 //   ?view=transfer-hours → Sarah's call-answering hours + live status
 //   ?view=referrals → every referrer: credit, free reflexology, who they referred
 //   ?view=codes → every gift certificate + voucher: buyer, holder, balance, uses
-//   ?view=settings → studio settings: gap between appointments + blocked-off time
+//   ?view=settings → studio settings: gap between appointments + blocked-off time + video call link
 //   ?view=catalog → service + combo catalog for the walk-in form
+//   ?view=consult-requests → after-hours video consultation requests (newest first)
 //   ?view=reports → per-client history + totals for a date range
 //   ?view=messages → caller messages taken by the voice agent (newest first)
 // POST /api/admin/data { view:"transfer-hours", settings } → save call hours.
@@ -57,6 +58,14 @@
 //   → block off part of a day (or a whole day) — stops new bookings there.
 // POST /api/admin/data { view:"settings", action:"block-remove", id }
 //   → remove a block.
+// POST /api/admin/data { view:"settings", action:"meet-link", link }
+//   → set the Google Meet link for video consultations ("" clears it).
+//     Until Sarah pastes one, confirmation emails say the link is coming.
+// POST /api/admin/data { view:"consult-requests", action:"accept", id, date?, time? }
+//   → say yes to an after-hours video consultation request: books it
+//     (unpaid, $30 flat) and emails the client a card pay link.
+// POST /api/admin/data { view:"consult-requests", action:"decline", id }
+//   → say no: emails the client that the time doesn't work.
 // POST /api/admin/data { view:"messages", action:"read", id, read }
 //   → mark a caller message read / unread.
 // POST /api/admin/data { view:"messages", action:"delete", id }
@@ -92,6 +101,7 @@ const {
   sendBookingConfirmation, sendWalkInConfirmation, sendHoldEmail, finalizePaidBooking,
   balanceDue, recordPayment, getPayment, deletePayment, newId, PHONE_DISPLAY,
   dueFinishChecks, notifyFinishCheck, markFinishDone, snoozeFinishCheck,
+  listConsultRequests, acceptConsultRequest, declineConsultRequest, sendDueConsultReminders,
 } = require("../../lib/bookings");
 const {
   dateKey, money, SERVICES, COMBOS, QUIET_PREMIUM_CENTS, FIRST_VISIT_CENTS,
@@ -101,6 +111,7 @@ const { getSettings, saveSettings, transferStatus } = require("../../lib/transfe
 const { listReferrals, getOrCreateReferral, getReferralByCode, deleteReferral, normalizeReferralCode, attendeeOf } = require("../../lib/referrals");
 const {
   getBufferMins, setBufferMins, listBlocks, addBlock, removeBlock, studioForDate,
+  getMeetLink, setMeetLink,
 } = require("../../lib/studio");
 const { listMessages, markMessageRead, deleteMessage } = require("../../lib/messages");
 const {
@@ -111,18 +122,20 @@ const { sendEmail } = require("../../lib/email");
 
 function publicBooking(b) {
   return {
-    id: b.id, serviceName: b.serviceName, service: b.service, date: b.date, time: b.time, type: b.type,
+    id: b.id, serviceName: b.serviceName, service: b.service, format: b.format || null, date: b.date, time: b.time, type: b.type,
     name: b.name, phone: b.phone, email: b.email,
     guestName: b.guestName, guestPhone: b.guestPhone, guestEmail: b.guestEmail,
     status: b.status, amountCents: b.amountCents, amountPaidCents: b.amountPaidCents,
     balanceDueCents: balanceDue(b),
     paymentMethod: b.paymentMethod || null, amountNote: b.amountNote || null,
-    giftCode: b.giftCode, giftAppliedCents: b.giftAppliedCents,
+    giftCode: b.giftCode, giftAppliedCents: b.giftAppliedCents, giftKind: b.giftKind || null,
     referralCode: b.referralCode || null, referralAppliedCents: b.referralAppliedCents || 0,
     freeReflexologyApplied: !!b.freeReflexologyApplied,
     referredBy: b.referredBy || null, myReferralCode: b.myReferralCode || null,
     outcomeAt: b.outcomeAt || null, cancelledAt: b.cancelledAt || null, cancelReason: b.cancelReason || null,
     checkoutUrl: b.checkoutUrl || null, paylinkId: b.paylinkId || null,
+    consultCreditCode: b.consultCreditCode || null,
+    consultCreditCents: b.consultCreditCents || 0,
     via: b.via || null, createdAt: b.createdAt,
   };
 }
@@ -397,6 +410,27 @@ module.exports = async (req, res) => {
         await logAudit(session, "settings.block-remove", `block ${b.id}`);
         return res.status(200).json({ ok: true });
       }
+      if (b.view === "settings" && b.action === "meet-link") {
+        const link = await setMeetLink(b.link || "");
+        await logAudit(session, "settings.meet-link", link ? "video call link saved" : "video call link cleared");
+        return res.status(200).json({ meetLink: link });
+      }
+      if (b.view === "consult-requests" && (b.action === "accept" || b.action === "decline")) {
+        try {
+          if (b.action === "decline") {
+            const request = await declineConsultRequest(b.id);
+            await logAudit(session, "consult-requests.decline", `video consultation request ${request.id} declined — ${request.date} ${request.time}`);
+            return res.status(200).json({ ok: true, request });
+          }
+          const out = await acceptConsultRequest(b.id, {
+            date: b.date || undefined, time: b.time || undefined,
+          });
+          await logAudit(session, "consult-requests.accept", `video consultation request ${out.request.id} accepted — ${out.booking.date} ${out.booking.time} · $30 pay link sent`);
+          return res.status(200).json({ ok: true, request: out.request, booking: publicBooking(out.booking), payUrl: out.payUrl });
+        } catch (err) {
+          return res.status(err.status || 500).json({ error: err.message });
+        }
+      }
       if (b.view === "messages" && b.action === "read") {
         const ok = await markMessageRead(b.id, b.read !== false);
         if (!ok) return res.status(404).json({ error: "Message not found." });
@@ -485,9 +519,24 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true });
       }
       if (b.view === "bookings" && b.action === "walk-in") {
-        const payment = ["cash", "e-transfer", "pay-link", "later"].includes(b.payment) ? b.payment : "later";
+        const payment = ["cash", "e-transfer", "pay-link", "later", "no-charge"].includes(b.payment) ? b.payment : "later";
         const { bufferMins, blocks } = await studioForDate(b.date);
         const booking = await buildBooking(b, { bufferMins, blocks, allowToday: true, allowAddonMain: true, via: "admin" });
+        // No charge (Tony Nov 19, 2026 — Tony's free test consultation,
+        // and any on-the-house booking Sarah decides): nothing is owed,
+        // no code is consumed, no payment step. Not a coupon — just a
+        // walk-in payment choice, like cash. The $0 branch below
+        // confirms it straight away.
+        if (payment === "no-charge") {
+          booking.amountCents = 0;
+          booking.amountPaidCents = 0;
+          booking.giftCode = null;
+          booking.giftAppliedCents = 0;
+          booking.giftKind = null;
+          booking.referralCode = null;
+          booking.referralAppliedCents = 0;
+          booking.firstVisitDiscountCents = 0;
+        }
         // $0 (consultation, or fully covered by a code): confirmed straight away.
         if (booking.amountCents === 0) {
           booking.status = booking.servicePriceLabel === "Custom" ? "consultation" : "paid";
@@ -689,7 +738,12 @@ module.exports = async (req, res) => {
     if ((req.query || {}).view === "settings") {
       const bufferMins = await getBufferMins();
       const blocks = await listBlocks();
-      return res.status(200).json({ bufferMins, blocks });
+      const meetLink = await getMeetLink();
+      return res.status(200).json({ bufferMins, blocks, meetLink });
+    }
+    if ((req.query || {}).view === "consult-requests") {
+      const requests = await listConsultRequests();
+      return res.status(200).json({ requests });
     }
     if ((req.query || {}).view === "messages") {
       const messages = await listMessages();
@@ -700,6 +754,11 @@ module.exports = async (req, res) => {
       const messages = await listMessages();
       const unreadMessages = messages.filter((m) => !m.read).length;
       const events = listEventsSince(await listEvents(), since);
+      // Reminder sweep for today's video consultations: Vercel Hobby
+      // crons run at most once a day, so the 1-hour-before reminder
+      // rides this poll (only fires while the dashboard is open).
+      // Never throws — a reminder failure must not break the poll.
+      await sendDueConsultReminders();
       return res.status(200).json({
         unreadMessages,
         events,
@@ -853,9 +912,11 @@ module.exports = async (req, res) => {
       toStr = dateKey(d);
     }
     const bookings = await listBookingsRange(fromStr, toStr);
+    const meetLink = await getMeetLink();
     return res.status(200).json({
       from: fromStr,
       to: toStr,
+      meetLink,
       bookings: bookings.map(publicBooking),
     });
   } catch (err) {

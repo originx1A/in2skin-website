@@ -74,6 +74,7 @@
           <button type="button" class="dash-nav-item" data-goto="sec-settings"><span class="sec-sym" aria-hidden="true">&#9881;</span>Settings</button>
           <button type="button" class="dash-nav-item" data-goto="sec-walkin"><span class="sec-sym" aria-hidden="true">+</span>Walk-in</button>
           <button type="button" class="dash-nav-item" data-goto="sec-calendar"><span class="sec-sym" aria-hidden="true">&#9638;</span>Calendar</button>
+          <button type="button" class="dash-nav-item" data-goto="sec-consult-requests"><span class="sec-sym" aria-hidden="true">&#9656;</span>Consultation requests</button>
           <button type="button" class="dash-nav-item" data-goto="sec-reports"><span class="sec-sym" aria-hidden="true">&#9646;</span>Reports</button>
           <button type="button" class="dash-nav-item" data-goto="sec-backup"><span class="sec-sym" aria-hidden="true">&#8681;</span>Backup</button>
           <button type="button" class="dash-nav-item" data-goto="sec-referrals"><span class="sec-sym" aria-hidden="true">&#8599;</span>Referrals</button>
@@ -116,6 +117,10 @@
         <p><label><input id="blkAllDay" type="checkbox" /> Whole day (7:00 AM – 9:00 PM)</label></p>
         <p style="margin-top:12px;"><button class="btn btn-book" id="blkAdd" type="button">Block off this time</button> <span id="blkMsg" style="color:#7A3B2E; margin-left:8px;"></span></p>
         <div id="blkList" style="margin-top:12px;">Loading blocks…</div>
+        <h3 style="font-size:1.1rem; margin:22px 0 8px;">Video call link</h3>
+        <p class="sub">Your one Google Meet link for video consultations — paste it here and it goes into every confirmation and reminder email. Until you paste one, clients are told the link is coming.</p>
+        <div class="field"><label for="meetLink">Google Meet link</label><input id="meetLink" type="url" placeholder="https://meet.google.com/abc-defg-hij" /></div>
+        <p style="margin-top:12px;"><button class="btn btn-book" id="meetSave" type="button">Save video link</button> <span id="meetMsg" style="color:#7A3B2E; margin-left:8px;"></span></p>
       </section>
 
       <section class="dash-sec" id="sec-walkin" style="margin-top:36px;">
@@ -131,6 +136,7 @@
             <div class="field"><label for="wkService">Treatment</label><select id="wkService"></select></div>
             <div class="field"><label for="wkType">Hours</label><select id="wkType"><option value="regular">Regular hours</option><option value="after">Private Hours (+$15)</option></select></div>
           </div>
+          <div class="field" id="wkFormatField" style="display:none;"><label for="wkFormat">Format</label><select id="wkFormat"><option value="video">Video call (Google Meet)</option><option value="in-person">In person at the studio</option></select></div>
           <div class="form-2col">
             <div class="field"><label for="wkDate">Day</label><input id="wkDate" type="date" /></div>
             <div class="field"><label for="wkTime">Time</label><select id="wkTime"><option value="">Pick a day first</option></select></div>
@@ -146,6 +152,7 @@
               <option value="e-transfer">Paid now — e-transfer</option>
               <option value="pay-link">Send a card pay link</option>
               <option value="later">Pay at the visit</option>
+              <option value="no-charge">No charge — on the house</option>
             </select></div>
           <div class="err" id="wkErr"></div>
           <p style="margin-top:12px;"><button type="submit" class="btn btn-book btn-big">Book this appointment</button></p>
@@ -159,6 +166,12 @@
         <label for="calTo">to</label> <input id="calTo" type="date" style="font-family:inherit; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink);" />
         <button class="btn btn-book" id="calLoad" type="button">Show</button></p>
         <div id="calList" style="margin-top:12px;"></div>
+      </section>
+
+      <section class="dash-sec" id="sec-consult-requests" style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;"><span class="sec-sym" aria-hidden="true">&#9656;</span> Consultation requests</h2>
+        <p class="sub">Evening and early-morning consultations are by request — say yes or no here. If you say yes, the client gets a $30 card link to lock it in. The $30 is flat — no $15 Private Hours premium.</p>
+        <div id="consultReqList" style="margin-top:12px;">Loading requests…</div>
       </section>
 
       <section class="dash-sec" id="sec-reports" style="margin-top:36px;">
@@ -1168,6 +1181,9 @@
                   + ((b.balanceDueCents || 0) > 0 ? ' · <strong style="color:#7A3B2E;">owes ' + money(b.balanceDueCents) + '</strong>' : '')
                   + (b.paymentMethod ? ' · paid by ' + b.paymentMethod : '')
                   + (b.status === "pending" && b.checkoutUrl ? ' · <a href="' + b.checkoutUrl + '" target="_blank" rel="noopener">card link sent</a>' : '')
+                  + (b.service === "consultation" && b.format === "video" && res.j.meetLink ? ' · <a href="' + res.j.meetLink + '" target="_blank" rel="noopener">Join video call</a>' : '')
+                  + (b.giftAppliedCents > 0 && b.giftKind === "consult-credit" ? ' · <strong>' + money(b.giftAppliedCents) + ' consultation credit applied</strong>' : '')
+                  + (b.consultCreditCode ? ' · consult credit <strong>' + b.consultCreditCode + '</strong> (' + money(b.consultCreditCents || 0) + ')' : '')
                   + (needsOutcome ? ' · <strong style="color:#7A3B2E;">Needs outcome — did they show up?</strong>' : '')
                   + '</div><div style="margin-top:8px;">' + outcome + acts + '</div><div class="act-slot" data-slot="' + b.id + '"></div></div>';
               });
@@ -1191,7 +1207,7 @@
         }
         function cancelPanel(b){
           return '<div class="act-panel"><h3 style="margin:0 0 6px;">Cancel — ' + b.serviceName + ' · ' + fmtDate(b.date) + ' ' + b.time + '</h3>'
-            + '<p class="sub">The slot opens back up, any gift / voucher value used goes back on the code, and the client gets a polite email.</p>'
+            + '<p class="sub">The slot opens back up, any gift / voucher value used goes back on the code — except a consultation credit, which stays used — and the client gets a polite email.</p>'
             + '<label>Reason (optional, shown to the client)</label><input type="text" id="cxReason" placeholder="e.g. Studio closed that day">'
             + '<p><button class="btn btn-book" type="button" data-cx-save="' + b.id + '">Yes, cancel this booking</button> <span id="cxMsg" style="color:#7A3B2E;"></span></p></div>';
         }
@@ -1376,6 +1392,50 @@
         });
         loadCal();
 
+        // ---- video consultation requests ----
+        // Evening / early morning consultations are requests, not
+        // bookings (Tony Nov 19, 2026): Sarah says yes or no here, and
+        // the client hears back either way. A yes books it (unpaid, $30
+        // flat) and emails the client a card pay link.
+        function loadConsultRequests(){
+          fetch("/api/admin/data?view=consult-requests")
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              var el = document.getElementById("consultReqList");
+              if (!res.ok){ el.textContent = res.j.error || "Could not load requests."; return; }
+              var rows = (res.j.requests || []).map(function(q){
+                var body = '<div class="after-item"><div><strong>' + q.name + '</strong> — ' + (q.serviceName || "Consultation") + ' · ' + fmtDate(q.date) + ' at ' + q.time + ' · ' + q.phone + ' · ' + q.email
+                  + ' · <em>' + q.status + '</em>' + (q.bookingId ? ' · booked' : '') + '</div>';
+                if (q.status === "requested"){
+                  body += '<div style="margin-top:8px;"><button class="btn btn-book btn-book-sm" type="button" data-crq-accept="' + q.id + '">Say yes — book it</button>'
+                    + ' <button class="btn btn-ghost btn-book-sm" type="button" data-crq-decline="' + q.id + '">Say no</button>'
+                    + ' <span id="crqMsg-' + q.id + '" style="color:#7A3B2E;"></span></div>';
+                }
+                return body + '</div>';
+              });
+              el.innerHTML = rows.length ? rows.join("") : "<p style='color:var(--ink-soft);'>No consultation requests.</p>";
+            })
+            .catch(function(){ document.getElementById("consultReqList").textContent = "Could not load requests — check your connection."; });
+        }
+        loadConsultRequests();
+        document.getElementById("consultReqList").addEventListener("click", function(ev){
+          var yesBtn = ev.target.closest("[data-crq-accept]");
+          var noBtn = ev.target.closest("[data-crq-decline]");
+          var btn = yesBtn || noBtn;
+          if (!btn) return;
+          var id = btn.getAttribute("data-crq-accept") || btn.getAttribute("data-crq-decline");
+          var action = yesBtn ? "accept" : "decline";
+          btn.disabled = true;
+          postAdmin({ view:"consult-requests", action: action, id: id })
+            .then(function(res){
+              var m = document.getElementById("crqMsg-" + id);
+              if (!res.ok){ if (m) m.textContent = res.j.error || "Could not save."; btn.disabled = false; return; }
+              msg.textContent = action === "accept" ? "Consultation booked — the client got a $30 card link." : "Request declined — the client was told.";
+              loadConsultRequests(); loadCal();
+            })
+            .catch(function(){ var m = document.getElementById("crqMsg-" + id); if (m) m.textContent = "Could not save — check your connection."; btn.disabled = false; });
+        });
+
         // ---- referrals ----
         var refRecords = {};
         function loadReferrals(){
@@ -1459,7 +1519,7 @@
                 codeRecords[g.code] = g;
                 var spent = (g.uses || []).reduce(function(n, u){ return n + (u.amountCents || 0); }, 0);
                 var uses = (g.uses || []).map(function(u){ return fmtUse(u); }).join("; ");
-                return '<div class="after-item"><div><strong>' + g.code + '</strong> — ' + (g.kind === "voucher" ? "Treatment voucher" : "Gift certificate")
+                return '<div class="after-item"><div><strong>' + g.code + '</strong> — ' + (g.kind === "voucher" ? "Treatment voucher" : g.kind === "consult-credit" ? "Consultation credit" : "Gift certificate")
                   + (g.voucherLabel ? ' · Good for <strong>' + g.voucherLabel + '</strong>' : '')
                   + '<br/>Bought by ' + (g.buyerName || "—") + ' · Held by ' + (g.holderName || g.recipientName || "—") + ' (' + (g.holderEmail || g.recipientEmail || "—") + ')'
                   + '<br/>Original <strong>' + money(g.originalCents) + '</strong> · Spent ' + money(spent) + ' · Balance left <strong>' + money(g.balanceCents) + '</strong> · Status: <strong>' + g.status + '</strong>'
@@ -1984,6 +2044,8 @@
             .then(function(res){
               if (!res.ok){ document.getElementById("gapMsg").textContent = res.j.error || "Could not load settings."; return; }
               gapCurrent = res.j.bufferMins;
+              var meetInput = document.getElementById("meetLink");
+              if (meetInput) meetInput.value = res.j.meetLink || "";
               document.querySelectorAll(".gap-btn").forEach(function(btn){
                 btn.setAttribute("aria-pressed", String(+btn.getAttribute("data-gap") === gapCurrent));
               });
@@ -1994,6 +2056,18 @@
             })
             .catch(function(){ document.getElementById("gapMsg").textContent = "Could not load settings — check your connection."; });
         }
+        document.getElementById("meetSave").addEventListener("click", function(){
+          var m = document.getElementById("meetMsg");
+          var link = document.getElementById("meetLink").value.trim();
+          fetch("/api/admin/data", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ view:"settings", action:"meet-link", link: link }) })
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ m.textContent = res.j.error || "Could not save."; return; }
+              document.getElementById("meetLink").value = res.j.meetLink || "";
+              m.textContent = res.j.meetLink ? "Video link saved — it will go into every consultation email." : "Video link cleared — clients will be told the link is coming.";
+            })
+            .catch(function(){ m.textContent = "Could not save — check your connection."; });
+        });
         document.getElementById("gapBtns").addEventListener("click", function(ev){
           var btn = ev.target.closest(".gap-btn");
           if (!btn) return;
@@ -2061,10 +2135,29 @@
           var sel = document.getElementById("wkTime");
           var svc = document.getElementById("wkService").value;
           var type = document.getElementById("wkType").value;
+          syncWalkConsultUI();
           if (!date || !svc){ sel.innerHTML = '<option value="">Pick a day first</option>'; return; }
           loadTimesInto(sel, date, svc, type);
         }
-        ["wkDate", "wkService", "wkType"].forEach(function(id){ document.getElementById(id).addEventListener("change", refreshWalkTimes); });
+        // Consultation walk-ins (Tony Nov 19, 2026): the $10
+        // first-visit offer never applies, evening/early morning costs
+        // no extra, and the client's email is required for a video call
+        // (the link goes there) but not for an in-person visit. The form
+        // says so when the consultation is picked.
+        function syncWalkConsultUI(){
+          var svc = document.getElementById("wkService").value;
+          var isConsult = svc === "consultation";
+          var firstField = document.getElementById("wkFirst").closest(".field");
+          if (firstField) firstField.style.display = isConsult ? "none" : "";
+          var formatField = document.getElementById("wkFormatField");
+          if (formatField) formatField.style.display = isConsult ? "" : "none";
+          var typeSel = document.getElementById("wkType");
+          var afterOpt = typeSel ? typeSel.querySelector('option[value="after"]') : null;
+          if (afterOpt) afterOpt.textContent = isConsult ? "Evening / early morning (no extra charge)" : "Private Hours (+$15)";
+          var emailLabel = document.querySelector('label[for="wkEmail"]');
+          if (emailLabel) emailLabel.textContent = isConsult && document.getElementById("wkFormat").value !== "in-person" ? "Client's email (required — the video link goes here)" : "Client's email";
+        }
+        ["wkDate", "wkService", "wkType", "wkFormat"].forEach(function(id){ document.getElementById(id).addEventListener("change", refreshWalkTimes); });
         var wkTomorrow = new Date(); wkTomorrow.setDate(wkTomorrow.getDate() + 1);
         document.getElementById("wkDate").value = wkTomorrow.getFullYear() + "-" + String(wkTomorrow.getMonth()+1).padStart(2,"0") + "-" + String(wkTomorrow.getDate()).padStart(2,"0");
         loadCatalog();
@@ -2074,6 +2167,7 @@
           var body = {
             view:"bookings", action:"walk-in",
             service: document.getElementById("wkService").value,
+            format: document.getElementById("wkFormat").value,
             type: document.getElementById("wkType").value,
             date: document.getElementById("wkDate").value,
             time: document.getElementById("wkTime").value,
@@ -2087,6 +2181,7 @@
           };
           if (!body.name){ err.textContent = "Please add the client's name."; glowMiss(document.getElementById("wkName")); return; }
           if (!body.phone){ err.textContent = "Please add the client's phone."; glowMiss(document.getElementById("wkPhone")); return; }
+          if (body.service === "consultation" && body.format !== "in-person" && (!body.email || body.email.indexOf("@") < 1)){ err.textContent = "Add the client's email — the video link goes there."; glowMiss(document.getElementById("wkEmail")); return; }
           if (!body.time){ err.textContent = "Pick a free time for the appointment."; glowMiss(document.getElementById("wkTime")); return; }
           err.textContent = "";
           postAdmin(body)
@@ -2094,7 +2189,7 @@
               var out = document.getElementById("walkResult");
               if (!res.ok){ err.textContent = res.j.error || "Could not book."; return; }
               var b = res.j.booking;
-              out.innerHTML = '<div class="book-step on" style="text-align:center;"><h3>Booked — ' + b.serviceName + '</h3><p>' + fmtDate(b.date) + ' at ' + b.time + ' · ' + (b.guestName || b.name) + ' · Total ' + money(b.amountCents) + (b.status === "paid" ? ' · Paid' : b.status === "unpaid" ? ' · Pay at the visit' : b.status === "pending" ? ' · Card link sent' : '') + '</p>'
+              out.innerHTML = '<div class="book-step on" style="text-align:center;"><h3>Booked — ' + b.serviceName + '</h3><p>' + fmtDate(b.date) + ' at ' + b.time + ' · ' + (b.guestName || b.name) + ' · Total ' + money(b.amountCents) + (b.amountCents === 0 ? ' · No charge' : b.status === "paid" ? ' · Paid' : b.status === "unpaid" ? ' · Pay at the visit' : b.status === "pending" ? ' · Card link sent' : '') + '</p>'
                 + (res.j.checkoutUrl ? '<p><a class="btn btn-book" href="' + res.j.checkoutUrl + '" target="_blank" rel="noopener">Open the card payment link →</a></p><p style="color:var(--ink-soft);">The link was also emailed to the client.</p>' : '')
                 + '</div>';
               loadCal(); loadPayments(); loadWeek();

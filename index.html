@@ -253,6 +253,21 @@
     var PHONE_DISPLAY = "(289) 212-4124";
     var PHONE_TEL = "tel:+12892124124";
 
+    /* Consultation (Tony Nov 19, 2026): 20 minutes with Sarah, video or
+       in person, $30, credited in full toward any treatment booked after.
+       NOT in SERVICES — the service-page builder extracts that list and
+       generates a page per service (a consultation has no photo or service
+       page). The wizard renders it from this object; lib/schedule.js
+       SERVICES carries the server mirror for the catalog + walk-in form. */
+    var CONSULT = {
+      id: "consultation",
+      name: "Consultation",
+      cat: "Consultation",
+      mins: 20, minsLabel: "20 minutes",
+      price: "$30", priceNum: 30
+    };
+    function isConsult(){ return booking.service === CONSULT.id; }
+
     var SERVICES = [
       {
         id: "classic-facial",
@@ -582,6 +597,8 @@
     function bookingAddons(){ return (booking.addons || []).map(addonById).filter(Boolean); }
     function bookingLabel(){
       var s = currentService(); if (!s) return "";
+      // A consultation shows its format — video call or in person.
+      if (s.id === CONSULT.id) return "Consultation — " + (booking.format === "in-person" ? "In person" : "Video call");
       var names = [s.name];
       bookingAddons().forEach(function(a){ names.push(a.name); });
       return names.join(" + ");
@@ -596,13 +613,14 @@
       var s = currentService(); if (!s || !s.priceNum) return "Confirmed at your consultation — no payment due now";
       var n = s.priceNum;
       bookingAddons().forEach(function(a){ n += a.priceNum; });
-      if (booking.type === "after") n += 15;
+      // The $15 Private Hours premium never applies to a consultation.
+      if (booking.type === "after" && s.id !== CONSULT.id) n += 15;
       return "$" + n;
     }
     function bookingAddonTotalText(){
       var s = currentService();
       if (!s) return "Choose a treatment first — then add anything extra here.";
-      return bookingLabel() + " · " + bookingMins() + " · " + bookingPrice() + (booking.type === "after" ? " (includes the $15 Private Hours premium)" : "");
+      return bookingLabel() + " · " + bookingMins() + " · " + bookingPrice() + (booking.type === "after" && s.id !== CONSULT.id ? " (includes the $15 Private Hours premium)" : "");
     }
 
     /* Live checkout total: base price + $15 Private Hours premium, less the
@@ -615,6 +633,9 @@
     var referralCodeApplied = false;
     function bookTotalCents(){
       var s = currentService(); if (!s) return 0;
+      // A consultation is $30 flat — no Private Hours premium, no
+      // first-visit offer, no add-ons, no gift code on it.
+      if (s.id === CONSULT.id) return 3000;
       var total = (s.priceNum || 0) * 100 + (booking.type === "after" ? 1500 : 0);
       bookingAddons().forEach(function(a){ total += a.priceNum * 100; });
       var reflex = addonById("reflexology");
@@ -629,6 +650,7 @@
       if (!s) return "Confirmed at your consultation — no payment due now";
       if (!s.priceNum && bookingAddons().length === 0) return "Confirmed at your consultation — no payment due now";
       var cents = bookTotalCents();
+      if (s.id === CONSULT.id) return "$30 — pay securely by card at checkout";
       var parts = [];
       if (booking.type === "after") parts.push("includes the $15 Private Hours premium");
       if (booking.first !== "no") parts.push("$10 first-visit offer applied");
@@ -649,6 +671,7 @@
     ];
     function currentService(){
       if (!booking.service) return null;
+      if (booking.service === CONSULT.id) return CONSULT;
       for (var i=0;i<COMBOS.length;i++) if (COMBOS[i].id===booking.service) return COMBOS[i];
       return svcById(booking.service);
     }
@@ -681,11 +704,19 @@
       function txGroup(title, rows){
         return '<h3 class="tx-group">' + title + '</h3><div class="tx-list">' + rows.join("") + '</div>';
       }
+      // Video consultation: no service page, so no treatment link — the
+      // button opens the wizard with it picked (startBooking knows it).
+      function txConsult(c){
+        return '<div class="tx-row"><span><span class="tx-name">' + c.name + '</span> <span class="tx-mins">· ' + c.minsLabel + '</span></span>' +
+          '<span class="tx-price"><b>' + c.price + '</b></span>' +
+          '<button class="btn btn-book btn-book-sm" data-book="' + c.id + '">Book</button></div>';
+      }
       var txList =
         txGroup("Facials", SERVICES.filter(function(s){ return s.cat.indexOf("Signature")===0; }).map(txRow)) +
         txGroup("Advanced", SERVICES.filter(function(s){ return s.cat.indexOf("Advanced")===0; }).map(txRow)) +
         txGroup("Combos", COMBOS.map(txCombo)) +
-        txGroup("Just one thing? Quick visits", SERVICES.filter(function(s){ return s.cat.indexOf("Enhancement")===0; }).map(txRow));
+        txGroup("Just one thing? Quick visits", SERVICES.filter(function(s){ return s.cat.indexOf("Enhancement")===0; }).map(txRow)) +
+        txGroup("New to In2Skin? Talk it over first", [txConsult(CONSULT)]);
       return '' +
       '<section class="hero" data-ambient>' +
         '<video class="hero-img" src="assets/video-hero-stones.mp4" poster="assets/hero-stones.jpg" autoplay muted loop playsinline preload="auto" aria-label="Three stacked grey spa stones with In2Skin engraved in white, among fresh green leaves — flowers blooming softly in the background"></video>' +
@@ -908,7 +939,7 @@
 
     /* ---------------- BOOKING WIZARD ---------------- */
     var PAGE_LOAD_MS = Date.now();
-    var booking = { service:null, addons:[], date:null, time:null, step:1, type:"regular", forWhom:"me" };
+    var booking = { service:null, addons:[], date:null, time:null, step:1, type:"regular", forWhom:"me", reqAfter:false, format:"video" };
     var TIMES = ["10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM"];
     /* Parse a YYYY-MM-DD day as LOCAL midnight. new Date("2026-11-21")
        is UTC midnight — the previous evening in Toronto, so the weekday
@@ -929,6 +960,9 @@
        all times if the service cannot be reached. */
     function refreshAvailability(){
       if (booking.step !== 2 || !booking.date || !booking.service) return;
+      // A video consultation request is not a slot — there is nothing to
+      // grey out; Sarah answers it on the dashboard.
+      if (isConsult() && booking.reqAfter) return;
       var d = parseDay(booking.date);
       var dateStr = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
       fetch("/api/availability?date=" + dateStr + "&service=" + encodeURIComponent(booking.service) + "&type=" + booking.type + "&addons=" + encodeURIComponent((booking.addons || []).join(",")))
@@ -975,6 +1009,9 @@
     }
     function calMonthKey(){ var c = calMonthInit(); return c.y + "-" + c.m; }
     function dateStatusFor(isoStr){
+      // A video consultation request is not a slot — a day that is full
+      // for treatments can still take an evening request.
+      if (isConsult() && booking.reqAfter) return null;
       if (!availRange || availRangeKey !== availKey() + "|" + calMonthKey()) return null;
       var rec = availRange[isoStr]; if (!rec) return null;
       var c = rec[booking.type === "after" ? "after" : "regular"]; if (!c) return null;
@@ -1058,6 +1095,12 @@
           booking.addons = (booking.addons || []).filter(function(id){ return id !== "nano-needling"; });
           hasNano = false;
         }
+        // Self-heal stale state: a consultation is just the consultation —
+        // no add-ons, and never booked for a friend.
+        if (isConsult()){
+          if ((booking.addons || []).length) booking.addons = [];
+          if (booking.forWhom !== "me") booking.forWhom = "me";
+        }
         var microBlocked = booking.service === "nano-needling" || hasNano;
         var nanoBlocked = booking.service === "microneedling";
         function pickRow(s){
@@ -1082,7 +1125,7 @@
         var guided = guidedFor(booking.service);
         var mainSvc = currentService();
         var guidedHint = "";
-        if (mainSvc && guided.length){
+        if (mainSvc && guided.length && !isConsult()){
           var names = guided.map(function(id){ var a = addonById(id); return a ? a.name : id; });
           guidedHint = '<p class="goes-well">Goes well with ' + mainSvc.name + ': ' + names.join(", ") + ' — tap to add.</p>';
         }
@@ -1092,8 +1135,15 @@
           group("Advanced", advanced.map(pickRow)) +
           (microBlocked ? '<p class="fine needling-note">' + NEEDLE_NOTE + '</p>' : '') +
           group("Combos", COMBOS.map(comboRow)) +
+          group("New to In2Skin? Talk it over first", [pickRow(CONSULT)]) +
+          '<p class="sub" style="margin-top:-6px;">20 minutes with Sarah — $30, credited in full toward any treatment you book after. For first-time clients — one consultation per client. Choose video or in person below.</p>' +
+          (isConsult() ?
+            '<div class="pick-grid" style="margin-bottom:20px;">' +
+              '<button type="button" class="pick' + (booking.format !== "in-person" ? " sel" : "") + '" data-pick-format="video"><span class="t">Video call</span><span class="d">Google Meet — your link arrives by email; no app needed</span></button>' +
+              '<button type="button" class="pick' + (booking.format === "in-person" ? " sel" : "") + '" data-pick-format="in-person"><span class="t">In person</span><span class="d">At the studio in Bolton — come as you are</span></button>' +
+            '</div>' : '') +
           guidedHint +
-          group("Just one thing? Quick visits", quick.map(addonRow)) +
+          (isConsult() ? "" : group("Just one thing? Quick visits", quick.map(addonRow))) +
           (nanoBlocked ? '<p class="fine needling-note">' + NEEDLE_NOTE + '</p>' : '') +
           '<div class="err" id="bookErr"></div></div>';
       }
@@ -1101,6 +1151,14 @@
         var s = currentService();
         var dObj2 = booking.date ? parseDay(booking.date) : null;
         var modeLabel = "Regular Hours";
+        /* Consultation after hours (Tony Nov 19, 2026): regular
+           hours auto-book like a treatment; evenings and early mornings
+           are a request — Sarah says yes or no on the dashboard. The
+           $30 is flat, no $15 premium, in either mode. */
+        var AFTER_TIMES = ["8:00 AM","9:00 AM","5:00 PM","6:00 PM","7:00 PM","8:00 PM"]; // must match CONSULT_REQUEST_TIMES in lib/schedule.js — the server validates requests against it
+        var consultReq = isConsult() && booking.reqAfter;
+        var step2Times = consultReq ? AFTER_TIMES : timesFor();
+        var step2ModeLabel = consultReq ? "Evening / Early Morning — by request" : modeLabel;
         /* Month calendar (Tony Nov 17, 2026): a real month grid — weekday
            header, one cell per day, ‹ › across the booking window
            (tomorrow → 60 days). Days outside the window are greyed out,
@@ -1124,6 +1182,11 @@
         }
         body = '<div class="book-step on"><h3>Choose a day &amp; time</h3>' +
           '<p class="book-summary">' + bookingAddonTotalText() + ' — <button type="button" class="linklike" id="changeTreatment">Change</button></p>' +
+          (isConsult() ?
+            '<div class="pick-grid" style="margin-bottom:20px;">' +
+              '<button type="button" class="pick' + (!booking.reqAfter ? " sel" : "") + '" data-pick-reqmode="regular"><span class="t">Regular Hours</span><span class="d">Mon–Sat, 10 AM–4 PM — books right away</span></button>' +
+              '<button type="button" class="pick' + (booking.reqAfter ? " sel" : "") + '" data-pick-reqmode="after"><span class="t">Evening / Early Morning</span><span class="d">By request — Sarah says yes or no</span></button>' +
+            '</div>' : '') +
           '<div class="cal" role="group" aria-label="Choose a day">' +
             '<div class="cal-head">' +
               '<button type="button" class="cal-nav" id="calPrev" aria-label="Previous month"' + (prevOff ? ' disabled' : '') + '>‹</button>' +
@@ -1135,13 +1198,17 @@
           '</div>' +
           '<p class="fine avail-legend" style="margin-top:8px;"><span class="dot open"></span> Open &nbsp;<span class="dot few"></span> Few left &nbsp;<span class="dot full"></span> Fully booked</p>' +
           (dObj2 ?
-            '<h3 id="timesHead" style="font-size:1.3rem; margin:20px 0 4px;">Available times — ' + fmtShort(dObj2) + ' · ' + modeLabel + '</h3>' +
-            '<div class="slot-grid">' + timesFor().map(function(t){
+            '<h3 id="timesHead" style="font-size:1.3rem; margin:20px 0 4px;">Available times — ' + fmtShort(dObj2) + ' · ' + step2ModeLabel + '</h3>' +
+            '<div class="slot-grid">' + step2Times.map(function(t){
               return '<button type="button" class="slot' + (booking.time===t ? " sel" : "") + '" data-pick-time="' + t + '">' + t + '</button>';
             }).join("") + '</div>'
           :
             '<p class="sub" style="margin-top:20px;">Pick a day above to see the times for it.</p>') +
-          '<p class="sub" style="margin-top:16px;">Need an early morning or evening time? Those are by request. Private Hours: the regular price of the services you pick, plus $15 per visit. <a href="tel:+12892124124">Call (289) 212-4124</a> or <a href="mailto:bookings@boltonfacials.com">email bookings@boltonfacials.com</a> and Sarah will set it up.</p>' +
+          (consultReq ?
+            '<p class="sub" style="margin-top:16px;">This is a request, not a booking — Sarah says yes or no on the dashboard, and you hear back either way. If she says yes, you get a $30 card link to lock it in. The $30 is flat — no $15 Private Hours premium.</p>' :
+            isConsult() ?
+            '<p class="sub" style="margin-top:16px;">Need an evening or early morning? Choose it above — it is a request, and Sarah says yes or no. Regular hours book right away.</p>' :
+            '<p class="sub" style="margin-top:16px;">Need an early morning or evening time? Those are by request. Private Hours: the regular price of the services you pick, plus $15 per visit. <a href="tel:+12892124124">Call (289) 212-4124</a> or <a href="mailto:bookings@boltonfacials.com">email bookings@boltonfacials.com</a> and Sarah will set it up.</p>') +
           '<div class="err" id="bookErr"></div>' +
           '<div class="book-nav"><button type="button" class="btn btn-ghost" id="backTo1">← Back</button><span class="spacer"></span>' +
           '<button type="button" class="btn btn-call" id="toStep3">Continue →</button></div></div>';
@@ -1149,6 +1216,8 @@
       else if (booking.step === 3){
         var s2 = currentService();
         var dObj = booking.date ? parseDay(booking.date) : null;
+        var consultMode = isConsult();
+        var reqMode = consultMode && booking.reqAfter;
         var friendMode = booking.forWhom === "friend";
         var fieldsHTML = friendMode ?
           '<div class="field"><label for="bfName">Your name (you are booking)</label><input id="bfName" type="text" autocomplete="name" placeholder="e.g. Jordan Smith" /></div>' +
@@ -1167,45 +1236,55 @@
           '<div class="field"><label for="bfName">Your name</label><input id="bfName" name="name" type="text" autocomplete="name" placeholder="e.g. Jordan Smith" /></div>' +
           '<div class="form-2col">' +
             '<div class="field"><label for="bfPhone">Phone</label><input id="bfPhone" name="phone" type="tel" autocomplete="tel" placeholder="e.g. (905) 555-0100" /></div>' +
-            '<div class="field"><label for="bfEmail">Email (optional) — for your confirmation</label><input id="bfEmail" name="email" type="email" autocomplete="email" placeholder="you@example.com" /></div>' +
+            '<div class="field"><label for="bfEmail">' + ((consultMode && booking.format !== "in-person") ? "Email (required) — your video link goes here" : "Email (optional) — for your confirmation") + '</label><input id="bfEmail" name="email" type="email" autocomplete="email" placeholder="you@example.com" /></div>' +
           '</div>' +
+          (consultMode ? "" :
           '<div class="field"><label for="bfFirst">Is this your first visit to In2Skin?</label>' +
-            '<select id="bfFirst" name="first"><option value="yes">Yes — first visit</option><option value="no">I have visited before</option></select></div>' +
+            '<select id="bfFirst" name="first"><option value="yes">Yes — first visit</option><option value="no">I have visited before</option></select></div>') +
           '<div class="field"><label for="bfRefCode">Who sent you? (optional)</label><input id="bfRefCode" type="text" autocomplete="off" placeholder="e.g. ALEX-4821" value="' + (booking.referredBy || "") + '" /><p class="fine" style="margin-top:6px;">A friend shared their code with you? Enter it here — they earn credit when you book and pay.</p></div>' +
-          '<div class="field"><label for="bfGiftCode">Gift certificate code (optional)</label><input id="bfGiftCode" type="text" autocomplete="off" placeholder="e.g. IN2SKIN-ABC123" /><p class="fine" id="bfGiftNote" style="margin-top:6px;">Have a gift certificate? Enter the code — its balance comes off this booking. Anything left stays on the code.</p></div>';
+          (reqMode ? "" :
+          '<div class="field"><label for="bfGiftCode">Gift certificate code (optional)</label><input id="bfGiftCode" type="text" autocomplete="off" placeholder="e.g. IN2SKIN-ABC123" /><p class="fine" id="bfGiftNote" style="margin-top:6px;">Have a gift certificate? Enter the code — its balance comes off this booking. Anything left stays on the code.</p></div>');
         body = '<div class="book-step on"><h3>' + (friendMode ? "Your details — and your friend\u2019s" : "Your details") + '</h3>' +
-          '<p class="sub">Almost done — just your name and phone. Email is optional, for your confirmation.</p>' +
+          '<p class="sub">' + (consultMode && booking.format !== "in-person" ? "Almost done — just your name, phone and email. Your video link goes to your email." : "Almost done — just your name and phone. Email is optional, for your confirmation.") + '</p>' +
           '<div class="summary-box"><dl>' +
-            '<dt>Treatment</dt><dd>' + bookingLabel() + ' · ' + bookingMins() + ' · ' + bookingPrice() + (booking.type === "after" ? ' (Private Hours)' : '') + '</dd>' +
-            '<dt>When</dt><dd>' + (dObj ? fmtDate(dObj) : "") + ' at ' + booking.time + '</dd>' +
-            '<dt>Where</dt><dd>In2Skin · Bolton, Ontario</dd>' +
-            '<dt>Due at checkout</dt><dd id="bookTotal">' + bookTotalText() + '</dd>' +
+            '<dt>Treatment</dt><dd>' + bookingLabel() + ' · ' + bookingMins() + ' · ' + bookingPrice() + (booking.type === "after" && !consultMode ? ' (Private Hours)' : '') + '</dd>' +
+            '<dt>When</dt><dd>' + (dObj ? fmtDate(dObj) : "") + ' at ' + booking.time + (reqMode ? ' (by request)' : '') + '</dd>' +
+            '<dt>Where</dt><dd>' + (consultMode ? (booking.format === "in-person" ? "In person at In2Skin · Bolton, Ontario" : "On video — your link arrives by email") : "In2Skin · Bolton, Ontario") + '</dd>' +
+            '<dt>' + (reqMode ? "Due" : "Due at checkout") + '</dt><dd id="bookTotal">' + (reqMode ? "$30 — only if Sarah says yes, by card" : bookTotalText()) + '</dd>' +
           '</dl></div>' +
+          (consultMode ? "" :
           '<h3 style="font-size:1.3rem; margin:6px 0 4px;">Booking for someone else?</h3>' +
           '<p class="sub" style="margin-bottom:12px;">Treat a friend — add their details and the confirmation goes straight to them. They just show up.</p>' +
           '<div class="pick-grid" style="margin-bottom:20px;">' +
             '<button type="button" class="pick' + (!friendMode ? " sel" : "") + '" data-pick-for="me"><span class="t">For Me</span><span class="d">I am coming to this appointment</span></button>' +
             '<button type="button" class="pick' + (friendMode ? " sel" : "") + '" data-pick-for="friend"><span class="t">For a Friend</span><span class="d">They get the confirmation — they just show up</span></button>' +
-          '</div>' +
+          '</div>') +
           '<form id="bookForm" novalidate>' + fieldsHTML +
             /* Honeypot (bots fill it; people never see it) + the page-load
                timestamp the server checks against too-fast submits. */
             '<input type="text" name="website" id="bfWebsite" value="" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" />' +
             '<input type="hidden" id="bfTs" value="" />' +
             '<div class="err" id="bookErr"></div>' +
-            '<p class="fine" style="margin:14px 0 0;"><strong>Your time is held for 30 minutes once you confirm.</strong> Pay now to lock it in — or call <a href="' + PHONE_TEL + '">' + PHONE_DISPLAY + '</a> and confirm with Sarah.</p>' +
+            '<p class="fine" style="margin:14px 0 0;">' + (reqMode ? '<strong>This is a request — Sarah says yes or no, and you hear back either way.</strong> If she says yes, a $30 card link comes to your email to lock it in.' : '<strong>Your time is held for 30 minutes once you confirm.</strong> Pay now to lock it in — or call <a href="' + PHONE_TEL + '">' + PHONE_DISPLAY + '</a> and confirm with Sarah.') + '</p>' +
             '<div class="book-nav"><button type="button" class="btn btn-ghost" id="backTo2">← Back</button><span class="spacer"></span>' +
-            '<button type="submit" class="btn btn-call btn-big">' + (friendMode ? "Confirm — Book for My Friend" : "Confirm My Booking") + '</button></div>' +
+            '<button type="submit" class="btn btn-call btn-big">' + (reqMode ? "Send Request" : (friendMode ? "Confirm — Book for My Friend" : "Confirm My Booking")) + '</button></div>' +
           '</form></div>';
       }
       else if (booking.step === 4){
         var s3 = currentService();
         var d3 = booking.date ? parseDay(booking.date) : null;
+        // A consultation request is not a booking yet — Sarah
+        // still has to say yes (Tony Nov 19, 2026).
+        var isReq = isConsult() && booking.reqAfter;
         /* Confirmation email goes out only when an email was given (Tony
            Nov 17, 2026: email is optional now) — otherwise we confirm by
-           phone. Nothing here may claim an email is on its way. */
+           phone. Nothing here may claim an email is on its way. A video
+           consultation always has an email — the link goes there. */
         var confirmItem, remindItem;
-        if (booking.forWhom === "friend" && booking.guestName) {
+        if (isReq) {
+          confirmItem = '<strong>Your request is with Sarah</strong><p>She says yes or no on the dashboard — and you hear back either way, at ' + booking.email + '. If she says yes, a $30 card link comes to lock it in.</p>';
+          remindItem = '<strong>You hear back either way</strong><p>Sarah says yes or no, and the answer comes to your email — nothing is booked until she says yes.</p>';
+        } else if (booking.forWhom === "friend" && booking.guestName) {
           if (booking.guestEmail) {
             confirmItem = '<strong>Your friend has the confirmation</strong><p>It was sent to ' + booking.guestEmail + ' with the treatment, date and time — ' + booking.guestName.split(" ")[0] + ' just shows up and relaxes.' + (booking.email ? ' A copy went to you at ' + booking.email + '.' : '') + '</p>';
           } else if (booking.email) {
@@ -1214,24 +1293,34 @@
             confirmItem = '<strong>No email given — we will confirm by phone</strong><p>We will confirm this appointment by phone at ' + (booking.guestPhone || booking.phone) + ' if anything changes — ' + booking.guestName.split(" ")[0] + ' just shows up and relaxes.</p>';
           }
         } else if (booking.email) {
-          confirmItem = '<strong>Your confirmation email is on its way</strong><p>It confirms your appointment is approved and booked, with your treatment, date and time — sent to ' + booking.email + '.</p>';
+          confirmItem = isConsult()
+            ? (booking.format === "in-person"
+              ? '<strong>Your confirmation email is on its way</strong><p>It confirms your in-person consultation, with the date and time — sent to ' + booking.email + '. See you at the studio.</p>'
+              : '<strong>Your confirmation email is on its way</strong><p>It confirms your video consultation, with the date and time — sent to ' + booking.email + '. Your video link is in the email (or coming soon if Sarah hasn\u2019t pasted it yet).</p>')
+            : '<strong>Your confirmation email is on its way</strong><p>It confirms your appointment is approved and booked, with your treatment, date and time — sent to ' + booking.email + '.</p>';
         } else {
           confirmItem = '<strong>No email given — we will confirm by phone</strong><p>We will confirm your appointment by phone at ' + booking.phone + ' if anything changes. Just show up and relax.</p>';
         }
-        remindItem = (booking.email || booking.guestEmail)
-          ? '<strong>A reminder before your visit</strong><p>You will receive a friendly reminder email ahead of your appointment, so all you need to do is arrive and relax.</p>'
-          : '<strong>A reminder before your visit</strong><p>We will remind you by phone ahead of your appointment, so all you need to do is arrive and relax.</p>';
+        if (!isReq) {
+          remindItem = isConsult() && booking.format !== "in-person" && (booking.email || booking.guestEmail)
+            ? '<strong>A reminder before your video call</strong><p>You will receive a friendly reminder email an hour before, with your video link again — so all you need to do is tap the link and relax.</p>'
+            : (booking.email || booking.guestEmail)
+            ? '<strong>A reminder before your visit</strong><p>You will receive a friendly reminder email ahead of your appointment, so all you need to do is arrive and relax.</p>'
+            : '<strong>A reminder before your visit</strong><p>We will remind you by phone ahead of your appointment, so all you need to do is arrive and relax.</p>';
+        }
         body = '<div class="book-step on"><div class="confirm-hero">' +
           '<div class="check">' + ICON_BIGCHECK + '</div>' +
-          '<h3>' + (booking.forWhom === "friend" && booking.guestName ? "Booked for " + booking.guestName.split(" ")[0] + " — what a gift." : "You are booked in" + (booking.name ? ", " + booking.name.split(" ")[0] : "") + ".") + '</h3>' +
-          '<p style="color:var(--ink-soft); max-width:34em; margin:0 auto;">' + (booking.forWhom === "friend" && booking.guestName ?
+          '<h3>' + (isReq ? "Request sent" + (booking.name ? ", " + booking.name.split(" ")[0] : "") + "." : (booking.forWhom === "friend" && booking.guestName ? "Booked for " + booking.guestName.split(" ")[0] + " — what a gift." : "You are booked in" + (booking.name ? ", " + booking.name.split(" ")[0] : "") + ".")) + '</h3>' +
+          '<p style="color:var(--ink-soft); max-width:34em; margin:0 auto;">' + (isReq ?
+            'Your request for a <strong>' + (booking.format === "in-person" ? "In-Person Consultation" : "Video Consultation") + '</strong> on <strong>' + (d3 ? fmtDate(d3) : "") + ' at ' + booking.time + '</strong> is with Sarah. She says yes or no — and you hear back either way. If she says yes, a $30 card link comes to your email to lock it in.' :
+            (booking.forWhom === "friend" && booking.guestName ?
             'The <strong>' + bookingLabel() + '</strong>' + (booking.type === "after" ? ' — a Private Hours appointment —' : '') + ' is reserved for <strong>' + booking.guestName + '</strong> on <strong>' + (d3 ? fmtDate(d3) : "") + ' at ' + booking.time + '</strong> at In2Skin in Bolton. They just show up — everything is arranged.' :
-            'Your <strong>' + bookingLabel() + '</strong>' + (booking.type === "after" ? ' — a Private Hours appointment —' : '') + ' is reserved for <strong>' + (d3 ? fmtDate(d3) : "") + ' at ' + booking.time + '</strong> at In2Skin in Bolton. We look forward to welcoming you.') + '</p></div>' +
+            'Your <strong>' + bookingLabel() + '</strong>' + (booking.type === "after" && !isConsult() ? ' — a Private Hours appointment —' : '') + ' is reserved for <strong>' + (d3 ? fmtDate(d3) : "") + ' at ' + booking.time + '</strong>' + (isConsult() ? (booking.format === "in-person" ? ' at In2Skin in Bolton. We look forward to welcoming you.' : ' — on video, your link arrives by email.') : ' at In2Skin in Bolton. We look forward to welcoming you.'))) + '</p></div>' +
           '<div class="after-list">' +
             '<div class="after-item"><span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h16v12H4z" stroke="#2F4A2C" stroke-width="1.8"/><path d="m4 7 8 6 8-6" stroke="#2F4A2C" stroke-width="1.8"/></svg></span>' +
               '<div>' + confirmItem + '</div></div>' +
             '<div class="after-item"><span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21a2.4 2.4 0 0 0 2.4-2.4H9.6A2.4 2.4 0 0 0 12 21Z" fill="#2F4A2C"/><path d="M6 16v-5a6 6 0 1 1 12 0v5l1.5 3h-15L6 16Z" stroke="#2F4A2C" stroke-width="1.8" stroke-linejoin="round"/></svg></span>' +
-              '<div><strong>We are notified instantly</strong><p>The moment you booked, In2Skin received your appointment by app notification and email — your time is held for you.</p></div></div>' +
+              '<div><strong>We are notified instantly</strong><p>' + (isReq ? 'The moment you sent it, In2Skin received your request by app notification and email — Sarah will answer it on the dashboard.' : 'The moment you booked, In2Skin received your appointment by app notification and email — your time is held for you.') + '</p></div></div>' +
             '<div class="after-item"><span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="#2F4A2C" stroke-width="1.8"/><path d="M12 7.5V12l3 2" stroke="#2F4A2C" stroke-width="1.8" stroke-linecap="round"/></svg></span>' +
               '<div>' + remindItem + '</div></div>' +
           '</div>' +
@@ -1265,6 +1354,9 @@
              auto-advance: the package bar is the way forward. */
           var id = b.getAttribute("data-pick-service");
           booking.addons = booking.addons || [];
+          // A consultation is just the consultation — no add-ons, and
+          // never booked for a friend.
+          if (id === CONSULT.id){ booking.addons = []; booking.forWhom = "me"; }
           if (booking.service === id){
             booking.service = null;
             if (booking.addons.length){ booking.service = booking.addons[0]; booking.addons = booking.addons.slice(1); }
@@ -1283,6 +1375,8 @@
              first extra if there is one). Otherwise toggle it as an extra. */
           var id = b.getAttribute("data-pick-addon");
           booking.addons = booking.addons || [];
+          // A consultation is just the consultation — no add-ons.
+          if (isConsult()) return;
           if (!booking.service){ booking.service = id; }
           else if (booking.service === id){
             booking.service = null;
@@ -1308,6 +1402,26 @@
              bring them into view (step 2 only; on step 1 the package bar
              is the next thing and it is already pinned in view). */
           if (booking.step === 2 && booking.date) scrollToTopOf("timesHead");
+        });
+      });
+      shell.querySelectorAll("[data-pick-reqmode]").forEach(function(b){
+        b.addEventListener("click", function(){
+          /* Consultation hours (Tony Nov 19, 2026): regular hours
+             book right away; evenings and early mornings are a request
+             Sarah answers on the dashboard. Switching modes clears the
+             time — the two modes have different time lists. */
+          booking.reqAfter = b.getAttribute("data-pick-reqmode") === "after";
+          booking.time = null;
+          if (booking.date && dateStatusFor(booking.date) === "full"){ booking.date = null; }
+          renderBooking();
+        });
+      });
+      shell.querySelectorAll("[data-pick-format]").forEach(function(b){
+        b.addEventListener("click", function(){
+          /* Consultation format (Tony Nov 19, 2026): video call or in
+             person at the studio — same $30, same rules. */
+          booking.format = b.getAttribute("data-pick-format") === "in-person" ? "in-person" : "video";
+          renderBooking();
         });
       });
       shell.querySelectorAll("[data-pick-for]").forEach(function(b){
@@ -1420,16 +1534,52 @@
           booking.name = name; booking.phone = phone; booking.email = email;
           booking.guestName = null; booking.guestEmail = null;
         }
-        booking.first = document.getElementById("bfFirst").value;
+        // A video consultation always needs an email — the link goes there.
+        // An in-person consultation does not (email stays optional).
+        if (isConsult() && booking.format !== "in-person" && (!email || email.indexOf("@") < 1)){
+          guideMissed([{ sel:"#bfEmail", msg:"Please add your email — your video link goes there." }], bookErr);
+          return;
+        }
+        // The first-visit field is hidden for consultations (the
+        // $10 offer never applies to one) — default to "no" there.
+        var bfFirstEl = document.getElementById("bfFirst");
+        booking.first = bfFirstEl ? bfFirstEl.value : "no";
         var giftCodeEl = document.getElementById("bfGiftCode");
         booking.giftCode = giftCodeEl ? giftCodeEl.value.trim() : "";
         var refCodeEl = document.getElementById("bfRefCode");
         booking.referredBy = refCodeEl ? refCodeEl.value.trim().toUpperCase() : (booking.referredBy || "");
         var bookBtn = form.querySelector('button[type="submit"]');
-        if (bookBtn){ bookBtn.disabled = true; bookBtn.textContent = "Taking you to secure checkout…"; }
         bookErr("");
+        // After-hours consultation: a request, not a booking —
+        // Sarah says yes or no on the dashboard.
+        if (isConsult() && booking.reqAfter){
+          if (bookBtn){ bookBtn.disabled = true; bookBtn.textContent = "Sending your request…"; }
+          fetch("/api/book", { method:"POST", headers:{ "Content-Type":"application/json" },
+            body: JSON.stringify({ consultRequest: true, service: booking.service, format: booking.format, date: booking.date, time: booking.time,
+              name: booking.name, phone: booking.phone, email: booking.email,
+              website: (document.getElementById("bfWebsite") || {}).value || "",
+              formLoadedAt: (document.getElementById("bfTs") || {}).value || "" }) })
+          .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+          .then(function(res){
+            if (!res.ok){
+              bookErr(res.j.error || "Something went wrong — please call us and we will set it up.");
+              if (bookBtn){ bookBtn.disabled = false; bookBtn.textContent = "Send Request"; }
+              return;
+            }
+            booking.requestId = res.j.requestId || null;
+            booking.step = 4; renderBooking();
+            var el = document.getElementById("book");
+            if (el) el.scrollIntoView({ behavior:"smooth", block:"start" });
+          })
+          .catch(function(){
+            bookErr("Could not reach the booking service — please check your connection or call us.");
+            if (bookBtn){ bookBtn.disabled = false; bookBtn.textContent = "Send Request"; }
+          });
+          return;
+        }
+        if (bookBtn){ bookBtn.disabled = true; bookBtn.textContent = "Taking you to secure checkout…"; }
         fetch("/api/book", { method:"POST", headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify({ service: booking.service, addons: booking.addons, date: booking.date, time: booking.time, type: booking.type,
+          body: JSON.stringify({ service: booking.service, format: booking.format, addons: booking.addons, date: booking.date, time: booking.time, type: booking.type,
             forWhom: booking.forWhom, name: booking.name, phone: booking.phone, email: booking.email,
             guestName: booking.guestName, guestPhone: booking.guestPhone, guestEmail: booking.guestEmail,
             first: booking.first, giftCode: booking.giftCode, referredBy: booking.referredBy,
@@ -1463,7 +1613,7 @@
       });
       var again = document.getElementById("bookAgain");
       if (again) again.addEventListener("click", function(){
-        booking = { service:null, addons:[], date:null, time:null, step:1, type:"regular", forWhom:"me", referredBy: booking.referredBy };
+        booking = { service:null, addons:[], date:null, time:null, step:1, type:"regular", forWhom:"me", reqAfter:false, format:"video", referredBy: booking.referredBy };
         calMonth = null;
         renderBooking();
       });
@@ -1654,7 +1804,7 @@
          for the one thing). A chosen treatment lands on step 2 (day & time);
          extras are picked on step 1, in the package builder. No service →
          step 1, pick a treatment. */
-      var svc = serviceId && (svcById(serviceId) || COMBOS.some(function(c){ return c.id===serviceId; }) || ADDONS.some(function(a){ return a.id===serviceId; }));
+      var svc = serviceId && (svcById(serviceId) || serviceId === CONSULT.id || COMBOS.some(function(c){ return c.id===serviceId; }) || ADDONS.some(function(a){ return a.id===serviceId; }));
       booking.service = svc ? serviceId : null;
       booking.step = svc ? 2 : 1;
       calMonth = null;
