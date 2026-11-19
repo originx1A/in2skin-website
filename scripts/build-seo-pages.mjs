@@ -263,18 +263,17 @@ const LOCATIONS = [
       {
         h: "Good to know",
         body: [
-          "First visit? Take $10 toward any service. Private Hours — weekday mornings 7 to 9, evenings after 7, and Sundays — are $15 more per visit, for times that fit around work and school. Gift certificates start at $10 and never expire, and you can book an appointment for a friend and have the confirmation go straight to them.",
+          "First visit? Take $10 toward any service. Private Hours, early mornings and evenings by request, are the regular price plus $15 per visit, for times that fit around work and school. Gift certificates start at $10 and never expire, and you can book an appointment for a friend and have the confirmation go straight to them.",
         ],
       },
     ],
     leadPrice: "$85",
     leadMins: "Classic Facial · 55 minutes",
-    panelExtra: "Private Hours: <strong style=\"color:var(--sage-deep);\">$80</strong>",
     faq: [
       ["Is the studio actually in Caledon?", "Yes — In2Skin is in Bolton, which is in the Town of Caledon. The studio is a private treatment room, by appointment."],
       ["How long is the drive from Caledon East or Caledon Village?", "About 10 to 20 minutes on local roads from most of Caledon. Directions are shared when you book."],
       ["What should I book for my first facial?", "The Classic Facial, $85 for 55 minutes. It is tailored to your skin that day, with every step explained — and $10 off your first visit."],
-      ["Do you have evening appointments?", "Yes — Private Hours run weekday evenings after 7 PM and on Sundays, for $15 more per visit."],
+      ["Do you have evening appointments?", "Yes — Private Hours are available early mornings and evenings, by request, for the regular price plus $15 per visit. Sundays the studio is closed."],
     ],
     areaServedExtra: "Caledon",
   },
@@ -311,13 +310,12 @@ const LOCATIONS = [
       {
         h: "Good to know",
         body: [
-          "First visit? Take $10 toward any service. Private Hours — weekday mornings 7 to 9, evenings after 7, and Sundays — are $15 more per visit. Gift certificates start at $10 and never expire.",
+          "First visit? Take $10 toward any service. Private Hours, early mornings and evenings by request, are the regular price plus $15 per visit. Gift certificates start at $10 and never expire.",
         ],
       },
     ],
     leadPrice: "$85",
     leadMins: "Classic Facial · 55 minutes",
-    panelExtra: "Private Hours: <strong style=\"color:var(--sage-deep);\">$80</strong>",
     faq: [
       ["How far is In2Skin from Kleinburg?", "About 15 minutes — straight up Highway 50 from Kleinburg village to Bolton. Directions are shared when you book."],
       ["What should I book first?", "The Classic Facial, $85 for 55 minutes, is the best first visit — tailored to your skin that day, with $10 off."],
@@ -344,7 +342,7 @@ const LOCATIONS = [
         h: "The drive from Vaughan",
         body: [
           "Highway 50 north from Woodbridge brings you to Bolton in about 20 minutes. From Maple and Thornhill it is a similar trip by way of Rutherford Road and Highway 50. Directions are shared when you book.",
-          "Evening and Sunday appointments — Private Hours — suit Vaughan clients who work in the city all week: weekday mornings 7 to 9, evenings after 7, and Sundays, for $15 more per visit.",
+          "Early morning and evening appointments — Private Hours — suit Vaughan clients who work all week: the regular price plus $15 per visit.",
         ],
       },
       {
@@ -365,11 +363,10 @@ const LOCATIONS = [
     ],
     leadPrice: "$85",
     leadMins: "Classic Facial · 55 minutes",
-    panelExtra: "Private Hours: <strong style=\"color:var(--sage-deep);\">$80</strong>",
     faq: [
       ["How far is In2Skin from Vaughan?", "About 20 minutes north of Woodbridge on Highway 50. From Maple and Thornhill, a similar trip via Rutherford Road and Highway 50."],
       ["Why drive to Bolton for a facial?", "For a private, one-on-one studio — one guest at a time, no waiting room, no rush — instead of a busy city spa."],
-      ["Do you have appointments after work?", "Yes — Private Hours run weekday evenings after 7 PM and on Sundays, for $15 more per visit."],
+      ["Do you have appointments after work?", "Yes — Private Hours are available early mornings and evenings, by request, for the regular price plus $15 per visit. Sundays the studio is closed."],
       ["What does a facial cost?", "The Classic Facial is $85 for 55 minutes; the Anti-Aging Facial is $125 for 80 minutes. Add-ons run $35 to $65."],
     ],
     areaServedExtra: "Vaughan",
@@ -407,18 +404,17 @@ const LOCATIONS = [
       {
         h: "Good to know",
         body: [
-          "First visit? Take $10 toward any service. Private Hours — weekday mornings 7 to 9, evenings after 7, and Sundays — are $15 more per visit. Gift certificates start at $10 and never expire.",
+          "First visit? Take $10 toward any service. Private Hours, early mornings and evenings by request, are the regular price plus $15 per visit. Gift certificates start at $10 and never expire.",
         ],
       },
     ],
     leadPrice: "$85",
     leadMins: "Classic Facial · 55 minutes",
-    panelExtra: "Private Hours: <strong style=\"color:var(--sage-deep);\">$80</strong>",
     faq: [
       ["How far is In2Skin from Brampton?", "About 25 minutes north on Highway 50, by way of Mayfield Road. Directions are shared when you book."],
       ["What is good before a wedding or event?", "Microdermabrasion, $55, gives an instant radiant glow, and a Classic Facial the week before leaves skin fresh and bright."],
       ["What does a facial cost?", "The Classic Facial is $85 for 55 minutes; the Anti-Aging Facial is $125 for 80 minutes. Add-ons run $35 to $65."],
-      ["Can I book an evening appointment?", "Yes — Private Hours run weekday evenings after 7 PM and on Sundays, for $15 more per visit."],
+      ["Can I book an evening appointment?", "Yes — Private Hours are available early mornings and evenings, by request, for the regular price plus $15 per visit. Sundays the studio is closed."],
     ],
     areaServedExtra: "Brampton",
   },
@@ -455,18 +451,17 @@ const LOCATIONS = [
       {
         h: "Good to know",
         body: [
-          "First visit? Take $10 toward any service. Private Hours — weekday mornings 7 to 9, evenings after 7, and Sundays — are $15 more per visit. Gift certificates start at $10 and never expire.",
+          "First visit? Take $10 toward any service. Private Hours, early mornings and evenings by request, are the regular price plus $15 per visit. Gift certificates start at $10 and never expire.",
         ],
       },
     ],
     leadPrice: "$85",
     leadMins: "Classic Facial · 55 minutes",
-    panelExtra: "Private Hours: <strong style=\"color:var(--sage-deep);\">$80</strong>",
     faq: [
       ["How far is In2Skin from Nobleton?", "About 10 minutes — King Road west from Nobleton, then south into Bolton. Directions are shared when you book."],
       ["Can I come for just a reflexology session?", "Yes — Reflexology is $35 for 20 minutes and can be booked on its own, or added to any facial."],
       ["What should I book first?", "The Classic Facial, $85 for 55 minutes, tailored to your skin that day — with $10 off your first visit."],
-      ["Do you have appointments after work?", "Yes — Private Hours run weekday evenings after 7 PM and on Sundays, for $15 more per visit."],
+      ["Do you have appointments after work?", "Yes — Private Hours are available early mornings and evenings, by request, for the regular price plus $15 per visit. Sundays the studio is closed."],
     ],
     areaServedExtra: "Nobleton",
   },
@@ -480,15 +475,15 @@ const LOCATIONS = [
     img: "visit-tea.webp",
     imgAlt: "A warm cup of tea on a wooden table in soft light, after a treatment",
     intro: [
-      "King City runs on the GO train — and In2Skin runs on the same clock. The studio is in Bolton, about 20 minutes west on King Road, with evening Private Hours that suit a commuter's day.",
-      "Book after the train home, or on a Sunday. One guest at a time, in a quiet room, with the whole appointment built around your skin that day.",
+      "King City runs on the GO train — and In2Skin runs on the same clock. The studio is in Bolton, about 20 minutes west on King Road, with Private Hours by request that suit a commuter's day.",
+      "Book after the train home. One guest at a time, in a quiet room, with the whole appointment built around your skin that day.",
     ],
     sections: [
       {
         h: "The drive from King City",
         body: [
           "King Road west from King City brings you to Bolton in about 20 minutes — a straight run through King Township. Directions are shared when you book.",
-          "Evening appointments are the natural fit: Private Hours run weekday evenings after 7 PM, and Sundays are open all day. Mornings before the train work too — Private Hours start at 7 AM.",
+          "Evening appointments are the natural fit: Private Hours are available early mornings and evenings, by request. Mornings before the train work too.",
         ],
       },
       {
@@ -503,16 +498,15 @@ const LOCATIONS = [
       {
         h: "Good to know",
         body: [
-          "First visit? Take $10 toward any service. Private Hours are $15 more per visit. Gift certificates start at $10 and never expire — an easy gift for someone who commutes all week and never books anything for themselves.",
+          "First visit? Take $10 toward any service. Private Hours cost the regular price plus $15 per visit. Gift certificates start at $10 and never expire — an easy gift for someone who commutes all week and never books anything for themselves.",
         ],
       },
     ],
     leadPrice: "$85",
     leadMins: "Classic Facial · 55 minutes",
-    panelExtra: "Private Hours: <strong style=\"color:var(--sage-deep);\">$80</strong>",
     faq: [
       ["How far is In2Skin from King City?", "About 20 minutes west on King Road. Directions are shared when you book."],
-      ["Do you have appointments after work?", "Yes — Private Hours run weekday evenings after 7 PM, for $15 more per visit. Sunday appointments are available too."],
+      ["Do you have appointments after work?", "Yes — Private Hours are available early mornings and evenings, by request, for the regular price plus $15 per visit. Sundays the studio is closed."],
       ["What should I book after a long week?", "The Works, $160 with a Classic Facial — facial, red light and reflexology all at once. Many clients fall asleep."],
       ["What does a facial cost?", "The Classic Facial is $85 for 55 minutes; the Anti-Aging Facial is $125 for 80 minutes."],
     ],
@@ -551,18 +545,17 @@ const LOCATIONS = [
       {
         h: "Good to know",
         body: [
-          "First visit? Take $10 toward any service. Private Hours — weekday mornings 7 to 9, evenings after 7, and Sundays — are $15 more per visit. Gift certificates start at $10 and never expire.",
+          "First visit? Take $10 toward any service. Private Hours, early mornings and evenings by request, are the regular price plus $15 per visit. Gift certificates start at $10 and never expire.",
         ],
       },
     ],
     leadPrice: "$85",
     leadMins: "Classic Facial · 55 minutes",
-    panelExtra: "Private Hours: <strong style=\"color:var(--sage-deep);\">$80</strong>",
     faq: [
       ["How far is In2Skin from Orangeville?", "About 30 minutes east on Highway 9. Directions are shared when you book."],
       ["Is it worth the drive from Orangeville?", "For a private, one-on-one studio — one guest at a time, no waiting room, no rush — clients say yes. Many book the longer treatments and make a morning of it."],
       ["What should I book first?", "The Classic Facial, $85 for 55 minutes, tailored to your skin that day — with $10 off your first visit."],
-      ["Do you have Sunday appointments?", "Yes — Sundays are Private Hours, open all day, for $15 more per visit."],
+      ["Do you have Sunday appointments?", "No — Sundays the studio is closed. Private Hours are available early mornings and evenings, by request."],
     ],
     areaServedExtra: "Orangeville",
   },
@@ -584,7 +577,7 @@ const LOCATIONS = [
         h: "The drive from Georgetown",
         body: [
           "Highway 7 east from Georgetown brings you to Bolton in about 30 minutes. Directions are shared when you book, and the studio is by appointment, so there is never a wait when you arrive.",
-          "Weekend appointments suit Georgetown clients best: Sundays are open all day as Private Hours, and Saturday appointments run through the regular day.",
+          "Weekend appointments suit Georgetown clients best: Saturday appointments run through the regular day, and Private Hours are available early mornings and evenings, by request.",
         ],
       },
       {
@@ -599,16 +592,15 @@ const LOCATIONS = [
       {
         h: "Good to know",
         body: [
-          "First visit? Take $10 toward any service. Private Hours — weekday mornings 7 to 9, evenings after 7, and Sundays — are $15 more per visit. Gift certificates start at $10 and never expire.",
+          "First visit? Take $10 toward any service. Private Hours, early mornings and evenings by request, are the regular price plus $15 per visit. Gift certificates start at $10 and never expire.",
         ],
       },
     ],
     leadPrice: "$85",
     leadMins: "Classic Facial · 55 minutes",
-    panelExtra: "Private Hours: <strong style=\"color:var(--sage-deep);\">$80</strong>",
     faq: [
       ["How far is In2Skin from Georgetown?", "About 30 minutes east on Highway 7. Directions are shared when you book."],
-      ["Do you have weekend appointments?", "Yes — Saturdays run through the regular day, and Sundays are open all day as Private Hours, for $15 more per visit."],
+      ["Do you have weekend appointments?", "Yes — Saturdays run through the regular day. Sundays the studio is closed, and Private Hours are available early mornings and evenings, by request."],
       ["What should I book first?", "The Classic Facial, $85 for 55 minutes, tailored to your skin that day — with $10 off your first visit."],
       ["What does a facial cost?", "The Classic Facial is $85 for 55 minutes; the Anti-Aging Facial is $125 for 80 minutes. Add-ons run $35 to $65."],
     ],
@@ -632,7 +624,7 @@ const LOCATIONS = [
         h: "The drive from Toronto",
         body: [
           "Downtown Toronto to Bolton is about 45 minutes to an hour, by Highway 400 north to King Road or Highway 427 to Highway 50. From Etobicoke and North York it is quicker — often under 45 minutes. Directions are shared when you book, and the studio is by appointment, so there is never a wait when you arrive.",
-          "Evening and Sunday appointments — Private Hours — suit Toronto clients who work in the city all week: weekday mornings 7 to 9, evenings after 7, and Sundays, for $15 more per visit.",
+          "Early morning and evening appointments — Private Hours — suit Toronto clients who work all week: the regular price plus $15 per visit.",
         ],
       },
       {
@@ -660,12 +652,11 @@ const LOCATIONS = [
     ],
     leadPrice: "$85",
     leadMins: "Classic Facial · 55 minutes",
-    panelExtra: "Private Hours: <strong style=\"color:var(--sage-deep);\">$80</strong>",
     faq: [
       ["How far is In2Skin from downtown Toronto?", "About 45 minutes to an hour by Highway 400 or Highway 427. From Etobicoke and North York it is often under 45 minutes. Directions are shared when you book."],
       ["Why drive to Bolton for a facial?", "For the same quality at about half the downtown price — a Classic Facial is $85 and an Anti-Aging Facial is $125, where a custom facial downtown runs $150 to $300 — in a private, one-on-one studio with no waiting room and no rush."],
       ["What does a facial cost in Toronto?", "Downtown, a custom facial runs $150 to $300, a HydraFacial $190 to $400, and peels $150 to $400. At In2Skin the same kind of care is $85 for a Classic Facial and $125 for an Anti-Aging Facial."],
-      ["Do you have appointments after work?", "Yes — Private Hours run weekday evenings after 7 PM and on Sundays, for $15 more per visit."],
+      ["Do you have appointments after work?", "Yes — Private Hours are available early mornings and evenings, by request, for the regular price plus $15 per visit. Sundays the studio is closed."],
     ],
     areaServedExtra: "Toronto",
   },
@@ -687,7 +678,7 @@ const LOCATIONS = [
         h: "The drive from Mississauga",
         body: [
           "Highway 407 or Highway 401 to Highway 50 brings you to Bolton in about 35 to 45 minutes from most of Mississauga. Directions are shared when you book, and the studio is by appointment, so there is never a wait when you arrive.",
-          "Evening and Sunday appointments — Private Hours — suit Mississauga clients who work all week: weekday mornings 7 to 9, evenings after 7, and Sundays, for $15 more per visit.",
+          "Early morning and evening appointments — Private Hours — suit Mississauga clients who work all week: the regular price plus $15 per visit.",
         ],
       },
       {
@@ -715,12 +706,11 @@ const LOCATIONS = [
     ],
     leadPrice: "$85",
     leadMins: "Classic Facial · 55 minutes",
-    panelExtra: "Private Hours: <strong style=\"color:var(--sage-deep);\">$80</strong>",
     faq: [
       ["How far is In2Skin from Mississauga?", "About 35 to 45 minutes by Highway 407 or Highway 401 to Highway 50. Directions are shared when you book."],
       ["What does a facial cost in Mississauga?", "About $130 on average, with medspas running $105 to $350. At In2Skin the Classic Facial is $85 for 55 minutes and the Anti-Aging Facial is $125 for 80 minutes."],
       ["Why drive to Bolton for a facial?", "For the same quality at about half the price, in a private, one-on-one studio — one guest at a time, no waiting room, no rush."],
-      ["Do you have appointments after work?", "Yes — Private Hours run weekday evenings after 7 PM and on Sundays, for $15 more per visit."],
+      ["Do you have appointments after work?", "Yes — Private Hours are available early mornings and evenings, by request, for the regular price plus $15 per visit. Sundays the studio is closed."],
     ],
     areaServedExtra: "Mississauga",
   },
@@ -759,13 +749,12 @@ const CONDITIONS = [
       {
         h: "Good to know",
         body: [
-          "First visit? Take $10 toward any service. Teenagers are welcome — the Classic Facial is the recommended affordable option for teen acne, and everything is explained as it happens. Private Hours — weekday mornings 7 to 9, evenings after 7, and Sundays — are $15 more per visit.",
+          "First visit? Take $10 toward any service. Teenagers are welcome — the Classic Facial is the recommended affordable option for teen acne, and everything is explained as it happens. Private Hours, early mornings and evenings by request, are the regular price plus $15 per visit.",
         ],
       },
     ],
     leadPrice: "$85",
     leadMins: "Classic Facial · 55 minutes",
-    panelExtra: "Private Hours: <strong style=\"color:var(--sage-deep);\">$80</strong>",
     faq: [
       ["Will a facial help my breakouts?", "Yes — a facial for acne-prone skin focuses on deep cleansing and gentle exfoliation to keep pores clear, with calming care afterwards. Regular visits help skin stay balanced."],
       ["Is a facial okay for teenagers?", "Yes — the Classic Facial is the recommended affordable first step for teen acne. Everything is explained as it happens."],
@@ -806,13 +795,12 @@ const CONDITIONS = [
       {
         h: "Good to know",
         body: [
-          "First visit? Take $10 toward any service. Tell the studio about your skin when you book — the treatment is shaped around it. Private Hours — weekday mornings 7 to 9, evenings after 7, and Sundays — are $15 more per visit.",
+          "First visit? Take $10 toward any service. Tell the studio about your skin when you book — the treatment is shaped around it. Private Hours, early mornings and evenings by request, are the regular price plus $15 per visit.",
         ],
       },
     ],
     leadPrice: "$85",
     leadMins: "Classic Facial · 55 minutes",
-    panelExtra: "Private Hours: <strong style=\"color:var(--sage-deep);\">$80</strong>",
     faq: [
       ["Is a facial safe for rosacea-prone skin?", "Yes — treatments are chosen for your skin that day, with gentle products and a soft touch. Tell the studio about your skin when you book."],
       ["What helps redness most?", "Calm, soothing care: gentle products, soft touch, and red light therapy, which encourages a more even-looking complexion."],
@@ -853,7 +841,7 @@ const CONDITIONS = [
       {
         h: "Good to know",
         body: [
-          "First visit? Take $10 toward any service. For a special occasion, book microdermabrasion a day or two before — the glow is instant, with no downtime. Private Hours — weekday mornings 7 to 9, evenings after 7, and Sundays — are $15 more per visit.",
+          "First visit? Take $10 toward any service. For a special occasion, book microdermabrasion a day or two before — the glow is instant, with no downtime. Private Hours, early mornings and evenings by request, are the regular price plus $15 per visit.",
         ],
       },
     ],
@@ -900,7 +888,7 @@ const CONDITIONS = [
       {
         h: "Good to know",
         body: [
-          "First visit? Take $10 toward any service. Microneedling and skin tightening are priced at consultation — the exact price is confirmed up front, before anything begins. Private Hours — weekday mornings 7 to 9, evenings after 7, and Sundays — are $15 more per visit.",
+          "First visit? Take $10 toward any service. Microneedling and skin tightening are priced at consultation — the exact price is confirmed up front, before anything begins. Private Hours, early mornings and evenings by request, are the regular price plus $15 per visit.",
         ],
       },
     ],
@@ -947,7 +935,7 @@ const CONDITIONS = [
       {
         h: "Good to know",
         body: [
-          "First visit? Take $10 toward any service. The Works is the gift people give to someone who never stops: book it for a friend and the confirmation goes straight to them. Private Hours — weekday mornings 7 to 9, evenings after 7, and Sundays — are $15 more per visit.",
+          "First visit? Take $10 toward any service. The Works is the gift people give to someone who never stops: book it for a friend and the confirmation goes straight to them. Private Hours, early mornings and evenings by request, are the regular price plus $15 per visit.",
         ],
       },
     ],
@@ -985,20 +973,19 @@ const QUESTIONS = {
         "Add-ons — NANO Needling $65, Microdermabrasion $55, Light Therapy $55, Reflexology $35 (NANO Needling, Light Therapy, and Reflexology 20 minutes; Microdermabrasion 15 minutes)",
         "Chemical Peels — $125–$475, 25 minutes, exact price confirmed at consultation",
         "Microneedling — from $150; Skin Tightening — custom, priced per consultation",
-        "First visit — $10 toward any service · Private Hours — $15 more per visit",
+        "First visit — $10 toward any service · Private Hours — the regular price plus $15 per visit",
       ],
     },
   ],
   leadPrice: "$85",
   leadMins: "Classic Facial · 55 minutes",
-  panelExtra: "Private Hours: <strong style=\"color:var(--sage-deep);\">$80</strong>",
   faq: [
     ["How much does a facial cost in Bolton?", "At In2Skin, the Classic Facial is $85 for 55 minutes and the Anti-Aging Facial is $125 for 80 minutes. Add-ons run $35 to $65, chemical peels run $125 to $475, and microneedling and skin tightening are priced per consultation. First visits get $10 off any service."],
     ["What does a facial do?", "A facial deep-cleanses, exfoliates, steams, massages and hydrates your skin, finished with a mask matched to your skin that day. Skin leaves brighter, fresher and more hydrated — with a glow that lasts for days."],
     ["How long does a facial take?", "The Classic Facial takes 55 minutes and the Anti-Aging Facial takes 80 minutes. Add-ons take 20 minutes each, except Microdermabrasion at 15 minutes, and can be added to a facial or booked on their own."],
     ["How often should I get a facial?", "Every 4 to 6 weeks. Most clients make it a monthly ritual."],
     ["What is a first visit like?", "A consultation first, then the treatment — with every step explained as it happens. It is tailored to your skin that day, and your first visit is $10 off any service."],
-    ["What are Private Hours?", "Premier appointments reserved just for you — weekday mornings 7 to 9, evenings after 7 PM, and Sundays — for $15 more per visit."],
+    ["What are Private Hours?", "Premier appointments reserved just for you — early mornings and evenings, by request. You pay the regular price of the services you pick, plus $15 per visit. Sundays the studio is closed."],
     ["Can I buy a gift certificate?", "Yes — gift a Classic Facial ($85), an Anti-Aging Facial ($125), The Works ($160), or any custom amount from $10. A certificate code is emailed to the recipient, ready to redeem when they book, and gift codes never expire. You can also buy a treatment voucher: a named facial, paid ahead."],
     ["How do I book?", "Book online anytime on this website, or call (289) 212-4124. You pay in full securely by card when you book online and receive an email confirmation. Cash or Interac e-transfer are also welcome at the studio. Advance booking is recommended to get the time you want."],
     ["Where is the studio?", "In2Skin is a private, one-on-one aesthetics studio in Bolton, Ontario. Appointments are by booking, and directions are shared when you book. Clients visit from Caledon, Kleinburg, Vaughan, Brampton, Nobleton, King City, Orangeville, Georgetown, Mississauga and across Toronto and the GTA."],
@@ -1016,7 +1003,7 @@ const QUESTIONS = {
     ["What is the difference between a facial and a chemical peel?", "A facial deep-cleanses, exfoliates, steams, massages and hydrates your skin, finished with a custom mask — the Classic Facial is $85 for 55 minutes. A chemical peel is a professional Circadia peel solution that lifts away dull surface layers so fresher, brighter skin emerges; peels are $125–$475 for 25 minutes, matched to your skin at consultation, with the exact price confirmed up front."],
     ["Do I need to book a facial in advance in Bolton?", "Yes — advance booking is recommended at In2Skin to get the time you want. You can book online anytime on the website or call (289) 212-4124, and you pay in full securely by card when you book online."],
     ["How much does The Works facial cost in Bolton?", "The Works is $160 with a Classic Facial (55 minutes) or $195 with an Anti-Aging Facial (80 minutes) at In2Skin in Bolton. It is a facial, red light therapy and reflexology all at the same time, while the mask works."],
-    ["Can I book a facial early in the morning or on a Sunday in Bolton?", "Yes — In2Skin offers Private Hours on weekday mornings from 7 to 9, weekday evenings after 7 PM, and on Sundays, for $15 more per visit. Call (289) 212-4124 or book online to reserve one."],
+    ["Can I book a facial early in the morning or on a Sunday in Bolton?", "Early mornings and evenings are available as Private Hours, by request — call (289) 212-4124 or email bookings@boltonfacials.com and Sarah will set it up. You pay the regular price of the services you pick, plus $15 per visit. Sundays the studio is closed."],
     ["Is there a facial for teenagers with acne in Bolton?", "Yes — the Classic Facial, $85 for 55 minutes, is the recommended affordable first step for teen acne at In2Skin in Bolton. It focuses on a thorough deep cleanse, gentle exfoliation and calming, hydrating care, with every step explained as it happens."],
     ["How much does microneedling cost in Bolton?", "Microneedling at In2Skin starts at $150. Your consultation confirms your exact quote up front, before anything begins."],
   ],

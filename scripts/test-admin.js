@@ -126,20 +126,28 @@ async function run() {
   const d4 = addDays(today, 4);
 
   // ---------- 1. buffer setting ----------
-  check("buffer default is 30", await studio.getBufferMins(), 30);
-  check("buffer set to 15", await studio.setBufferMins(15), 15);
-  check("buffer reads back 15", await studio.getBufferMins(), 15);
+  check("buffer default is 60", await studio.getBufferMins(), 60);
   let threw = false;
+  try { await studio.setBufferMins(15); } catch { threw = true; }
+  check("buffer 15 rejected (60-min floor)", threw, true);
+  check("buffer set to 60", await studio.setBufferMins(60), 60);
+  check("buffer reads back 60", await studio.getBufferMins(), 60);
+  check("buffer set to 90", await studio.setBufferMins(90), 90);
+  threw = false;
   try { await studio.setBufferMins(999); } catch { threw = true; }
   check("buffer 999 rejected", threw, true);
   threw = false;
   try { await studio.setBufferMins("abc"); } catch { threw = true; }
   check("buffer non-number rejected", threw, true);
+  // A gap saved before the 60-minute rule still counts as 60 — the rule
+  // is a floor, not a preference.
+  mem.set("studio:buffer", 30);
+  check("legacy 30-min gap reads as 60", await studio.getBufferMins(), 60);
   const classic9 = [{ time: "9:00 AM", service: "classic-facial", status: "paid", createdAt: new Date().toISOString() }];
-  check("30-min buffer blocks 10:15 add-on", sched.slotTaken(classic9, sched.parseTime("10:15 AM"), 15, { bufferMins: 30 }), true);
-  check("15-min buffer frees 10:15 add-on", sched.slotTaken(classic9, sched.parseTime("10:15 AM"), 15, { bufferMins: 15 }), false);
-  check("slotTaken defaults to 30 when no opts", sched.slotTaken(classic9, sched.parseTime("10:15 AM"), 15), true);
-  await studio.setBufferMins(30);
+  check("60-min buffer blocks 11:00 add-on", sched.slotTaken(classic9, sched.parseTime("11:00 AM"), 15, { bufferMins: 60 }), true);
+  check("30-min buffer frees 11:00 add-on", sched.slotTaken(classic9, sched.parseTime("11:00 AM"), 15, { bufferMins: 30 }), false);
+  check("slotTaken defaults to 60 when no opts", sched.slotTaken(classic9, sched.parseTime("11:00 AM"), 15), true);
+  await studio.setBufferMins(60);
 
   // ---------- 2. blocks ----------
   const block = await studio.addBlock({ date: d4, start: "12:00", end: "13:00", reason: "Day off" });
@@ -154,18 +162,19 @@ async function run() {
   const blocks = await studio.blocksForDate(d4);
   check("blocksForDate finds it", blocks.length, 1);
   const freeWithBlock = sched.freeTimes(d4, "regular", "classic-facial", [], { bufferMins: 30, blocks });
-  check("12:30 PM blocked", freeWithBlock.includes("12:30 PM"), false);
-  check("11:00 AM still free", freeWithBlock.includes("11:00 AM"), true);
-  check("1:30 PM free after block", freeWithBlock.includes("1:30 PM"), true);
+  check("10:00 AM still free", freeWithBlock.includes("10:00 AM"), true);
+  check("11:00 AM blocked by the noon block", freeWithBlock.includes("11:00 AM"), false);
+  check("12:00 PM blocked", freeWithBlock.includes("12:00 PM"), false);
+  check("1:00 PM free after block", freeWithBlock.includes("1:00 PM"), true);
   let res = mockRes();
   await availability(mockReq({ query: { date: d4, service: "classic-facial", type: "regular" } }), res);
-  check("availability hides blocked 12:30", res.body.times.includes("12:30 PM"), false);
-  check("availability keeps 11:00", res.body.times.includes("11:00 AM"), true);
+  check("availability hides blocked 12:00", res.body.times.includes("12:00 PM"), false);
+  check("availability keeps 10:00", res.body.times.includes("10:00 AM"), true);
   check("block removed", await studio.removeBlock(block.id), true);
   check("block gone", (await studio.blocksForDate(d4)).length, 0);
   res = mockRes();
   await availability(mockReq({ query: { date: d4, service: "classic-facial", type: "regular" } }), res);
-  check("availability shows 12:30 after removal", res.body.times.includes("12:30 PM"), true);
+  check("availability shows 12:00 after removal", res.body.times.includes("12:00 PM"), true);
 
   // ---------- 2b. availability range mode (date-grid statuses) ----------
   const d5 = addDays(today, 5);
@@ -175,18 +184,18 @@ async function run() {
   await availability(mockReq({ query: { from: d5, to: d7, service: "classic-facial" } }), res);
   check("range -> 200", res.statusCode, 200);
   check("range covers 3 days", Object.keys(res.body.dates || {}).length, 3);
-  check("range d5 regular total 9", res.body.dates[d5].regular.total, 9);
-  check("range d5 regular free 9 (empty)", res.body.dates[d5].regular.free, 9);
+  check("range d5 regular total 7", res.body.dates[d5].regular.total, 7);
+  check("range d5 regular free 7 (empty)", res.body.dates[d5].regular.free, 7);
   check("range d5 after total matches schedule", res.body.dates[d5].after.total, sched.timesFor(d5, "after").length);
-  check("range d5 after free all (empty)", res.body.dates[d5].after.free, res.body.dates[d5].after.total);
-  check("range d7 regular free 9 (empty)", res.body.dates[d7].regular.free, 9);
+  check("range d5 after free 0 (never bookable online)", res.body.dates[d5].after.free, 0);
+  check("range d7 regular free 7 (empty)", res.body.dates[d7].regular.free, 7);
   const block2 = await studio.addBlock({ date: d6, start: "12:00", end: "13:00", reason: "Range test" });
   res = mockRes();
   await availability(mockReq({ query: { from: d5, to: d7, service: "classic-facial" } }), res);
-  check("range d6 regular free 8 with block", res.body.dates[d6].regular.free, 8);
-  check("range d6 regular total still 9", res.body.dates[d6].regular.total, 9);
-  check("range d6 after free all (block misses private)", res.body.dates[d6].after.free, res.body.dates[d6].after.total);
-  check("range d5 still free 9 with d6 blocked", res.body.dates[d5].regular.free, 9);
+  check("range d6 regular free 5 with block", res.body.dates[d6].regular.free, 5);
+  check("range d6 regular total still 7", res.body.dates[d6].regular.total, 7);
+  check("range d6 after free 0 (never bookable online)", res.body.dates[d6].after.free, 0);
+  check("range d5 still free 7 with d6 blocked", res.body.dates[d5].regular.free, 7);
   check("range block removed", await studio.removeBlock(block2.id), true);
   res = mockRes();
   await availability(mockReq({ query: { from: d5, to: d7, service: "nope" } }), res);
@@ -204,7 +213,7 @@ async function run() {
   // ---------- 3. walk-in booking ----------
   res = await callAdmin({
     view: "bookings", action: "walk-in",
-    service: "classic-facial", type: "regular", date: d1, time: "9:00 AM",
+    service: "classic-facial", type: "regular", date: d1, time: "10:00 AM",
     name: "Walk In", phone: "(905) 555-0101", email: "walkin@example.com",
     first: "no", payment: "cash",
   });
@@ -219,7 +228,7 @@ async function run() {
 
   res = await callAdmin({
     view: "bookings", action: "walk-in",
-    service: "classic-facial", type: "regular", date: d1, time: "11:00 AM",
+    service: "classic-facial", type: "regular", date: d1, time: "1:00 PM",
     name: "Pay Later", phone: "(905) 555-0102", email: "later@example.com",
     first: "no", payment: "later",
   });
@@ -230,7 +239,7 @@ async function run() {
 
   res = await callAdmin({
     view: "bookings", action: "walk-in",
-    service: "anti-aging-facial", type: "regular", date: d1, time: "2:30 PM",
+    service: "anti-aging-facial", type: "regular", date: d1, time: "4:00 PM",
     name: "Pay Link", phone: "(905) 555-0103", email: "paylink@example.com",
     first: "no", payment: "pay-link",
   });
@@ -240,7 +249,7 @@ async function run() {
 
   res = await callAdmin({
     view: "bookings", action: "walk-in",
-    service: "classic-facial", type: "regular", date: d1, time: "9:00 AM",
+    service: "classic-facial", type: "regular", date: d1, time: "10:00 AM",
     name: "Double", phone: "(905) 555-0104", email: "double@example.com",
     first: "no", payment: "cash",
   });
@@ -251,7 +260,7 @@ async function run() {
   const bkV = {
     id: "bk-admin-v1", status: "paid", forWhom: "me", name: "Sam Friend",
     email: "sam@example.com", phone: "(905) 555-0505",
-    service: "classic-facial", serviceName: "Classic Facial", date: d2, time: "9:00 AM",
+    service: "classic-facial", serviceName: "Classic Facial", date: d2, time: "10:00 AM",
     giftCode: gift.code, giftAppliedCents: 6500, giftDeducted: false,
     amountCents: 0, amountPaidCents: 0, createdAt: new Date().toISOString(),
   };
@@ -262,7 +271,7 @@ async function run() {
   check("cancel voucher booking -> 200", res.statusCode, 200);
   check("cancelled status", res.body.booking.status, "cancelled");
   check("cancel restores voucher balance", (await bookingsLib.getGift(gift.code)).balanceCents, 6500);
-  check("cancel frees the slot", sched.slotTaken(await bookingsLib.listBookingsForDate(d2), sched.parseTime("9:00 AM"), 55), false);
+  check("cancel frees the slot", sched.slotTaken(await bookingsLib.listBookingsForDate(d2), sched.parseTime("10:00 AM"), 55), false);
   res = await callAdmin({ view: "bookings", action: "cancel", bookingId: "bk-admin-v1" });
   check("cancel twice -> 400", res.statusCode, 400);
 
@@ -283,25 +292,26 @@ async function run() {
   check("cancel restores plain gift balance", (await bookingsLib.getGift(plain.code)).balanceCents, 6500);
 
   // ---------- 5. move ----------
-  // d1 now: walk-in Classic 9:00 (paid), later Classic 11:00 (unpaid), Anti 2:30 (pending).
-  res = await callAdmin({ view: "bookings", action: "move", bookingId: walkIn.id, date: d1, time: "10:00 AM", type: "regular" });
+  // d1 now: walk-in Classic 10:00 (paid), later Classic 1:00 PM (unpaid), Anti 4:00 PM (pending).
+  res = await callAdmin({ view: "bookings", action: "move", bookingId: walkIn.id, date: d1, time: "11:00 AM", type: "regular" });
   check("move into a blocked slot -> 409", res.statusCode, 409);
-  res = await callAdmin({ view: "bookings", action: "move", bookingId: walkIn.id, date: d1, time: "4:30 PM", type: "regular" });
+  res = await callAdmin({ view: "bookings", action: "move", bookingId: walkIn.id, date: d2, time: "10:00 AM", type: "regular" });
   check("move to a free slot -> 200", res.statusCode, 200);
-  check("moved time", res.body.booking.time, "4:30 PM");
+  check("moved time", res.body.booking.time, "10:00 AM");
+  const day2 = await bookingsLib.listBookingsForDate(d2);
+  check("moved booking shows at new time", day2.some((b) => b.id === walkIn.id && b.time === "10:00 AM"), true);
   const day1 = await bookingsLib.listBookingsForDate(d1);
-  check("moved booking shows at new time", day1.some((b) => b.id === walkIn.id && b.time === "4:30 PM"), true);
-  check("old slot free after move", sched.slotTaken(day1, sched.parseTime("9:00 AM"), 55), false);
+  check("old slot free after move", sched.slotTaken(day1, sched.parseTime("10:00 AM"), 55), false);
   res = await callAdmin({ view: "bookings", action: "move", bookingId: walkIn.id, date: d1, time: "7:00 PM", type: "after" });
   check("move regular -> Private Hours -> 200", res.statusCode, 200);
   check("Private Hours adds $15", res.body.booking.amountCents, 10000);
   check("balance due $15 after move", res.body.booking.balanceDueCents, 1500);
   // Blocked time blocks a move.
   const blk2 = await studio.addBlock({ date: d1, start: "12:00", end: "13:00", reason: "lunch" });
-  res = await callAdmin({ view: "bookings", action: "move", bookingId: walkIn.id, date: d1, time: "12:30 PM", type: "regular" });
+  res = await callAdmin({ view: "bookings", action: "move", bookingId: walkIn.id, date: d1, time: "12:00 PM", type: "regular" });
   check("move into a blocked time -> 409", res.statusCode, 409);
   await studio.removeBlock(blk2.id);
-  res = await callAdmin({ view: "bookings", action: "move", bookingId: "bk-admin-v1", date: d1, time: "9:00 AM", type: "regular" });
+  res = await callAdmin({ view: "bookings", action: "move", bookingId: "bk-admin-v1", date: d1, time: "10:00 AM", type: "regular" });
   check("move a cancelled booking -> 400", res.statusCode, 400);
 
   // ---------- 6. payments: set-amount + record-payment ----------
@@ -451,26 +461,26 @@ async function run() {
   res = mockRes();
   await book(mockReq({
     method: "POST", headers: {},
-    body: { service: "classic-facial", type: "regular", date: d2, time: "9:00 AM", name: "Public Booker", phone: "(905) 555-0200", email: "public@example.com", first: "no" },
+    body: { service: "classic-facial", type: "regular", date: d2, time: "1:00 PM", name: "Public Booker", phone: "(905) 555-0200", email: "public@example.com", first: "no" },
   }), res);
   check("public booking -> 200", res.statusCode, 200);
   check("public booking returns checkout url", res.body.url, "https://checkout.stripe.test/pay/cs_test_1");
   res = mockRes();
   await book(mockReq({
     method: "POST", headers: {},
-    body: { service: "skin-tightening", type: "regular", date: d3, time: "9:00 AM", name: "Consult", phone: "(905) 555-0201", email: "consult@example.com", first: "no" },
+    body: { service: "skin-tightening", type: "regular", date: d4, time: "10:00 AM", name: "Consult", phone: "(905) 555-0201", email: "consult@example.com", first: "no" },
   }), res);
   check("public consultation -> 200", res.statusCode, 200);
   check("consultation paid immediately", res.body.paid, true);
   check("consultation flagged", res.body.consultation, true);
 
   // ---------- 13. settings round-trip via the admin path ----------
-  res = await callAdmin({ view: "settings", action: "buffer", bufferMins: 45 });
+  res = await callAdmin({ view: "settings", action: "buffer", bufferMins: 75 });
   check("admin buffer save -> 200", res.statusCode, 200);
-  check("admin buffer saved 45", res.body.bufferMins, 45);
+  check("admin buffer saved 75", res.body.bufferMins, 75);
   res = await callAdmin(null, { view: "settings" });
-  check("admin settings read buffer 45", res.body.bufferMins, 45);
-  await studio.setBufferMins(30);
+  check("admin settings read buffer 75", res.body.bufferMins, 75);
+  await studio.setBufferMins(60);
   res = await callAdmin({ view: "settings", action: "block-add", date: d4, start: "09:00", end: "10:00", reason: "test" });
   check("admin block-add -> 200", res.statusCode, 200);
   check("admin block-add returns block", !!res.body.block.id, true);
@@ -549,6 +559,41 @@ async function run() {
   check("delete missing code -> 404", res.statusCode, 404);
   res = await callAdmin({ view: "codes", action: "delete", code: "NOPE-0000" });
   check("delete bad code -> 404", res.statusCode, 404);
+
+  // ---------- 16. finish check (Tony Nov 19, 2026) ----------
+  const fcBooking = {
+    id: "bk_finish_test",
+    date: torontoToday(),
+    time: "10:00 AM",
+    service: "classic-facial",
+    serviceName: "Classic Facial",
+    serviceLabel: "Classic Facial",
+    status: "paid",
+    name: "Finish Test",
+    phone: "(905) 555-0999",
+    email: "finish@test.example",
+    addons: [],
+    createdAt: new Date().toISOString(),
+  };
+  await bookingsLib.saveBooking(fcBooking);
+  let fcRes = await callAdmin({ view: "finish-check", action: "notify", bookingId: "bk_finish_test" });
+  check("finish-check notify -> 200", fcRes.statusCode, 200);
+  check("finish-check notify fires once", fcRes.body.notified, true);
+  fcRes = await callAdmin({ view: "finish-check", action: "notify", bookingId: "bk_finish_test" });
+  check("finish-check notify twice -> not re-sent", fcRes.body.notified, false);
+  fcRes = await callAdmin({ view: "finish-check", action: "snooze", bookingId: "bk_finish_test" });
+  check("finish-check snooze -> 200", fcRes.statusCode, 200);
+  const snoozed = await bookingsLib.getBooking("bk_finish_test");
+  check("snooze sets a future time", Date.parse(snoozed.finishSnoozedUntil) > Date.now(), true);
+  fcRes = await callAdmin({ view: "finish-check", action: "done", bookingId: "bk_finish_test" });
+  check("finish-check done -> 200", fcRes.statusCode, 200);
+  const doneFc = await bookingsLib.getBooking("bk_finish_test");
+  check("done sets finishedAt", !!doneFc.finishedAt, true);
+  check("done sets actualEndMin", Number.isFinite(doneFc.actualEndMin), true);
+  fcRes = await callAdmin({ view: "finish-check", action: "done", bookingId: "bk_finish_test" });
+  check("finish-check done twice -> 404", fcRes.statusCode, 404);
+  fcRes = await callAdmin({ view: "finish-check", action: "notify", bookingId: "bk_nope" });
+  check("finish-check notify unknown -> not sent", fcRes.body.notified, false);
 
   console.log(`admin tests: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

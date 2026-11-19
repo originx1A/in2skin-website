@@ -7,7 +7,7 @@
 // fully booked. Counts only — never client names or booking details.
 // At most 31 days per call.
 const { kvGet, configured } = require("../lib/kv");
-const { findService, parseDateLocal, dateKey, freeTimes, timesFor } = require("../lib/schedule");
+const { findService, parseDateLocal, dateKey, freeTimes, timesFor, dayIsFull, countActiveBookings } = require("../lib/schedule");
 const { studioForDate } = require("../lib/studio");
 
 module.exports = async (req, res) => {
@@ -36,9 +36,13 @@ module.exports = async (req, res) => {
           const bookings = await listBookingsForDate(key);
           const { bufferMins, blocks } = await studioForDate(key);
           const opts = { bufferMins, blocks };
+          // Four appointments a day, whatever they are (Tony Nov 19) —
+          // a full day shows no free slots. After-hours is never
+          // bookable online, so its free count is always zero.
+          const full = dayIsFull(bookings);
           dates[key] = {
-            regular: { free: freeTimes(key, "regular", service, bookings, opts, addonIds).length, total: allRegular.length },
-            after: { free: freeTimes(key, "after", service, bookings, opts, addonIds).length, total: allAfter.length },
+            regular: { free: full ? 0 : freeTimes(key, "regular", service, bookings, opts, addonIds).length, total: allRegular.length },
+            after: { free: 0, total: allAfter.length },
           };
         }
         cur.setDate(cur.getDate() + 1);
@@ -46,12 +50,17 @@ module.exports = async (req, res) => {
       return res.status(200).json({ from: dateKey(fromD), to: dateKey(toD), dates, storageConfigured: configured() });
     }
     if (!parseDateLocal(date)) return res.status(400).json({ error: "Choose a valid date." });
-    const all = timesFor(date, type === "after" ? "after" : "regular");
+    // After-hours is by request through Sarah — never offered online
+    // (Tony Nov 19, 2026).
+    if (type === "after") return res.status(200).json({ date, times: [], dayFull: false, bookedCount: 0, storageConfigured: configured() });
+    const all = timesFor(date, "regular");
     if (!configured()) return res.status(200).json({ date, times: all, storageConfigured: false });
     const { listBookingsForDate } = require("../lib/bookings");
     const bookings = await listBookingsForDate(date);
     const { bufferMins, blocks } = await studioForDate(date);
-    return res.status(200).json({ date, times: freeTimes(date, type, service, bookings, { bufferMins, blocks }, addonIds), storageConfigured: true });
+    const bookedCount = countActiveBookings(bookings);
+    const dayFull = dayIsFull(bookings);
+    return res.status(200).json({ date, times: dayFull ? [] : freeTimes(date, "regular", service, bookings, { bufferMins, blocks }, addonIds), dayFull, bookedCount, storageConfigured: true });
   } catch (err) {
     return res.status(err.status || 500).json({ error: err.message });
   }

@@ -239,7 +239,7 @@ async function testBackupAndAudit() {
   assert.strictEqual(res.body.gifts[0].code, "IN2SKIN-TEST01");
 
   // A mutating action writes an audit entry, visible in the audit view.
-  res = await call(data, { method: "POST", body: { view: "settings", action: "buffer", bufferMins: 45 } });
+  res = await call(data, { method: "POST", body: { view: "settings", action: "buffer", bufferMins: 75 } });
   assert.strictEqual(res.statusCode, 200);
   res = await call(data, { method: "GET", query: { view: "audit" } });
   assert.strictEqual(res.statusCode, 200);
@@ -267,7 +267,7 @@ async function testAuditCap() {
   // Write 560 entries directly through the audit path via repeated
   // buffer saves (each one logs), then check the list is capped at 500.
   for (let i = 0; i < 560; i++) {
-    await call(data, { method: "POST", body: { view: "settings", action: "buffer", bufferMins: 30 } });
+    await call(data, { method: "POST", body: { view: "settings", action: "buffer", bufferMins: 60 } });
   }
   const res = await call(data, { method: "GET", query: { view: "audit" } });
   assert.strictEqual(res.statusCode, 200);

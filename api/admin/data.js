@@ -37,7 +37,7 @@
 // POST /api/admin/data { view:"bookings", action:"email-client", bookingId, subject, message }
 //   → send the client a short custom note.
 // POST /api/admin/data { view:"settings", action:"buffer", bufferMins }
-//   → set the gap between appointments (0–120 min, default 30).
+//   → set the gap between appointments (60–120 min, default 60).
 // POST /api/admin/data { view:"settings", action:"block-add", date, start, end, reason }
 //   → block off part of a day (or a whole day) — stops new bookings there.
 // POST /api/admin/data { view:"settings", action:"block-remove", id }
@@ -49,7 +49,14 @@
 // GET /api/admin/data ?view=counts&since=<ISO>
 //   → what is new since `since`: unread caller messages + recent
 //     events (bookings, payments, messages), for the dashboard chime,
-//     banner, and icon badge; also carries the push setup state.
+//     banner, and icon badge; also carries the push setup state and the
+//     finish checks due right now (appointments an hour in, awaiting
+//     Sarah's "Done" / "Not yet").
+// POST /api/admin/data { view:"finish-check", action:"notify"|"done"|"snooze", bookingId }
+//   → the finish check (Tony Nov 19, 2026): "notify" fires the pop-up
+//     once for a due check; "done" marks the appointment finished (the
+//     room is free from now, so the next slot opens an hour from this
+//     minute); "snooze" asks again in 15 minutes.
 // POST /api/admin/data { view:"push", action:"subscribe", subscription }
 //   → store this phone's Web Push subscription (pop-up alerts on).
 // POST /api/admin/data { view:"push", action:"unsubscribe", endpoint }
@@ -69,6 +76,7 @@ const {
   cancelBooking, moveBooking, buildBooking, createBookingCheckout, createPayLink,
   sendBookingConfirmation, sendWalkInConfirmation, sendHoldEmail, finalizePaidBooking,
   balanceDue, recordPayment, newId, PHONE_DISPLAY,
+  dueFinishChecks, notifyFinishCheck, markFinishDone, snoozeFinishCheck,
 } = require("../../lib/bookings");
 const {
   dateKey, money, SERVICES, COMBOS, QUIET_PREMIUM_CENTS, FIRST_VISIT_CENTS,
@@ -346,6 +354,26 @@ module.exports = async (req, res) => {
         await logAudit(session, "push.test", `test pop-up sent to ${out.sent} device(s)`);
         return res.status(200).json({ ok: true, sent: out.sent });
       }
+      if (b.view === "finish-check" && ["notify", "done", "snooze"].includes(b.action)) {
+        const id = String(b.bookingId || "");
+        if (!id) return res.status(400).json({ error: "Missing booking." });
+        if (b.action === "notify") {
+          const booking = await notifyFinishCheck(id);
+          if (!booking) return res.status(200).json({ ok: true, notified: false });
+          await logAudit(session, "finish-check.notify", `finish check pop-up sent — ${booking.serviceName} ${booking.date} ${booking.time}`);
+          return res.status(200).json({ ok: true, notified: true });
+        }
+        if (b.action === "done") {
+          const booking = await markFinishDone(id);
+          if (!booking) return res.status(404).json({ error: "That appointment is already marked done, or it is gone." });
+          await logAudit(session, "finish-check.done", `${booking.serviceName} — ${booking.date} ${booking.time} finished, room free`);
+          return res.status(200).json({ ok: true, booking: publicBooking(booking) });
+        }
+        const booking = await snoozeFinishCheck(id);
+        if (!booking) return res.status(404).json({ error: "That appointment is gone." });
+        await logAudit(session, "finish-check.snooze", `${booking.serviceName} — ${booking.date} ${booking.time} not done yet, asking again in 15 minutes`);
+        return res.status(200).json({ ok: true });
+      }
       if (b.view === "codes" && b.action === "delete") {
         const ok = await deleteGift(b.code);
         if (!ok) return res.status(404).json({ error: "That code is already gone." });
@@ -563,6 +591,7 @@ module.exports = async (req, res) => {
       return res.status(200).json({
         unreadMessages,
         events,
+        finishChecks: await dueFinishChecks(),
         badge: await badgeCount(),
         pushConfigured: pushConfigured(),
         vapidPublicKey: pushPublicKey(),

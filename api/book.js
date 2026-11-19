@@ -9,7 +9,7 @@ const { kvGet, kvSet } = require("../lib/kv");
 const {
   findService, parseDateLocal, timesFor, parseTime, normalizeAddons,
   durationForBooking, baseCentsFor,
-  slotTaken, FIRST_VISIT_CENTS, PENDING_HOLD_MS,
+  slotTaken, FIRST_VISIT_CENTS, PENDING_HOLD_MS, dayIsFull,
 } = require("../lib/schedule");
 const { studioForDate } = require("../lib/studio");
 const {
@@ -59,6 +59,9 @@ async function handleAgentHold(req, res, b) {
     const addonNames = addons.map((id) => findService(id).name);
     const serviceLabel = addonNames.length ? `${svc.name} + ${addonNames.join(" + ")}` : svc.name;
     const type = b.type === "after" ? "after" : "regular";
+    // Early mornings and evenings are by request through Sarah — the voice
+    // agent never books them; it takes a message instead (Tony Nov 19).
+    if (type === "after") return bad(res, "Early mornings and evenings are by request — please take the caller's message and Sarah will call them back.");
     const d = parseDateLocal(b.date);
     if (!d) return bad(res, "Please choose a day.");
     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -75,6 +78,10 @@ async function handleAgentHold(req, res, b) {
     const { bufferMins, blocks } = await studioForDate(b.date);
     if (slotTaken(bookings, parseTime(b.time), totalMins, { bufferMins, blocks })) {
       return res.status(409).json({ error: "That time was just taken — please choose another time." });
+    }
+    // Four appointments a day, whatever they are (Tony Nov 19, 2026).
+    if (dayIsFull(bookings)) {
+      return res.status(409).json({ error: "That day is fully booked — Sarah takes four appointments a day. Please choose another day." });
     }
 
     const first = b.first !== "no";

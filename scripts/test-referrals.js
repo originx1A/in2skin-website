@@ -155,7 +155,7 @@ async function run() {
   let res = mockRes();
   await book({
     method: "POST", headers: {}, body: {
-      service: "classic-facial", date, time: "9:00 AM", type: "regular", forWhom: "me",
+      service: "classic-facial", date, time: "10:00 AM", type: "regular", forWhom: "me",
       name: "Casey Friend", phone: "(905) 555-0303", email: "casey@example.com",
       first: "no", giftCode: "IN2SKIN-TEST01", referredBy: alex.code,
     },
@@ -179,7 +179,7 @@ async function run() {
   res = mockRes();
   await book({
     method: "POST", headers: {}, body: {
-      service: "classic-facial", date, time: "11:00 AM", type: "regular", forWhom: "me",
+      service: "classic-facial", date, time: "1:00 PM", type: "regular", forWhom: "me",
       name: "Dana New", phone: "(905) 555-0404", email: "dana@example.com",
       first: "no", giftCode: "", referredBy: "NOPE-9999",
     },
@@ -188,7 +188,7 @@ async function run() {
   res = mockRes();
   await book({
     method: "POST", headers: {}, body: {
-      service: "classic-facial", date, time: "11:00 AM", type: "regular", forWhom: "me",
+      service: "classic-facial", date, time: "1:00 PM", type: "regular", forWhom: "me",
       name: "Dana New", phone: "(905) 555-0404", email: "dana@example.com",
       first: "no", giftCode: alex.code, referredBy: "",
     },

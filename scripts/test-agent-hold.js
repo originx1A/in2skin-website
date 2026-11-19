@@ -8,7 +8,7 @@ assert.equal(typeof book, "function", "api/book exports a handler");
 
 const sched = require("../lib/schedule");
 assert.equal(sched.PENDING_HOLD_MS, 30 * 60 * 1000, "PENDING_HOLD_MS is 30 min");
-assert.equal(sched.BUFFER_MINS, 30, "BUFFER_MINS is 30");
+assert.equal(sched.BUFFER_MINS, 60, "BUFFER_MINS is 60");
 
 const bookings = require("../lib/bookings");
 assert.equal(typeof bookings.sendHoldEmail, "function", "sendHoldEmail is exported");

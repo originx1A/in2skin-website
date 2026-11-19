@@ -1,5 +1,5 @@
 // Build the nine static service pages + sitemap.xml from the homepage's own
-// data (SERVICES, SERVICE_VIDEOS, AH_PRICE, SEO_TITLES, SEO_DESCS in
+// data (SERVICES, SERVICE_VIDEOS, SEO_TITLES, SEO_DESCS in
 // index.html), so the pages can never drift from the approved copy/prices.
 // Run: npm run build:pages   (or: node scripts/build-service-pages.mjs)
 // Re-run after any change to index.html services data.
@@ -25,7 +25,6 @@ function extractArray(varName) {
 
 const SERVICES = extractArray("SERVICES");
 const SERVICE_VIDEOS = extract("SERVICE_VIDEOS");
-const AH_PRICE = extract("AH_PRICE");
 const SEO_TITLES = extract("SEO_TITLES");
 const SEO_DESCS = extract("SEO_DESCS");
 
@@ -206,7 +205,6 @@ ${JSON.stringify(ld.faq, null, 2)}
         <aside class="price-panel">
           <div class="pp-price">${esc(s.price)}</div>
           <div class="pp-mins">${esc(s.minsLabel)} · Bolton, Ontario</div>
-          <p style="font-size:.93rem; color:var(--ink-soft); margin-bottom:16px;">Private Hours: <strong style="color:var(--sage-deep);">${esc(AH_PRICE[s.id])}</strong></p>
           <a class="btn btn-book btn-big" href="/#book" style="width:100%;">${s.price === "Custom" ? "Book a Consultation" : "Book Online — " + esc(s.price)}</a>
           <a class="btn btn-ghost" href="${PHONE_TEL}" style="width:100%;">Call ${PHONE_DISPLAY}</a>
           <p class="fine">Pay in full securely by card when you book.<br />Cash or e-transfer also welcome at your visit.</p>
