@@ -63,6 +63,7 @@ const sched = require("../lib/schedule");
 const studio = require("../lib/studio");
 const transfer = require("../lib/transfer");
 const bookingsLib = require("../lib/bookings");
+const referralsLib = require("../lib/referrals");
 const messagesLib = require("../lib/messages");
 const dataHandler = require("../api/admin/data");
 const availability = require("../api/availability");
@@ -620,6 +621,51 @@ async function run() {
   check("delete twice -> 404", delRes.statusCode, 404);
   delRes = await callAdmin({ view: "bookings", action: "delete", bookingId: "bk_nope" });
   check("delete unknown -> 404", delRes.statusCode, 404);
+
+  // ---------- 18. backup-before-delete + payments delete (Tony Nov 19, 2026) ----------
+  // Payments, gift codes, and referrals are archived BEFORE they are
+  // deleted — the archive rides in every backup download + weekly email.
+  // Bookings and caller messages delete with no archive.
+  const backupBefore = await callAdmin(null, { view: "backup" });
+  check("backup export -> 200", backupBefore.statusCode, 200);
+  const archivedBefore = (backupBefore.body.counts || {}).deleted || 0;
+  // A pay-on-the-spot payment (standalone) + a booking-linked one.
+  const paySpotTest = { id: "pay_del_test", kind: "pay-spot", amountCents: 5000, clientName: "Pay Test", serviceLabel: "Classic Facial", method: "cash", createdAt: new Date().toISOString() };
+  await bookingsLib.recordPayment(paySpotTest);
+  const payLinkedTest = { id: "pay_linked_test", kind: "booking", bookingId: "bk_linked_test", amountCents: 8500, clientName: "Linked Test", serviceLabel: "Classic Facial", method: "cash", createdAt: new Date().toISOString() };
+  await bookingsLib.recordPayment(payLinkedTest);
+  const refRes = await callAdmin({ view: "referrals", action: "create", name: "Ref Del", email: "refdel@test.example", phone: "9055550123" });
+  check("referral create -> 200", refRes.statusCode, 200);
+  const refCode = refRes.body.referral.code;
+  const delGift2 = await bookingsLib.ensureGiftCode(voucherSession("cs_admin_del2", "Classic Facial — $65", 6500, "gift"));
+  const msgTest = await messagesLib.saveMessage({ name: "Msg Del", phone: "9055550111", reason: "test message", callId: "call_del" });
+  let payRes = await callAdmin({ view: "payments", action: "delete", paymentId: "pay_del_test" });
+  check("delete pay-spot payment -> 200", payRes.statusCode, 200);
+  check("pay-spot payment gone", await bookingsLib.getPayment("pay_del_test"), null);
+  payRes = await callAdmin({ view: "payments", action: "delete", paymentId: "pay_linked_test" });
+  check("delete booking-linked payment -> 400", payRes.statusCode, 400);
+  check("booking-linked payment kept", !!(await bookingsLib.getPayment("pay_linked_test")), true);
+  payRes = await callAdmin({ view: "payments", action: "delete", paymentId: "pay_nope" });
+  check("delete unknown payment -> 404", payRes.statusCode, 404);
+  let arcRes = await callAdmin({ view: "referrals", action: "delete", code: refCode });
+  check("delete referral -> 200", arcRes.statusCode, 200);
+  check("referral gone after delete", await referralsLib.getReferralByCode(refCode), null);
+  arcRes = await callAdmin({ view: "codes", action: "delete", code: delGift2.code });
+  check("delete gift -> 200", arcRes.statusCode, 200);
+  check("gift gone after delete", await bookingsLib.getGift(delGift2.code), null);
+  arcRes = await callAdmin({ view: "messages", action: "delete", id: msgTest.id });
+  check("delete message -> 200", arcRes.statusCode, 200);
+  check("message gone after delete", (await messagesLib.listMessages()).some((m) => m.id === msgTest.id), false);
+  const backupAfter = await callAdmin(null, { view: "backup" });
+  const deleted = backupAfter.body.deleted || [];
+  const types = deleted.map((d) => d.type);
+  check("archive grew by exactly 3 (payment + referral + gift)", (backupAfter.body.counts || {}).deleted, archivedBefore + 3);
+  check("archive has the payment", deleted.some((d) => d.type === "payment" && d.record && d.record.id === "pay_del_test"), true);
+  check("archived payment keeps its amount", (deleted.find((d) => d.type === "payment" && d.record && d.record.id === "pay_del_test") || { record: {} }).record.amountCents, 5000);
+  check("archive has the referral", deleted.some((d) => d.type === "referral" && d.record && d.record.code === refCode), true);
+  check("archive has the gift", deleted.some((d) => d.type === "gift" && d.record && d.record.code === delGift2.code), true);
+  check("archive has no booking entries", types.includes("booking"), false);
+  check("archive has no message entries", types.includes("message"), false);
 
   console.log(`admin tests: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

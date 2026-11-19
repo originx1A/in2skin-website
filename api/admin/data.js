@@ -14,6 +14,17 @@
 // POST /api/admin/data { view:"referrals", action:"delete", code }
 //   → delete a referral code for good (record, ref:all entry, email/phone
 //     indexes). Any credit or banked free reflexology on it is gone.
+//     BACKUP FIRST (Tony Nov 19, 2026): the record is saved into the
+//     deleted-items archive before it is removed — the archive rides in
+//     every full backup download and weekly backup email.
+// POST /api/admin/data { view:"codes", action:"delete", code }
+//   → delete a gift certificate / voucher for good. BACKUP FIRST, same
+//     rule as referrals — the record is archived before it is removed.
+// POST /api/admin/data { view:"payments", action:"delete", paymentId }
+//   → delete a pay-on-the-spot payment record for good. BACKUP FIRST,
+//     same rule. Booking-linked payments are refused here — they are the
+//     audit trail for money already in a booking; delete or cancel the
+//     booking from the calendar instead.
 // POST /api/admin/data { view:"bookings", action:"complete"|"no-show", bookingId }
 //   → mark a booking's outcome (complete voids a $0 voucher; no-show restores it).
 // POST /api/admin/data { view:"bookings", action:"cancel", bookingId, reason }
@@ -75,11 +86,11 @@
 const { requireAdmin, adminEmails } = require("../../lib/auth");
 const { pipeline, kvGet, kvSet, kvDel } = require("../../lib/kv");
 const {
-  listBookingsRange, listBookingsForDate, listPayments, listGifts, deleteGift,
+  listBookingsRange, listBookingsForDate, listPayments, listGifts, deleteGift, getGift,
   giftDisplayStatus, getBooking, markBookingOutcome, saveBooking,
   cancelBooking, moveBooking, deleteBooking, buildBooking, createBookingCheckout, createPayLink,
   sendBookingConfirmation, sendWalkInConfirmation, sendHoldEmail, finalizePaidBooking,
-  balanceDue, recordPayment, newId, PHONE_DISPLAY,
+  balanceDue, recordPayment, getPayment, deletePayment, newId, PHONE_DISPLAY,
   dueFinishChecks, notifyFinishCheck, markFinishDone, snoozeFinishCheck,
 } = require("../../lib/bookings");
 const {
@@ -87,7 +98,7 @@ const {
   parseTime, durationFor, findService,
 } = require("../../lib/schedule");
 const { getSettings, saveSettings, transferStatus } = require("../../lib/transfer");
-const { listReferrals, getOrCreateReferral, deleteReferral, normalizeReferralCode, attendeeOf } = require("../../lib/referrals");
+const { listReferrals, getOrCreateReferral, getReferralByCode, deleteReferral, normalizeReferralCode, attendeeOf } = require("../../lib/referrals");
 const {
   getBufferMins, setBufferMins, listBlocks, addBlock, removeBlock, studioForDate,
 } = require("../../lib/studio");
@@ -173,6 +184,35 @@ async function listAudit(limit) {
   return out;
 }
 
+// Backup-before-delete (Tony Nov 19, 2026): a payment, gift code, or
+// referral is only ever deleted AFTER a backup copy of the record exists.
+// archiveDeleted saves the full record into the deleted-items archive
+// (key backup:deleted, newest first, capped at 200 — the archive rides
+// inside every full backup download and every weekly backup email, so a
+// deleted record survives in the emailed backup even after it rolls out
+// of the live archive). The delete handlers below call this FIRST and
+// abort the delete if the archive write throws — fail closed, never lose
+// a record. Bookings and caller messages do NOT need it (Tony's rule
+// names payments, gift codes, and referrals only).
+const DELETED_ARCHIVE_MAX = 200;
+
+async function archiveDeleted(session, type, record) {
+  const entry = {
+    type,
+    record,
+    deletedAt: new Date().toISOString(),
+    deletedBy: (session && session.email) || "studio",
+  };
+  const all = (await kvGet("backup:deleted")) || [];
+  all.unshift(entry);
+  await kvSet("backup:deleted", all.slice(0, DELETED_ARCHIVE_MAX));
+  return entry;
+}
+
+async function listDeletedArchive() {
+  return (await kvGet("backup:deleted")) || [];
+}
+
 // Every booking, found by scanning the per-day indexes — a backup must not
 // miss a booking just because it is older than some window. Falls back to
 // a wide date range if SCAN is unavailable.
@@ -204,7 +244,7 @@ async function listAllBookings() {
 }
 
 async function exportBackup() {
-  const [bookings, gifts, payments, referrals, transferSettings, bufferMins, blocks] = await Promise.all([
+  const [bookings, gifts, payments, referrals, transferSettings, bufferMins, blocks, deleted] = await Promise.all([
     listAllBookings(),
     listGifts(),
     listPayments(null, null),
@@ -212,6 +252,7 @@ async function exportBackup() {
     getSettings(),
     getBufferMins(),
     listBlocks(),
+    listDeletedArchive(),
   ]);
   return {
     exportedAt: new Date().toISOString(),
@@ -221,11 +262,13 @@ async function exportBackup() {
       gifts: gifts.length,
       payments: payments.length,
       referrals: referrals.length,
+      deleted: deleted.length,
     },
     bookings,
     gifts,
     payments,
     referrals,
+    deleted,
     settings: { transfer: transferSettings, bufferMins, blocks },
   };
 }
@@ -238,10 +281,10 @@ async function sendBackupEmail(backup) {
     to,
     subject: `In2Skin weekly backup — ${backup.counts.bookings} bookings, ${backup.counts.gifts} gift codes (${backup.exportedAt.slice(0, 10)})`,
     html: `<p>In2Skin weekly backup — ${backup.exportedAt}.</p>`
-      + `<p>Bookings: <strong>${backup.counts.bookings}</strong> · Gift codes: <strong>${backup.counts.gifts}</strong> · Payments: <strong>${backup.counts.payments}</strong> · Referrals: <strong>${backup.counts.referrals}</strong>.</p>`
+      + `<p>Bookings: <strong>${backup.counts.bookings}</strong> · Gift codes: <strong>${backup.counts.gifts}</strong> · Payments: <strong>${backup.counts.payments}</strong> · Referrals: <strong>${backup.counts.referrals}</strong> · Deleted items backed up: <strong>${backup.counts.deleted || 0}</strong>.</p>`
       + `<p>The full backup is below as text — save it somewhere safe. You can also download the same file any time from the admin dashboard (Backup section).</p>`
       + `<pre style="font-size:11px; white-space:pre-wrap; word-break:break-all;">${json.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>`,
-    text: `In2Skin weekly backup — ${backup.exportedAt}.\nBookings: ${backup.counts.bookings} · Gift codes: ${backup.counts.gifts} · Payments: ${backup.counts.payments} · Referrals: ${backup.counts.referrals}.\n\n${json}`,
+    text: `In2Skin weekly backup — ${backup.exportedAt}.\nBookings: ${backup.counts.bookings} · Gift codes: ${backup.counts.gifts} · Payments: ${backup.counts.payments} · Referrals: ${backup.counts.referrals} · Deleted items backed up: ${backup.counts.deleted || 0}.\n\n${json}`,
   });
 }
 
@@ -287,9 +330,14 @@ module.exports = async (req, res) => {
         return res.status(200).json({ referral });
       }
       if (b.view === "referrals" && b.action === "delete") {
+        const ref = await getReferralByCode(b.code);
+        if (!ref) return res.status(404).json({ error: "That referral code is already gone." });
+        // Backup first (Tony Nov 19, 2026) — the archive write must succeed
+        // before anything is deleted; a throw here aborts the delete.
+        await archiveDeleted(session, "referral", ref);
         const ok = await deleteReferral(b.code);
         if (!ok) return res.status(404).json({ error: "That referral code is already gone." });
-        await logAudit(session, "referrals.delete", `code ${normalizeReferralCode(b.code)} deleted`);
+        await logAudit(session, "referrals.delete", `code ${normalizeReferralCode(b.code)} deleted (backed up first)`);
         return res.status(200).json({ ok: true });
       }
       if (b.view === "settings" && b.action === "buffer") {
@@ -379,9 +427,28 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true });
       }
       if (b.view === "codes" && b.action === "delete") {
+        const gift = await getGift(b.code);
+        if (!gift) return res.status(404).json({ error: "That code is already gone." });
+        // Backup first (Tony Nov 19, 2026) — the archive write must succeed
+        // before anything is deleted; a throw here aborts the delete.
+        await archiveDeleted(session, "gift", gift);
         const ok = await deleteGift(b.code);
         if (!ok) return res.status(404).json({ error: "That code is already gone." });
-        await logAudit(session, "codes.delete", `gift code ${b.code} deleted`);
+        await logAudit(session, "codes.delete", `gift code ${b.code} deleted (backed up first)`);
+        return res.status(200).json({ ok: true });
+      }
+      if (b.view === "payments" && b.action === "delete" && b.paymentId) {
+        const payment = await getPayment(b.paymentId);
+        if (!payment) return res.status(404).json({ error: "That payment is already gone." });
+        if (payment.bookingId) {
+          return res.status(400).json({ error: "That payment belongs to a booking — delete or cancel the booking from the calendar instead." });
+        }
+        // Backup first (Tony Nov 19, 2026) — the archive write must succeed
+        // before anything is deleted; a throw here aborts the delete.
+        await archiveDeleted(session, "payment", payment);
+        const ok = await deletePayment(b.paymentId);
+        if (!ok) return res.status(404).json({ error: "That payment is already gone." });
+        await logAudit(session, "payments.delete", `payment ${money(payment.amountCents)} — ${payment.clientName || ""} deleted (backed up first)`);
         return res.status(200).json({ ok: true });
       }
       if (b.view === "bookings" && b.action === "walk-in") {

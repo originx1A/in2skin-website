@@ -1020,6 +1020,7 @@
 
         var payDate = document.getElementById("payDate");
         payDate.value = todayKey();
+        var payRecords = {};
         function loadPayments(){
           fetch("/api/admin/payments?date=" + payDate.value)
             .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
@@ -1027,13 +1028,50 @@
               if (!res.ok){ msg.textContent = res.j.error || "Could not load payments."; return; }
               var j = res.j;
               document.getElementById("paySummary").innerHTML = '<dl><dt>' + fmtDate(j.date) + '</dt><dd>Total paid: <strong>' + j.total + '</strong> (' + (j.paySpot.length + j.bookings.length) + ' payments)</dd></dl>';
+              payRecords = {};
               var rows = [];
-              j.paySpot.forEach(function(p){ rows.push('<div class="after-item"><div><strong>' + money(p.amountCents) + '</strong> — ' + (p.serviceLabel || "In2Skin visit") + ' · ' + (p.clientName || "Client") + ' · pay on the spot</div></div>'); });
+              j.paySpot.forEach(function(p){
+                payRecords[p.id] = p;
+                // Delete only for standalone pay-on-the-spot records — a
+                // payment tied to a booking is that booking's audit trail
+                // and is removed by deleting the booking from the calendar.
+                var del = !p.bookingId ? ' <div style="margin-top:8px;"><button class="btn btn-ghost btn-book-sm" type="button" data-pay-del="' + p.id + '">Delete</button></div><div class="act-slot" data-slot="pay-' + p.id + '"></div>' : '';
+                rows.push('<div class="after-item"><div><strong>' + money(p.amountCents) + '</strong> — ' + (p.serviceLabel || "In2Skin visit") + ' · ' + (p.clientName || "Client") + ' · pay on the spot</div>' + del + '</div>');
+              });
               j.bookings.forEach(function(b){ rows.push('<div class="after-item"><div><strong>' + money(b.amountPaidCents || 0) + '</strong> — ' + b.serviceName + ' · ' + (b.guestName || b.name || "Client") + ' · ' + b.time + ' · ' + (b.via === "admin" ? "walk-in" : "online booking") + (b.giftAppliedCents ? ' · ' + money(b.giftAppliedCents) + ' from gift code' : '') + ((b.balanceDueCents || 0) > 0 ? ' · <strong style="color:#7A3B2E;">owes ' + money(b.balanceDueCents) + '</strong>' : '') + '</div></div>'); });
               document.getElementById("payList").innerHTML = rows.length ? rows.join("") : "<p style='color:var(--ink-soft);'>No payments recorded for this day yet.</p>";
             })
             .catch(function(){ msg.textContent = "Could not load payments — check your connection."; });
         }
+        function payDelPanel(p){
+          return '<div class="act-panel"><h3 style="margin:0 0 6px;">Delete this payment for good?</h3>'
+            + '<p class="sub">' + money(p.amountCents) + ' — ' + (p.serviceLabel || "In2Skin visit") + ' · ' + (p.clientName || "Client") + '<br>A backup copy is saved first — nothing is lost for good.</p>'
+            + '<p><button class="btn btn-book" type="button" data-pay-yes="' + p.id + '">Yes, delete it</button> '
+            + '<button class="btn btn-ghost" type="button" data-pay-no="' + p.id + '">Keep it</button> <span id="payDelMsg" style="color:#7A3B2E;"></span></p></div>';
+        }
+        document.getElementById("payList").addEventListener("click", function(ev){
+          var delBtn = ev.target.closest("[data-pay-del]");
+          if (delBtn){
+            var p = payRecords[delBtn.getAttribute("data-pay-del")];
+            if (p) openPanel("pay-" + p.id, payDelPanel(p));
+            return;
+          }
+          var yesBtn = ev.target.closest("[data-pay-yes]");
+          if (yesBtn){
+            var pid = yesBtn.getAttribute("data-pay-yes");
+            yesBtn.disabled = true;
+            postAdmin({ view:"payments", action:"delete", paymentId: pid })
+              .then(function(res){
+                if (!res.ok){ var dm = document.getElementById("payDelMsg"); if (dm) dm.textContent = res.j.error || "Could not delete the payment."; yesBtn.disabled = false; return; }
+                msg.textContent = "Payment deleted — a backup copy was saved first.";
+                loadPayments();
+              })
+              .catch(function(){ var dm2 = document.getElementById("payDelMsg"); if (dm2) dm2.textContent = "Could not delete the payment — check your connection."; yesBtn.disabled = false; });
+            return;
+          }
+          var noBtn = ev.target.closest("[data-pay-no]");
+          if (noBtn){ closePanels(); return; }
+        });
         function loadWeek(){
           var box = document.getElementById("weekSummary");
           if (!box) return;
@@ -1337,31 +1375,52 @@
         loadCal();
 
         // ---- referrals ----
+        var refRecords = {};
         function loadReferrals(){
           fetch("/api/admin/data?view=referrals")
             .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
             .then(function(res){
               if (!res.ok){ document.getElementById("refList").textContent = res.j.error || "Could not load referrals."; return; }
+              refRecords = {};
               var rows = res.j.referrals.map(function(r){
+                refRecords[r.code] = r;
                 var friends = (r.referred || []).map(function(f){
                   return (f.name || f.email || "Friend") + " — " + (f.paid ? "paid" : "booked, not paid yet");
                 }).join("; ");
                 return '<div class="after-item"><div><strong>' + r.code + '</strong> — ' + (r.name || "Client") + ' · ' + (r.email || "") + ' · ' + (r.phone || "")
                   + '<br/>Credit: <strong>' + money(r.creditCents) + '</strong> (used ' + money(r.creditUsedCents) + ') · Free reflexology banked: <strong>' + r.freeReflexology + '</strong> · Paid referrals: <strong>' + r.paidCount + '</strong>'
                   + (friends ? '<br/><span style="color:var(--ink-soft);">Referred: ' + friends + '</span>' : '<br/><span style="color:var(--ink-soft);">No referrals yet.</span>')
-                  + '</div><div style="margin-top:8px;"><button class="btn btn-ghost btn-book-sm" type="button" data-ref-del="' + r.code + '">Delete</button></div></div>';
+                  + '</div><div style="margin-top:8px;"><button class="btn btn-ghost btn-book-sm" type="button" data-ref-del="' + r.code + '">Delete</button></div><div class="act-slot" data-slot="ref-' + r.code + '"></div></div>';
               });
               document.getElementById("refList").innerHTML = rows.length ? rows.join("") : "<p style='color:var(--ink-soft);'>No referral codes yet — the first one is created when a client books.</p>";
             })
             .catch(function(){ document.getElementById("refList").textContent = "Could not load referrals — check your connection."; });
         }
         document.getElementById("refList").addEventListener("click", function(ev){
+          var yesBtn = ev.target.closest("[data-ref-yes]");
+          if (yesBtn){
+            var ycode = yesBtn.getAttribute("data-ref-yes");
+            yesBtn.disabled = true;
+            postAdmin({ view:"referrals", action:"delete", code: ycode })
+              .then(function(res){
+                if (!res.ok){ var ym = document.getElementById("refDelMsg"); if (ym) ym.textContent = res.j.error || "Could not delete the code."; yesBtn.disabled = false; return; }
+                msg.textContent = "Referral code deleted — a backup copy was saved first.";
+                loadReferrals();
+              })
+              .catch(function(){ var ym2 = document.getElementById("refDelMsg"); if (ym2) ym2.textContent = "Could not delete the code — check your connection."; yesBtn.disabled = false; });
+            return;
+          }
+          var noBtn = ev.target.closest("[data-ref-no]");
+          if (noBtn){ closePanels(); return; }
           var delBtn = ev.target.closest("[data-ref-del]");
           if (!delBtn) return;
           var code = delBtn.getAttribute("data-ref-del");
-          if (!confirm("Delete this referral code (" + code + ")? Any credit or banked free reflexology on it is gone for good.")) return;
-          postAdmin({ view:"referrals", action:"delete", code: code })
-            .then(function(){ loadReferrals(); });
+          var r = refRecords[code];
+          if (!r) return;
+          openPanel("ref-" + code, '<div class="act-panel"><h3 style="margin:0 0 6px;">Delete this referral code for good?</h3>'
+            + '<p class="sub"><strong>' + code + '</strong> — ' + (r.name || "Client") + ' · Credit ' + money(r.creditCents) + ' · Free reflexology banked: ' + r.freeReflexology + '<br>Any credit or banked free reflexology on it is gone — a backup copy is saved first.</p>'
+            + '<p><button class="btn btn-book" type="button" data-ref-yes="' + code + '">Yes, delete it</button> '
+            + '<button class="btn btn-ghost" type="button" data-ref-no="' + code + '">Keep it</button> <span id="refDelMsg" style="color:#7A3B2E;"></span></p></div>');
         });
         document.getElementById("refCreate").addEventListener("click", function(){
           var m = document.getElementById("refMsg");
@@ -1387,12 +1446,15 @@
           var sign = u.amountCents < 0 ? "+" : "−";
           return money(Math.abs(u.amountCents)) + " on " + (u.date || "").slice(0, 10) + (u.usedBy ? " · " + u.usedBy : "") + (u.note ? " (" + u.note + ")" : "");
         }
+        var codeRecords = {};
         function loadCodes(){
           fetch("/api/admin/data?view=codes")
             .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
             .then(function(res){
               if (!res.ok){ document.getElementById("codeList").textContent = res.j.error || "Could not load codes."; return; }
+              codeRecords = {};
               var rows = res.j.codes.map(function(g){
+                codeRecords[g.code] = g;
                 var spent = (g.uses || []).reduce(function(n, u){ return n + (u.amountCents || 0); }, 0);
                 var uses = (g.uses || []).map(function(u){ return fmtUse(u); }).join("; ");
                 return '<div class="after-item"><div><strong>' + g.code + '</strong> — ' + (g.kind === "voucher" ? "Treatment voucher" : "Gift certificate")
@@ -1401,7 +1463,7 @@
                   + '<br/>Original <strong>' + money(g.originalCents) + '</strong> · Spent ' + money(spent) + ' · Balance left <strong>' + money(g.balanceCents) + '</strong> · Status: <strong>' + g.status + '</strong>'
                   + (g.suggestedUseBy ? '<br/><span style="color:var(--ink-soft);">Suggested use by ' + g.suggestedUseBy + ' — the dollar value never expires.</span>' : '')
                   + (uses ? '<br/><span style="color:var(--ink-soft);">Uses: ' + uses + '</span>' : '')
-                  + '</div><div style="margin-top:8px;"><button class="btn btn-ghost btn-book-sm" type="button" data-code-del="' + g.code + '">Delete</button></div></div>';
+                  + '</div><div style="margin-top:8px;"><button class="btn btn-ghost btn-book-sm" type="button" data-code-del="' + g.code + '">Delete</button></div><div class="act-slot" data-slot="code-' + g.code + '"></div></div>';
               });
               document.getElementById("codeList").innerHTML = rows.length ? rows.join("") : "<p style='color:var(--ink-soft);'>No gift certificates or vouchers yet.</p>";
             })
@@ -1409,11 +1471,30 @@
         }
         loadCodes();
         document.getElementById("codeList").addEventListener("click", function(ev){
+          var yesBtn = ev.target.closest("[data-code-yes]");
+          if (yesBtn){
+            var ycode = yesBtn.getAttribute("data-code-yes");
+            yesBtn.disabled = true;
+            postAdmin({ view:"codes", action:"delete", code: ycode })
+              .then(function(res){
+                if (!res.ok){ var ym = document.getElementById("codeDelMsg"); if (ym) ym.textContent = res.j.error || "Could not delete the code."; yesBtn.disabled = false; return; }
+                msg.textContent = "Gift code deleted — a backup copy was saved first.";
+                loadCodes();
+              })
+              .catch(function(){ var ym2 = document.getElementById("codeDelMsg"); if (ym2) ym2.textContent = "Could not delete the code — check your connection."; yesBtn.disabled = false; });
+            return;
+          }
+          var noBtn = ev.target.closest("[data-code-no]");
+          if (noBtn){ closePanels(); return; }
           var delBtn = ev.target.closest("[data-code-del]");
           if (!delBtn) return;
-          if (!confirm("Delete this code? Its remaining balance will be gone for good.")) return;
-          postAdmin({ view:"codes", action:"delete", code: delBtn.getAttribute("data-code-del") })
-            .then(function(){ loadCodes(); });
+          var code = delBtn.getAttribute("data-code-del");
+          var g = codeRecords[code];
+          if (!g) return;
+          openPanel("code-" + code, '<div class="act-panel"><h3 style="margin:0 0 6px;">Delete this code for good?</h3>'
+            + '<p class="sub"><strong>' + code + '</strong> — ' + (g.kind === "voucher" ? "Treatment voucher" : "Gift certificate") + ' · Balance left ' + money(g.balanceCents) + '<br>Its remaining balance will be gone for good — a backup copy is saved first.</p>'
+            + '<p><button class="btn btn-book" type="button" data-code-yes="' + code + '">Yes, delete it</button> '
+            + '<button class="btn btn-ghost" type="button" data-code-no="' + code + '">Keep it</button> <span id="codeDelMsg" style="color:#7A3B2E;"></span></p></div>');
         });
 
         // ---- call answering hours ----
@@ -1523,17 +1604,20 @@
         function fmtMsgTime(iso){
           try { return new Date(iso).toLocaleString("en-CA", { month:"short", day:"numeric", hour:"numeric", minute:"2-digit" }); } catch(e){ return iso; }
         }
+        var msgRecords = {};
         function loadMessages(){
           fetch("/api/admin/data?view=messages")
             .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
             .then(function(res){
               if (!res.ok){ document.getElementById("msgList").textContent = res.j.error || "Could not load messages."; return; }
+              msgRecords = {};
               var rows = res.j.messages.map(function(m){
+                msgRecords[m.id] = m;
                 var tel = (m.phone || "").replace(/[^0-9+]/g, "");
                 return '<div class="after-item"' + (m.read ? ' style="opacity:.65;"' : '') + '><div><strong>' + esc(m.name) + '</strong> · <a href="tel:' + tel + '">' + esc(m.phone) + '</a> · ' + fmtMsgTime(m.receivedAt)
                   + '<br/>' + esc(m.reason || "No reason given.")
                   + '</div><div style="margin-top:8px;"><button class="btn btn-ghost btn-book-sm" type="button" data-msg-read="' + m.id + '" data-read="' + (m.read ? "false" : "true") + '">' + (m.read ? "Mark unread" : "Mark read") + '</button>'
-                  + ' <button class="btn btn-ghost btn-book-sm" type="button" data-msg-del="' + m.id + '">Delete</button></div></div>';
+                  + ' <button class="btn btn-ghost btn-book-sm" type="button" data-msg-del="' + m.id + '">Delete</button></div><div class="act-slot" data-slot="msg-' + m.id + '"></div></div>';
               });
               document.getElementById("msgList").innerHTML = rows.length ? rows.join("") : "<p style='color:var(--ink-soft);'>No messages yet — when the assistant takes one, it shows up here.</p>";
             })
@@ -1546,11 +1630,30 @@
               .then(function(){ loadMessages(); });
             return;
           }
+          var yesBtn = ev.target.closest("[data-msg-yes]");
+          if (yesBtn){
+            var yid = yesBtn.getAttribute("data-msg-yes");
+            yesBtn.disabled = true;
+            postAdmin({ view:"messages", action:"delete", id: yid })
+              .then(function(res){
+                if (!res.ok){ var ym = document.getElementById("msgDelMsg"); if (ym) ym.textContent = res.j.error || "Could not delete the message."; yesBtn.disabled = false; return; }
+                msg.textContent = "Message deleted.";
+                loadMessages();
+              })
+              .catch(function(){ var ym2 = document.getElementById("msgDelMsg"); if (ym2) ym2.textContent = "Could not delete the message — check your connection."; yesBtn.disabled = false; });
+            return;
+          }
+          var noBtn = ev.target.closest("[data-msg-no]");
+          if (noBtn){ closePanels(); return; }
           var delBtn = ev.target.closest("[data-msg-del]");
           if (delBtn){
-            if (!confirm("Delete this message?")) return;
-            postAdmin({ view:"messages", action:"delete", id: delBtn.getAttribute("data-msg-del") })
-              .then(function(){ loadMessages(); });
+            var mid = delBtn.getAttribute("data-msg-del");
+            var m = msgRecords[mid];
+            if (!m) return;
+            openPanel("msg-" + mid, '<div class="act-panel"><h3 style="margin:0 0 6px;">Delete this message?</h3>'
+              + '<p class="sub">' + esc(m.name) + ' · ' + esc(m.phone) + ' · ' + fmtMsgTime(m.receivedAt) + '<br>It won\'t come back.</p>'
+              + '<p><button class="btn btn-book" type="button" data-msg-yes="' + mid + '">Yes, delete it</button> '
+              + '<button class="btn btn-ghost" type="button" data-msg-no="' + mid + '">Keep it</button> <span id="msgDelMsg" style="color:#7A3B2E;"></span></p></div>');
             return;
           }
         });
@@ -2082,7 +2185,7 @@
               a.download = "in2skin-backup-" + (res.j.exportedAt || "").slice(0, 10) + ".json";
               a.click();
               URL.revokeObjectURL(a.href);
-              m.textContent = "Downloaded — " + res.j.counts.bookings + " bookings, " + res.j.counts.gifts + " gift codes, " + res.j.counts.payments + " payments. A copy is also emailed every Monday morning.";
+              m.textContent = "Downloaded — " + res.j.counts.bookings + " bookings, " + res.j.counts.gifts + " gift codes, " + res.j.counts.payments + " payments, " + (res.j.counts.deleted || 0) + " deleted items backed up. A copy is also emailed every Monday morning.";
             })
             .catch(function(){ m.textContent = "Could not make the backup — check your connection."; });
         });
