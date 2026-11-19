@@ -1108,9 +1108,14 @@
          already booking — and the chat bubble lifts clear above the
          wizard bar, using the bar's measured height (--wiz-bar-h, set by
          syncWizBar in index.html) so it never sits on it. The bar also
-         drops its chat-clearance padding, giving the text room. */
+         drops its chat-clearance padding, giving the text room.
+         The bar sits right down at the bottom (Tony Nov 18, 2026): the
+         72px under it used to clear the Book/Call bar, but that bar is
+         hidden while a wizard bar shows, so the gap was dead space and
+         the bar floated up high. 12px above the safe area now; the chat
+         bubble sits 12px above the lowered bar. */
       @media (max-width:860px){
         body.has-wiz-bar .mobile-bar{ display:none; }
-        body.has-wiz-bar .pkg-bar{ padding-right:14px; }
-        body.has-wiz-bar .chat-fab{ bottom:calc(72px + var(--wiz-bar-h, 96px) + 12px + env(safe-area-inset-bottom)); }
+        body.has-wiz-bar .pkg-bar{ padding-right:14px; bottom:calc(12px + env(safe-area-inset-bottom)); }
+        body.has-wiz-bar .chat-fab{ bottom:calc(12px + var(--wiz-bar-h, 96px) + 12px + env(safe-area-inset-bottom)); }
       }
