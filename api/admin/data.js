@@ -61,6 +61,11 @@
 //   → mark a caller message read / unread.
 // POST /api/admin/data { view:"messages", action:"delete", id }
 //   → delete a caller message.
+// POST /api/admin/data { view:"messages", action:"test" }
+//   → send a test caller message through the whole path (save → email →
+//     pop-up) so Sarah can check it reaches her.
+// GET /api/admin/data ?view=calls → the Recent calls log (signed-in only:
+//   transcript / recording links live here and nowhere public).
 // GET /api/admin/data ?view=counts&since=<ISO>
 //   → what is new since `since`: unread caller messages + recent
 //     events (bookings, payments, messages), for the dashboard chime,
@@ -97,12 +102,13 @@ const {
   dateKey, money, SERVICES, COMBOS, QUIET_PREMIUM_CENTS, FIRST_VISIT_CENTS,
   parseTime, durationFor, findService,
 } = require("../../lib/schedule");
-const { getSettings, saveSettings, transferStatus } = require("../../lib/transfer");
+const { getSettings, saveSettings, transferStatus, messageRecipients } = require("../../lib/transfer");
 const { listReferrals, getOrCreateReferral, getReferralByCode, deleteReferral, normalizeReferralCode, attendeeOf } = require("../../lib/referrals");
 const {
   getBufferMins, setBufferMins, listBlocks, addBlock, removeBlock, studioForDate,
 } = require("../../lib/studio");
-const { listMessages, markMessageRead, deleteMessage } = require("../../lib/messages");
+const { listMessages, markMessageRead, deleteMessage, saveMessage, deliverCallerMessage } = require("../../lib/messages");
+const { listCalls } = require("../../lib/calls");
 const {
   configured: pushConfigured, publicKey: pushPublicKey, detail: pushDetail, addSub, removeSub,
   listEvents, listEventsSince, badgeCount, sendPush,
@@ -254,7 +260,7 @@ async function listAllBookings() {
 }
 
 async function exportBackup() {
-  const [bookings, gifts, payments, referrals, transferSettings, bufferMins, blocks, deleted] = await Promise.all([
+  const [bookings, gifts, payments, referrals, transferSettings, bufferMins, blocks, deleted, calls] = await Promise.all([
     listAllBookings(),
     listGifts(),
     listPayments(null, null),
@@ -263,6 +269,7 @@ async function exportBackup() {
     getBufferMins(),
     listBlocks(),
     listDeletedArchive(),
+    listCalls(),
   ]);
   return {
     exportedAt: new Date().toISOString(),
@@ -273,12 +280,14 @@ async function exportBackup() {
       payments: payments.length,
       referrals: referrals.length,
       deleted: deleted.length,
+      calls: calls.length,
     },
     bookings,
     gifts,
     payments,
     referrals,
     deleted,
+    calls,
     settings: { transfer: transferSettings, bufferMins, blocks },
   };
 }
@@ -409,6 +418,23 @@ module.exports = async (req, res) => {
         if (!ok) return res.status(404).json({ error: "Message not found." });
         await logAudit(session, "messages.delete", `message ${b.id} deleted`);
         return res.status(200).json({ ok: true });
+      }
+      if (b.view === "messages" && b.action === "test") {
+        // "Send test message" — Sarah checks the whole path at once:
+        // save → email → pop-up. Runs as a test caller so it is easy
+        // to spot (and delete) afterwards.
+        const settings = await getSettings();
+        const saved = await saveMessage({
+          name: "Test caller",
+          phone: settings.forwardTo || "(289) 212-4124",
+          reason: "Test message — checking that caller messages reach your email and phone.",
+          source: "test",
+        });
+        const { emailed } = await deliverCallerMessage(saved, {
+          to: messageRecipients(settings) || adminEmails(),
+        });
+        await logAudit(session, "messages.test", `test message sent (emailed: ${emailed})`);
+        return res.status(200).json({ ok: true, id: saved.id, emailed });
       }
       if (b.view === "push" && b.action === "subscribe") {
         if (!pushConfigured()) return res.status(503).json({ error: "Pop-up alerts are not set up yet — the studio keys are missing." });
@@ -694,6 +720,12 @@ module.exports = async (req, res) => {
     if ((req.query || {}).view === "messages") {
       const messages = await listMessages();
       return res.status(200).json({ messages });
+    }
+    if ((req.query || {}).view === "calls") {
+      // Recent calls, signed-in only: transcript / recording links live
+      // here and nowhere public.
+      const calls = await listCalls();
+      return res.status(200).json({ calls });
     }
     if ((req.query || {}).view === "counts") {
       const since = String((req.query || {}).since || "");

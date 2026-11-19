@@ -18,7 +18,7 @@
       #calList .act-slot { width: 100%; }
       .act-panel label { display: block; font-size: .9rem; margin: 8px 0 4px; }
       .act-panel input, .act-panel select, .act-panel textarea { font-family: inherit; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); width: 100%; box-sizing: border-box; }
-      .gap-btn[aria-pressed="true"] { background: var(--sage-deep); color: #fff; }
+      .gap-btn[aria-pressed="true"], .mode-btn[aria-pressed="true"] { background: var(--sage-deep); color: #fff; }
       /* Dashboard sections (Tony Nov 19, 2026): one small Sections button
          opens the list; picking one jumps there and closes it. Sections
          alternate soft palette backgrounds inside a gold frame, each with
@@ -80,6 +80,7 @@
           <button type="button" class="dash-nav-item" data-goto="sec-gifts"><span class="sec-sym" aria-hidden="true">&#10022;</span>Gifts</button>
           <button type="button" class="dash-nav-item" data-goto="sec-calls"><span class="sec-sym" aria-hidden="true">&#9742;</span>Calls</button>
           <button type="button" class="dash-nav-item" data-goto="sec-messages"><span class="sec-sym" aria-hidden="true">&#9993;</span>Messages</button>
+          <button type="button" class="dash-nav-item" data-goto="sec-recent-calls"><span class="sec-sym" aria-hidden="true">&#9742;</span>Recent calls</button>
           <button type="button" class="dash-nav-item" data-goto="sec-activity"><span class="sec-sym" aria-hidden="true">&#8635;</span>Activity</button>
           <button type="button" class="dash-nav-item" data-goto="sec-spot"><span class="sec-sym" aria-hidden="true">&#8677;</span>Pay</button>
         </div>
@@ -204,11 +205,28 @@
         <p class="sub">The voice agent on (289) 212-4124 checks this before every transfer. Outside these hours — or while paused — it takes a message and offers online booking instead.</p>
         <div id="callStatus" class="summary-box" style="margin-top:12px;">Loading call hours…</div>
         <h3 style="font-size:1.1rem; margin:22px 0 8px;">Who answers the phone?</h3>
-        <p><span id="agentModeBtns">
-          <button class="btn btn-ghost gap-btn" type="button" data-mode="agent">AI assistant answers</button>
-          <button class="btn btn-ghost gap-btn" type="button" data-mode="direct">Calls go straight to me</button>
+        <p><span id="agentModeBtns" style="display:flex; flex-direction:column; gap:8px; align-items:flex-start; max-width:560px;">
+          <button class="btn btn-ghost mode-btn" type="button" data-mode="agent_then_transfer" style="text-align:left;">AI assistant answers, puts calls through when needed</button>
+          <button class="btn btn-ghost mode-btn" type="button" data-mode="message_only" style="text-align:left;">AI assistant only — never put calls through</button>
+          <button class="btn btn-ghost mode-btn" type="button" data-mode="ring_me_first" style="text-align:left;">Calls go straight to me</button>
         </span> <span id="modeMsg" style="color:#7A3B2E; margin-left:8px;"></span></p>
-        <p class="sub">Straight to me means the assistant puts every caller straight through to you — only while your call hours below say you're answering. Outside those hours it still takes a message.</p>
+        <p class="sub">Assistant answers means the AI takes the call first and only puts it through to you when it can't help. Straight to me puts every caller straight through to you — only while your call hours below say you're answering. Outside those hours it still takes a message.</p>
+        <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <label for="forwardTo" style="min-width:150px;">Forward my calls to</label>
+          <input id="forwardTo" type="tel" placeholder="+1 416-659-6640" style="font-family:inherit; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink); flex:1; min-width:180px;" />
+        </div>
+        <p class="sub" style="margin-top:6px;">The number calls go to when one is put through. Only used while transfers are on — the number is never shown on the public website.</p>
+        <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <label for="messageEmails" style="min-width:150px;">Send messages to</label>
+          <input id="messageEmails" type="text" placeholder="Leave blank for the usual studio emails" style="font-family:inherit; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink); flex:1; min-width:180px;" />
+        </div>
+        <p class="sub" style="margin-top:6px;">Emails that get every caller message, separated by commas. Leave it blank and messages go to the usual studio emails.</p>
+        <h3 style="font-size:1.1rem; margin:22px 0 8px;">Early mornings and evenings (Private Hours)</h3>
+        <p><span id="phModeBtns" style="display:flex; flex-direction:column; gap:8px; align-items:flex-start; max-width:560px;">
+          <button class="btn btn-ghost mode-btn" type="button" data-phmode="message_only" style="text-align:left;">Take a message</button>
+          <button class="btn btn-ghost mode-btn" type="button" data-phmode="same" style="text-align:left;">Same as my regular hours</button>
+        </span> <span id="phMsg" style="color:#7A3B2E; margin-left:8px;"></span></p>
+        <p class="sub">Private Hours are 7–10 in the morning and 5–9 in the evening. "Take a message" means the assistant never puts a call through then, even if your regular hours say otherwise.</p>
         <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
           <label for="pauseUntil">Pause transfers until</label>
           <input id="pauseUntil" type="time" style="font-family:inherit; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink);" />
@@ -217,7 +235,7 @@
         </div>
         <p class="sub" style="margin-top:6px;">A couple of hours off, or sleeping — pause and the agent takes messages until the time you picked.</p>
         <div id="callWeek" style="margin-top:16px;"></div>
-        <p style="margin-top:12px;"><button class="btn btn-book" id="callSave" type="button">Save call hours</button> <span id="callMsg" style="color:#7A3B2E; margin-left:8px;"></span></p>
+        <p style="margin-top:12px;"><button class="btn btn-book" id="callSave" type="button">Save call settings</button> <span id="callMsg" style="color:#7A3B2E; margin-left:8px;"></span></p>
       </section>
 
       <section class="dash-sec" id="sec-messages" style="margin-top:36px;">
@@ -233,6 +251,15 @@
           <button class="btn btn-ghost" id="chimeToggle" type="button" style="display:none;" aria-pressed="true">Sound: on</button>
         </div>
         <div id="msgList" style="margin-top:12px;">Loading messages…</div>
+        <p style="margin-top:12px;"><button class="btn btn-ghost" id="msgTest" type="button">Send test message</button> <span id="msgTestNote" style="color:#7A3B2E; margin-left:8px;"></span></p>
+        <p class="sub" style="margin-top:6px;">Checks the whole path at once — the test message is saved here, emailed to you, and pops up on your phone, just like a real caller message. Delete it afterwards.</p>
+      </section>
+
+      <section class="dash-sec" id="sec-recent-calls" style="margin-top:36px;">
+        <h2 style="font-size:1.4rem;"><span class="sec-sym" aria-hidden="true">&#9742;</span> Recent calls</h2>
+        <p class="sub">Every call the phone system reported, newest first. Tap a recording or transcript link to hear or read it — only you can see these.</p>
+        <p style="margin-top:12px;"><button class="btn btn-ghost" id="callsRefresh" type="button">Refresh</button></p>
+        <div id="callsList" style="margin-top:12px;">Loading recent calls…</div>
       </section>
 
       <section class="dash-sec" id="sec-activity" style="margin-top:36px;">
@@ -554,10 +581,13 @@
             return { ok: true, jump: "sec-calls", action: "resume", message: "Transfers resumed." };
           }
           if (/straight to me/.test(t)){
-            return { ok: true, jump: "sec-calls", action: "mode", mode: "direct", message: "Calls go straight to you now." };
+            return { ok: true, jump: "sec-calls", action: "mode", mode: "ring_me_first", message: "Calls go straight to you now." };
+          }
+          if (/messages only|never put (calls )?through/.test(t)){
+            return { ok: true, jump: "sec-calls", action: "mode", mode: "message_only", message: "The assistant will only take messages now." };
           }
           if (/ai (assistant )?answers|assistant answers/.test(t)){
-            return { ok: true, jump: "sec-calls", action: "mode", mode: "agent", message: "The AI assistant answers the phone now." };
+            return { ok: true, jump: "sec-calls", action: "mode", mode: "agent_then_transfer", message: "The AI assistant answers the phone now." };
           }
           if (/\breport\b/.test(t)){
             var range = talkParseDateRange(t, todayISO);
@@ -1505,22 +1535,44 @@
         var DAY_LABEL = { mon:"Monday", tue:"Tuesday", wed:"Wednesday", thu:"Thursday", fri:"Friday", sat:"Saturday", sun:"Sunday" };
         function fmtClock(t){ var p = t.split(":"); var h = +p[0]; var ap = h >= 12 ? "PM" : "AM"; h = h % 12 || 12; return h + ":" + p[1] + " " + ap; }
         function fmtResume(iso){ try { return new Date(iso).toLocaleTimeString("en-CA", { hour:"numeric", minute:"2-digit" }); } catch(e){ return iso; } }
+        var MODE_LABEL = {
+          agent_then_transfer: "AI assistant answers, puts calls through when needed",
+          message_only: "AI assistant only — never put calls through",
+          ring_me_first: "Calls go straight to me"
+        };
+        function modeOf(s){
+          if (s.transferMode) return s.transferMode;
+          return s.agentMode === "direct" ? "ring_me_first" : "agent_then_transfer";
+        }
         function renderCall(){
           if (!callSettings) return;
           var st = callSettings.status, s = callSettings.settings;
           var el = document.getElementById("callStatus");
-          if (st.transferAllowed){
+          if (st.transferAllowed && st.period === "private_hours"){
+            el.innerHTML = "<dl><dt>Private Hours right now — transfers are ON</dt><dd>Calls come through to you.</dd></dl>";
+          } else if (st.transferAllowed){
             el.innerHTML = "<dl><dt>Transfers are ON right now</dt><dd>Calls come through to you until <strong>" + fmtClock(st.until) + "</strong> today.</dd></dl>";
           } else if (st.reason === "paused"){
             el.innerHTML = "<dl><dt>Transfers are PAUSED</dt><dd>The agent is taking messages until <strong>" + fmtResume(st.pausedUntil) + "</strong>.</dd></dl>";
+          } else if (st.reason === "message_only"){
+            el.innerHTML = "<dl><dt>Messages only</dt><dd>You chose never to put calls through — the agent is taking messages.</dd></dl>";
+          } else if (st.reason === "private_hours"){
+            el.innerHTML = "<dl><dt>Private Hours right now</dt><dd>The agent is taking messages until your regular hours.</dd></dl>";
           } else {
             el.innerHTML = "<dl><dt>Transfers are OFF right now</dt><dd>Outside your call hours — the agent is taking messages" + (st.nextOn ? " until <strong>" + fmtClock(st.nextOn) + "</strong>" : "") + ".</dd></dl>";
           }
           document.getElementById("resumeBtn").style.display = st.reason === "paused" ? "" : "none";
-          var mode = s.agentMode || "agent";
-          document.querySelectorAll("#agentModeBtns .gap-btn").forEach(function(btn){
+          var mode = modeOf(s);
+          document.querySelectorAll("#agentModeBtns .mode-btn").forEach(function(btn){
             btn.setAttribute("aria-pressed", String(btn.getAttribute("data-mode") === mode));
           });
+          var phMode = (s.privateHours && s.privateHours.mode) || "message_only";
+          document.querySelectorAll("#phModeBtns .mode-btn").forEach(function(btn){
+            btn.setAttribute("aria-pressed", String(btn.getAttribute("data-phmode") === phMode));
+          });
+          document.getElementById("forwardTo").value = s.forwardTo || "";
+          var em = s.messageEmails;
+          document.getElementById("messageEmails").value = (Array.isArray(em) ? em : (em ? [em] : [])).join(", ");
           var rows = DAY_ORDER.map(function(d){
             var r = s.week[d];
             return '<div style="display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--line); flex-wrap:wrap;">'
@@ -1563,23 +1615,47 @@
             .catch(function(){ m.textContent = "Could not save — check your connection."; });
         }
         function collectSettings(){
-          var pressed = document.querySelector('#agentModeBtns .gap-btn[aria-pressed="true"]');
-          return { week: collectWeek(), pausedUntil: callSettings.settings.pausedUntil, agentMode: pressed ? pressed.getAttribute("data-mode") : "agent" };
+          var pressed = document.querySelector('#agentModeBtns .mode-btn[aria-pressed="true"]');
+          var phPressed = document.querySelector('#phModeBtns .mode-btn[aria-pressed="true"]');
+          return {
+            week: collectWeek(),
+            pausedUntil: callSettings.settings.pausedUntil,
+            transferMode: pressed ? pressed.getAttribute("data-mode") : "agent_then_transfer",
+            forwardTo: (document.getElementById("forwardTo").value || "").trim(),
+            messageEmails: (document.getElementById("messageEmails").value || "").trim(),
+            privateHours: { mode: phPressed ? phPressed.getAttribute("data-phmode") : "message_only" }
+          };
         }
         document.getElementById("agentModeBtns").addEventListener("click", function(ev){
-          var btn = ev.target.closest(".gap-btn");
+          var btn = ev.target.closest(".mode-btn");
           if (!btn) return;
           var mode = btn.getAttribute("data-mode");
-          document.querySelectorAll("#agentModeBtns .gap-btn").forEach(function(x){
+          document.querySelectorAll("#agentModeBtns .mode-btn").forEach(function(x){
             x.setAttribute("aria-pressed", String(x === btn));
           });
           var s = collectSettings();
-          s.agentMode = mode;
-          saveCall(s, mode === "direct" ? "Calls will go straight to you while your call hours say you're answering." : "The AI assistant answers again.");
+          s.transferMode = mode;
+          var notes = {
+            ring_me_first: "Calls will go straight to you while your call hours say you're answering.",
+            agent_then_transfer: "The AI assistant answers and puts calls through when it can't help.",
+            message_only: "The assistant will only take messages — no calls put through."
+          };
+          saveCall(s, notes[mode] || "Saved.");
+        });
+        document.getElementById("phModeBtns").addEventListener("click", function(ev){
+          var btn = ev.target.closest(".mode-btn");
+          if (!btn) return;
+          var ph = btn.getAttribute("data-phmode");
+          document.querySelectorAll("#phModeBtns .mode-btn").forEach(function(x){
+            x.setAttribute("aria-pressed", String(x === btn));
+          });
+          var s = collectSettings();
+          s.privateHours = { mode: ph };
+          saveCall(s, ph === "same" ? "Private Hours: same as your regular hours." : "Private Hours: the assistant will take messages.");
         });
         document.getElementById("callSave").addEventListener("click", function(){
           var s = collectSettings();
-          saveCall(s, "Call hours saved.");
+          saveCall(s, "Call settings saved.");
         });
         document.getElementById("pauseBtn").addEventListener("click", function(){
           var t = document.getElementById("pauseUntil").value;
@@ -1600,6 +1676,43 @@
         var d2 = new Date(Date.now() + 2*60*60*1000);
         pu.value = String(d2.getHours()).padStart(2,"0") + ":" + String(d2.getMinutes()).padStart(2,"0");
         loadCall();
+
+        // ---- recent calls ----
+        var CALL_OUTCOME = { started: "Call started", transferred: "Put through", message: "Message taken", missed: "Missed call", ended: "Call ended" };
+        function loadCalls(){
+          fetch("/api/admin/data?view=calls")
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ document.getElementById("callsList").textContent = res.j.error || "Could not load recent calls."; return; }
+              var rows = (res.j.calls || []).map(function(c){
+                var links = [];
+                if (c.transcriptUrl) links.push('<a href="' + esc(c.transcriptUrl) + '" target="_blank" rel="noopener">Transcript</a>');
+                if (c.recordingUrl) links.push('<a href="' + esc(c.recordingUrl) + '" target="_blank" rel="noopener">Recording</a>');
+                return '<div class="after-item"><div><strong>' + esc(CALL_OUTCOME[c.outcome] || "Call") + '</strong> · ' + fmtMsgTime(c.startedAt)
+                  + (c.from ? ' · <a href="tel:' + (c.from || "").replace(/[^0-9+]/g, "") + '">' + esc(c.from) + '</a>' : '')
+                  + (c.summary ? '<br/>' + esc(c.summary) : '')
+                  + (links.length ? '<br/>' + links.join(" · ") : '')
+                  + '</div></div>';
+              });
+              document.getElementById("callsList").innerHTML = rows.length ? rows.join("") : "<p style='color:var(--ink-soft);'>No calls yet — when the phone system reports one, it shows up here.</p>";
+            })
+            .catch(function(){ document.getElementById("callsList").textContent = "Could not load recent calls — check your connection."; });
+        }
+        document.getElementById("callsRefresh").addEventListener("click", loadCalls);
+        loadCalls();
+        document.getElementById("msgTest").addEventListener("click", function(){
+          var n = document.getElementById("msgTestNote");
+          n.textContent = "Sending…";
+          fetch("/api/admin/data", { method:"POST", headers:{ "Content-Type":"application/json" },
+            body: JSON.stringify({ view:"messages", action:"test" }) })
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ n.textContent = res.j.error || "Could not send."; return; }
+              n.textContent = "Sent — check your email and phone, then delete the test message.";
+              loadMessages();
+            })
+            .catch(function(){ n.textContent = "Could not send — check your connection."; });
+        });
 
         // ---- caller messages ----
         function esc(s){ return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }

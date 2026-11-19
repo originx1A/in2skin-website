@@ -4,6 +4,7 @@
 // Run: node scripts/test-admin.js
 // Uses an in-memory KV stub + stubbed auth/Stripe (no Stripe/KV/Resend needed).
 const assert = require("assert");
+const crypto = require("crypto");
 
 // --- in-memory KV, stubbed before any lib loads ---
 const mem = new Map();
@@ -68,6 +69,7 @@ const transfer = require("../lib/transfer");
 const bookingsLib = require("../lib/bookings");
 const referralsLib = require("../lib/referrals");
 const messagesLib = require("../lib/messages");
+const callsLib = require("../lib/calls");
 const dataHandler = require("../api/admin/data");
 const availability = require("../api/availability");
 const transferStatusHandler = require("../api/transfer-status");
@@ -375,9 +377,10 @@ async function run() {
   check("cleanSettings rejects bogus mode", transfer.cleanSettings({ agentMode: "bogus" }).agentMode, "agent");
   check("cleanSettings defaults agent", transfer.cleanSettings({}).agentMode, "agent");
   const base = transfer.defaultSettings();
-  base.agentMode = "direct";
+  base.transferMode = "ring_me_first";
   const saved = await transfer.saveSettings(base);
   check("saveSettings keeps direct", saved.agentMode, "direct");
+  check("saveSettings keeps ring_me_first", saved.transferMode, "ring_me_first");
   check("getSettings reads back direct", (await transfer.getSettings()).agentMode, "direct");
   check("transferStatus carries direct", transfer.transferStatus(await transfer.getSettings()).agentMode, "direct");
   res = mockRes();
@@ -719,6 +722,158 @@ async function run() {
   check("gate open: message delete -> 200", gateRes.statusCode, 200);
   gateRes = await callAdmin({ view: "bookings", action: "delete", bookingId: "bk_gate_test" });
   check("gate open: booking delete -> 200", gateRes.statusCode, 200);
+  // ---------- 20. call forwarding (Tony Nov 19, 2026 — Grok Bot A–E) ----------
+  const signRetell = (payload, secret) =>
+    crypto.createHmac("sha256", secret).update(Buffer.from(JSON.stringify(payload))).digest("hex");
+  const retellReq = (payload, secret) => mockReq({
+    method: "POST",
+    headers: { "x-retell-signature": signRetell(payload, secret) },
+    body: payload,
+  });
+  const atToronto = (iso) => new Date(iso);
+  // Transfer modes.
+  check("transferMode default", transfer.defaultSettings().transferMode, "agent_then_transfer");
+  check("cleanSettings keeps message_only", transfer.cleanSettings({ transferMode: "message_only" }).transferMode, "message_only");
+  check("cleanSettings keeps ring_me_first", transfer.cleanSettings({ transferMode: "ring_me_first" }).transferMode, "ring_me_first");
+  check("legacy direct maps to ring_me_first", transfer.cleanSettings({ agentMode: "direct" }).transferMode, "ring_me_first");
+  check("legacy direct still reads direct", transfer.cleanSettings({ agentMode: "direct" }).agentMode, "direct");
+  check("agentModeFor ring_me_first is direct", transfer.agentModeFor("ring_me_first"), "direct");
+  check("agentModeFor message_only is agent", transfer.agentModeFor("message_only"), "agent");
+  check("Sunday off by default", transfer.defaultSettings().week.sun.on, false);
+  // Forward-to + message emails.
+  check("forwardTo default", transfer.defaultSettings().forwardTo, "+14166596640");
+  check("cleanForwardTo formats", transfer.cleanForwardTo("(416) 659-6640"), "+14166596640");
+  check("cleanForwardTo keeps +", transfer.cleanForwardTo("+1 416 659 6640"), "+14166596640");
+  let threwShort = false;
+  try { transfer.cleanForwardTo("123"); } catch { threwShort = true; }
+  check("cleanForwardTo rejects short", threwShort, true);
+  check("cleanMessageEmails splits + dedupes",
+    JSON.stringify(transfer.cleanMessageEmails("a@x.ca, B@x.ca, a@x.ca")), JSON.stringify(["a@x.ca", "b@x.ca"]));
+  let threwEmail = false;
+  try { transfer.cleanMessageEmails("not-an-email"); } catch { threwEmail = true; }
+  check("cleanMessageEmails rejects bad", threwEmail, true);
+  check("cleanMessageEmails caps at 5",
+    transfer.cleanMessageEmails(["a@x.ca", "b@x.ca", "c@x.ca", "d@x.ca", "e@x.ca", "f@x.ca"]).length, 5);
+  // Private Hours split (Mon Nov 16 2026; EST = UTC-5).
+  const daySettings = transfer.defaultSettings();
+  const stNoon = transfer.transferStatus(daySettings, atToronto("2026-11-16T12:00:00-05:00"));
+  check("PH: noon is regular + allowed", stNoon.period === "regular" && stNoon.transferAllowed, true);
+  const stMorning = transfer.transferStatus(daySettings, atToronto("2026-11-16T08:00:00-05:00"));
+  check("PH: 8 AM is private hours", stMorning.period, "private_hours");
+  check("PH: 8 AM default takes a message", stMorning.transferAllowed, false);
+  check("PH: 8 AM reason", stMorning.reason, "private_hours");
+  const stEvening = transfer.transferStatus(daySettings, atToronto("2026-11-16T20:00:00-05:00"));
+  check("PH: 8 PM is private hours", stEvening.period, "private_hours");
+  const phSame = { ...transfer.defaultSettings(), privateHours: { mode: "same" } };
+  const stPhSame = transfer.transferStatus(phSame, atToronto("2026-11-16T08:00:00-05:00"));
+  check("PH same: 8 AM follows the mode", stPhSame.transferAllowed, true);
+  check("PH same: 8 AM reason", stPhSame.reason, "private_hours");
+  const msgOnly = { ...transfer.defaultSettings(), transferMode: "message_only" };
+  const stMsgOnly = transfer.transferStatus(msgOnly, atToronto("2026-11-16T12:00:00-05:00"));
+  check("message_only: noon not allowed", stMsgOnly.transferAllowed, false);
+  check("message_only: noon reason", stMsgOnly.reason, "message_only");
+  check("message_only: noon period", stMsgOnly.period, "regular");
+  const stSunday = transfer.transferStatus(daySettings, atToronto("2026-11-15T12:00:00-05:00"));
+  check("Sunday: off", stSunday.transferAllowed, false);
+  check("Sunday: reason", stSunday.reason, "outside_hours");
+  // Public GET never leaks the forward-to number.
+  const allDay = transfer.defaultSettings();
+  for (const d of Object.keys(allDay.week)) allDay.week[d] = { on: true, start: "00:00", end: "23:59" };
+  allDay.forwardTo = "+14165550199";
+  allDay.messageEmails = ["sarah@test.example"];
+  await transfer.saveSettings(allDay);
+  res = mockRes();
+  await transferStatusHandler(mockReq({ method: "GET" }), res);
+  check("public GET has transferMode", res.body.transferMode, "agent_then_transfer");
+  check("public GET has period", typeof res.body.period, "string");
+  check("public GET never has forwardTo", "forwardTo" in res.body, false);
+  check("public GET never has forward_to", "forward_to" in res.body, false);
+  // Admin round-trip of the new fields.
+  res = await callAdmin({ view: "transfer-hours", settings: { ...allDay, transferMode: "ring_me_first", privateHours: { mode: "same" } } });
+  check("admin save new fields -> 200", res.statusCode, 200);
+  check("admin save keeps ring_me_first", res.body.settings.transferMode, "ring_me_first");
+  check("admin save keeps forwardTo", res.body.settings.forwardTo, "+14165550199");
+  check("admin save keeps messageEmails", JSON.stringify(res.body.settings.messageEmails), JSON.stringify(["sarah@test.example"]));
+  check("admin save keeps PH same", res.body.settings.privateHours.mode, "same");
+  // Retell webhook: signature + call_started dynamic_variables.
+  process.env.RETELL_WEBHOOK_SECRET = "test-retell-secret";
+  const startedPayload = { event: "call_started", call: { call_id: "call_web_1", from_number: "+19055550123" } };
+  res = mockRes();
+  await transferStatusHandler(retellReq(startedPayload, "test-retell-secret"), res);
+  check("webhook call_started -> 200", res.statusCode, 200);
+  check("call_started returns dynamic_variables", !!res.body.dynamic_variables, true);
+  check("call_started transfer allowed", res.body.dynamic_variables.transfer_allowed, true);
+  check("call_started forward_to present when allowed", res.body.dynamic_variables.forward_to, "+14165550199");
+  check("call_started transfer_mode", res.body.dynamic_variables.transfer_mode, "ring_me_first");
+  res = mockRes();
+  await transferStatusHandler(retellReq(startedPayload, "wrong-secret"), res);
+  check("webhook wrong signature -> 401", res.statusCode, 401);
+  res = mockRes();
+  await transferStatusHandler(mockReq({ method: "POST", headers: {}, body: startedPayload }), res);
+  check("webhook no signature, no agent key -> 401", res.statusCode, 401);
+  delete process.env.RETELL_WEBHOOK_SECRET;
+  delete process.env.AGENT_API_KEY;
+  res = mockRes();
+  await transferStatusHandler(retellReq(startedPayload, "test-retell-secret"), res);
+  check("webhook no secret configured -> 503", res.statusCode, 503);
+  process.env.AGENT_API_KEY = "test-agent-key";
+  process.env.RETELL_WEBHOOK_SECRET = "test-retell-secret";
+  // message_only: call_started must NOT carry the number.
+  await transfer.saveSettings({ ...allDay, transferMode: "message_only" });
+  res = mockRes();
+  await transferStatusHandler(retellReq({ event: "call_started", call: { call_id: "call_web_2", from_number: "+19055550124" } }, "test-retell-secret"), res);
+  check("call_started message_only not allowed", res.body.dynamic_variables.transfer_allowed, false);
+  check("call_started message_only has no forward_to", "forward_to" in res.body.dynamic_variables, false);
+  await transfer.saveSettings(allDay);
+  // Safety net: failed transfer saves a missed call; clean end does not.
+  const endedFailed = { event: "call_ended", call: { call_id: "call_web_3", from_number: "+19055550125", disconnection_reason: "transfer_failed" } };
+  res = mockRes();
+  await transferStatusHandler(retellReq(endedFailed, "test-retell-secret"), res);
+  check("call_ended failed -> 200", res.statusCode, 200);
+  check("call_ended failed saves missed call", res.body.missedCallSaved, true);
+  check("missed call stored", (await messagesLib.listMessages()).some((m) => m.callId === "call_web_3" && m.source === "missed-call"), true);
+  res = mockRes();
+  await transferStatusHandler(retellReq(endedFailed, "test-retell-secret"), res);
+  check("call_ended retry does not duplicate", (await messagesLib.listMessages()).filter((m) => m.callId === "call_web_3").length, 1);
+  const endedClean = { event: "call_ended", call: { call_id: "call_web_4", from_number: "+19055550126", disconnection_reason: "user_hangup" } };
+  res = mockRes();
+  await transferStatusHandler(retellReq(endedClean, "test-retell-secret"), res);
+  check("call_ended clean saves nothing", res.body.missedCallSaved, false);
+  check("clean call has no message", (await messagesLib.listMessages()).some((m) => m.callId === "call_web_4"), false);
+  const analyzedCallback = { event: "call_analyzed", call: { call_id: "call_web_5", from_number: "+19055550127", call_analysis: { call_successful: true, call_summary: "Caller asked us to call her back tomorrow." } } };
+  res = mockRes();
+  await transferStatusHandler(retellReq(analyzedCallback, "test-retell-secret"), res);
+  check("call_analyzed callback promise saves missed call", res.body.missedCallSaved, true);
+  // Recent calls log (admin only) + transcript/recording links.
+  const analyzedLinks = { event: "call_analyzed", call: { call_id: "call_web_6", from_number: "+19055550128", disconnection_reason: "user_hangup", call_analysis: { call_successful: true, call_summary: "Asked about prices." }, transcript_url: "https://retell.example/t/call_web_6", recording_url: "https://retell.example/r/call_web_6" } };
+  res = mockRes();
+  await transferStatusHandler(retellReq(analyzedLinks, "test-retell-secret"), res);
+  check("call_analyzed with links -> 200", res.statusCode, 200);
+  res = await callAdmin(null, { view: "calls" });
+  check("admin calls view -> 200", res.statusCode, 200);
+  const logged = (res.body.calls || []).find((c) => c.callId === "call_web_6");
+  check("calls log has the call", !!logged, true);
+  check("calls log keeps transcript link", logged ? logged.transcriptUrl : "", "https://retell.example/t/call_web_6");
+  check("calls log keeps recording link", logged ? logged.recordingUrl : "", "https://retell.example/r/call_web_6");
+  // take_message dedupe by callId.
+  const dupBody = { name: "Dup Caller", phone: "(905) 555-0199", reason: "Hello", callId: "call_dup_1" };
+  res = mockRes();
+  await transferStatusHandler(mockReq({ method: "POST", headers: { "x-agent-key": "test-agent-key" }, body: dupBody }), res);
+  check("take_message first -> 200", res.statusCode, 200);
+  res = mockRes();
+  await transferStatusHandler(mockReq({ method: "POST", headers: { "x-agent-key": "test-agent-key" }, body: dupBody }), res);
+  check("take_message duplicate -> 200", res.statusCode, 200);
+  check("take_message duplicate flagged", res.body.duplicate, true);
+  check("take_message duplicate stored once", (await messagesLib.listMessages()).filter((m) => m.callId === "call_dup_1").length, 1);
+  // Send test message (admin) + backup includes calls.
+  res = await callAdmin({ view: "messages", action: "test" });
+  check("test message -> 200", res.statusCode, 200);
+  check("test message stored as test", (await messagesLib.listMessages()).some((m) => m.source === "test"), true);
+  res = await callAdmin(null, { view: "backup" });
+  check("backup includes calls", Array.isArray(res.body.calls) && res.body.calls.length >= 1, true);
+  check("backup counts calls", (res.body.counts.calls || 0) >= 1, true);
+  delete process.env.RETELL_WEBHOOK_SECRET;
+
   const vercel = JSON.parse(require("fs").readFileSync(require("path").join(__dirname, "..", "vercel.json"), "utf8"));
   check("vercel has a weekly backup cron", (vercel.crons || []).some((c) => c.schedule === "0 13 * * 1" && (c.path || "").includes("view=backup")), true);
   check("vercel has a monthly backup cron on the 1st", (vercel.crons || []).some((c) => c.schedule === "0 13 1 * *" && (c.path || "").includes("period=monthly")), true);
