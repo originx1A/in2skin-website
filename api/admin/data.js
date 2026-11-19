@@ -104,7 +104,7 @@ const {
 } = require("../../lib/studio");
 const { listMessages, markMessageRead, deleteMessage } = require("../../lib/messages");
 const {
-  configured: pushConfigured, publicKey: pushPublicKey, addSub, removeSub,
+  configured: pushConfigured, publicKey: pushPublicKey, detail: pushDetail, addSub, removeSub,
   listEvents, listEventsSince, badgeCount, sendPush,
 } = require("../../lib/push");
 const { sendEmail } = require("../../lib/email");
@@ -707,6 +707,7 @@ module.exports = async (req, res) => {
         badge: await badgeCount(),
         pushConfigured: pushConfigured(),
         vapidPublicKey: pushPublicKey(),
+        pushDetail: pushDetail(),
       });
     }
     if ((req.query || {}).view === "backup" && (req.query || {}).status === "1") {
