@@ -65,7 +65,7 @@
           { "@type": "Offer", "price": "55", "priceCurrency": "CAD", "itemOffered": { "@type": "Service", "name": "Microdermabrasion", "description": "Microdermabrasion in Bolton — $55 for 20 minutes. A precision polish that sweeps away dull surface cells, for an instant radiant glow." } },
           { "@type": "Offer", "price": "55", "priceCurrency": "CAD", "itemOffered": { "@type": "Service", "name": "Light Therapy", "description": "Light Therapy (red light) in Bolton — $55 for 20 minutes. Warm red light that supports the skin's natural renewal, for a firmer-looking, more even complexion." } },
           { "@type": "Offer", "price": "35", "priceCurrency": "CAD", "itemOffered": { "@type": "Service", "name": "Reflexology", "description": "Reflexology in Bolton — $35 for 20 minutes. Gentle pressure on the feet that helps the whole body unwind." } },
-          { "@type": "Offer", "price": "125", "priceCurrency": "CAD", "itemOffered": { "@type": "Service", "name": "Chemical Peels", "description": "Chemical Peels in Bolton — $125 to $475 for 25 minutes. Gentle to advanced strengths, matched to your skin at consultation; exact price confirmed up front." } },
+          { "@type": "Offer", "price": "125", "priceCurrency": "CAD", "itemOffered": { "@type": "Service", "name": "Chemical Peels", "description": "Chemical Peels in Bolton — $125 to $475 for 55 minutes, including your consultation. Gentle to advanced strengths, matched to your skin at consultation; exact price confirmed up front." } },
           { "@type": "Offer", "price": "65", "priceCurrency": "CAD", "itemOffered": { "@type": "Service", "name": "Microneedling", "description": "Microneedling in Bolton — $65 for 20 minutes. Collagen induction therapy for fine lines, acne scarring, uneven texture & pores; Sarah picks the needle size (micro or nano) at the visit." } },
           { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Skin Tightening", "description": "Firming treatment for tighter, more lifted-looking skin. Custom treatment — priced per consultation, ask for a quote." } }
         ]
@@ -106,7 +106,7 @@
         { "@type": "Question", "name": "How much downtime is there after a chemical peel?", "acceptedAnswer": { "@type": "Answer", "text": "It depends on the strength of the peel. Gentle peels have little to no downtime; deeper peels can mean a few days of flaking as fresh skin emerges. At In2Skin, peels run $125 to $475, and your consultation matches the peel to your skin and confirms exactly what to expect." } },
         { "@type": "Question", "name": "What is the best facial in Bolton?", "acceptedAnswer": { "@type": "Answer", "text": "There is no single best facial — the best first facial at In2Skin is the Classic Facial, $85 for 55 minutes, tailored to your skin that day. If fine lines are your main concern, the Anti-Aging Facial, $125 for 80 minutes, adds firming massage and targeted serums." } },
         { "@type": "Question", "name": "Where can I get microneedling near Bolton?", "acceptedAnswer": { "@type": "Answer", "text": "At In2Skin, a private, one-on-one aesthetics studio in Bolton, Ontario — call (289) 212-4124 to book. Microneedling is collagen induction therapy that prompts the skin’s natural repair and new collagen, improving the look of fine lines, acne scarring, uneven texture and enlarged pores over a series of treatments. It's $65 for 20 minutes, and Sarah picks the needle size (micro or nano) that's best for your face at the visit." } },
-        { "@type": "Question", "name": "What is the difference between a facial and a chemical peel?", "acceptedAnswer": { "@type": "Answer", "text": "A facial deep-cleanses, exfoliates, steams, massages and hydrates your skin, finished with a hydration mask — the Classic Facial is $85 for 55 minutes. A chemical peel is a professional Circadia peel solution that lifts away dull surface layers so fresher, brighter skin emerges; peels are $125–$475 for 25 minutes, matched to your skin at consultation, with the exact price confirmed up front." } },
+        { "@type": "Question", "name": "What is the difference between a facial and a chemical peel?", "acceptedAnswer": { "@type": "Answer", "text": "A facial deep-cleanses, exfoliates, steams, massages and hydrates your skin, finished with a hydration mask — the Classic Facial is $85 for 55 minutes. A chemical peel is a professional Circadia peel solution that lifts away dull surface layers so fresher, brighter skin emerges; peels are $125–$475 for 55 minutes, including the consultation that matches the peel to your skin, with the exact price confirmed up front." } },
         { "@type": "Question", "name": "Do I need to book a facial in advance in Bolton?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — advance booking is recommended at In2Skin to get the time you want. You can book online anytime on the website or call (289) 212-4124, and you pay in full securely by card when you book online." } },
         { "@type": "Question", "name": "How much does The Works facial cost in Bolton?", "acceptedAnswer": { "@type": "Answer", "text": "The Works is $160 with a Classic Facial (55 minutes) or $195 with an Anti-Aging Facial (80 minutes) at In2Skin in Bolton. It is a facial, red light therapy and reflexology all at the same time, while the mask works." } },
         { "@type": "Question", "name": "Can I book a facial early in the morning or on a Sunday in Bolton?", "acceptedAnswer": { "@type": "Answer", "text": "Early mornings and evenings are available as Private Hours, by request — call (289) 212-4124 or email bookings@boltonfacials.com and Sarah will set it up. You pay the regular price of the services you pick, plus $15 per visit. Sundays the studio is closed." } },
@@ -160,7 +160,7 @@
         <ul>
           <li>Classic Facial &mdash; $85, 55 minutes</li>
           <li>Anti-Aging Facial &mdash; $125, 80 minutes</li>
-          <li>Chemical Peels &mdash; $125&ndash;$475, 25 minutes</li>
+          <li>Chemical Peels &mdash; $125&ndash;$475, 55 minutes</li>
           <li>Microneedling &mdash; $65, 20 minutes</li>
           <li>Skin Tightening &mdash; custom, priced per consultation</li>
           <li>NANO Needling &mdash; $65, 20 minutes</li>
@@ -455,13 +455,14 @@
         id: "chemical-peels",
         name: "Chemical Peels",
         cat: "Advanced Treatment",
-        mins: 25, minsLabel: "25 minutes",
+        mins: 55, minsLabel: "55 minutes",
         price: "$125–$475", priceNum: 125,
         img: "assets/chemical-peels.webp",
         imgAlt: "A brush applying a golden chemical peel to the cheek, peel solution in a small glass bowl nearby",
         short: "Circadia peel matched to you. Brighter, smoother skin.",
         intro: [
-          "Our most transformative treatment. Circadia peels lift dull layers so fresh, bright skin can emerge — strengths from gentle to advanced."
+          "Our most transformative treatment. Circadia peels lift dull layers so fresh, bright skin can emerge — strengths from gentle to advanced.",
+          "Your visit starts with a consultation — it's part of the 55 minutes."
         ],
         includes: [
           "Personal consultation to match the peel to your skin",
@@ -2193,7 +2194,7 @@
       "microdermabrasion": "Microdermabrasion Bolton — $55, 20 min | In2Skin",
       "light-therapy": "Light Therapy Bolton — $55, 20 min | In2Skin",
       "reflexology": "Reflexology Bolton — $35, 20 min | In2Skin",
-      "chemical-peels": "Chemical Peel Bolton — $125–$475, 25 min | In2Skin",
+      "chemical-peels": "Chemical Peel Bolton — $125–$475, 55 min | In2Skin",
       "microneedling": "Microneedling Bolton — $65, 20 min | In2Skin",
       "skin-tightening": "Skin Tightening Bolton — Custom, priced per consultation | In2Skin"
     };
@@ -2205,7 +2206,7 @@
       "microdermabrasion": "Microdermabrasion in Bolton, Ontario — $55, a 20-minute add-on at In2Skin. A gentle polish for smoother, brighter skin, perfect before events & photos. Aesthetics in Bolton, serving Caledon & the GTA. Book online or call (289) 212-4124.",
       "light-therapy": "Light Therapy in Bolton, Ontario — $55, a 20-minute add-on at In2Skin. Warm red light supports collagen, calms skin & evens tone while you rest. Add to any facial. Book online or call (289) 212-4124.",
       "reflexology": "Reflexology in Bolton, Ontario — $35, a 20-minute add-on at In2Skin. Gentle foot pressure for whole-body relaxation. Book online or call (289) 212-4124.",
-      "chemical-peels": "Chemical Peel in Bolton, Ontario — $125–$475 for 25 minutes at In2Skin. Professional Circadia peels matched to your skin at consultation, price confirmed up front. Brighter, smoother, more even skin. Serving Bolton & the GTA. Book online or call (289) 212-4124.",
+      "chemical-peels": "Chemical Peel in Bolton, Ontario — $125–$475 for 55 minutes at In2Skin. Professional Circadia peels matched to your skin at consultation, price confirmed up front. Brighter, smoother, more even skin. Serving Bolton & the GTA. Book online or call (289) 212-4124.",
       "microneedling": "Microneedling in Bolton, Ontario at In2Skin — collagen induction therapy for fine lines, acne scarring, uneven texture & pores. $65 for 20 minutes — Sarah picks the needle size (micro or nano) at the visit. Book online or call (289) 212-4124.",
       "skin-tightening": "Skin Tightening in Bolton, Ontario at In2Skin — firming treatments for tighter, smoother, more lifted-looking skin on the face & neck. Custom treatment, priced per consultation — ask for a quote. Book online or call (289) 212-4124."
     };
@@ -2383,7 +2384,7 @@
       if (has("for a friend","someone else","for my friend","book for","gift visit"))
         return { text:"You can book a visit for a friend right in the booking wizard: pick their treatment and time, then choose <strong>\u201CFor a Friend\u201D</strong> at the details step. The confirmation goes straight to them — they just show up.", actions:[{ label:"Start a Booking", scroll:"book" }] };
       if (has("peel"))
-        return { text:"<strong>Chemical Peels ($125–$475)</strong> lift dull surface layers so brighter, smoother, more even skin emerges. The right peel is matched to your skin at consultation, with the exact price confirmed up front.", actions:[svcBtn("chemical-peels")] };
+        return { text:"<strong>Chemical Peels ($125–$475, 55 minutes)</strong> lift dull surface layers so brighter, smoother, more even skin emerges. Your visit starts with a consultation that matches the peel to your skin — it's part of the 55 minutes — with the exact price confirmed up front.", actions:[svcBtn("chemical-peels")] };
       if (has("microneedling","micro needling","micro-needling","collagen induction"))
         return { text:"<strong>Microneedling ($65, 20 minutes)</strong> (collagen induction) creates controlled micro-channels that prompt new collagen — improving the look of fine lines, acne scarring, texture and pores over a series. Sarah picks the needle size (micro or nano) that's best for your face at the visit.", actions:[svcBtn("microneedling")] };
       if (has("nano"))

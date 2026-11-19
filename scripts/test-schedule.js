@@ -45,7 +45,9 @@ check("Anti-Aging 10:00 booked -> 1:00 PM free", taken([B("10:00 AM", "anti-agin
 check("20-min add-on 10:00 -> 11:00 Classic blocked", taken([B("10:00 AM", "reflexology")], "11:00 AM", "classic-facial"), true);
 check("20-min add-on 10:00 -> 12:00 Classic free", taken([B("10:00 AM", "reflexology")], "12:00 PM", "classic-facial"), false);
 check("Classic 12:00 booked -> new 11:00 Classic blocked", taken([B("12:00 PM", "classic-facial")], "11:00 AM", "classic-facial"), true);
-check("Chemical peel 10:00 -> 12:00 free", taken([B("10:00 AM", "chemical-peels")], "12:00 PM", "classic-facial"), false);
+check("Chemical peel 10:00 -> 12:00 blocked", taken([B("10:00 AM", "chemical-peels")], "12:00 PM", "classic-facial"), true);
+check("Chemical peel 10:00 -> 1:00 PM free", taken([B("10:00 AM", "chemical-peels")], "1:00 PM", "classic-facial"), false);
+check("Chemical peel alone is 55 min", durationForBooking("chemical-peels", []), 55);
 check("Private Classic 7:00 -> 7:45 blocked", taken([B("7:00 AM", "classic-facial")], "7:45 AM", "classic-facial"), true);
 check("Private Classic 7:00 -> 8:30 blocked", taken([B("7:00 AM", "classic-facial")], "8:30 AM", "classic-facial"), true);
 check("Private Classic 7:00 -> 10:00 free", taken([B("7:00 AM", "classic-facial")], "10:00 AM", "classic-facial"), false);
