@@ -109,7 +109,7 @@ function page(p) {
         addressCountry: "CA",
       },
       geo: { "@type": "GeoCoordinates", latitude: GEO.lat, longitude: GEO.lon },
-      areaServed: ["Bolton", "Caledon", "Kleinburg", "Vaughan", "Brampton", "Nobleton", "King City", "Orangeville", "Georgetown", "Toronto"],
+      areaServed: ["Bolton", "Caledon", "Kleinburg", "Vaughan", "Brampton", "Nobleton", "King City", "Orangeville", "Georgetown", "Toronto", "Mississauga"],
     },
     areaServed: p.areaServedExtra || "Bolton",
   };
@@ -613,6 +613,116 @@ const LOCATIONS = [
     ],
     areaServedExtra: "Georgetown",
   },
+  {
+    slug: "facials-toronto",
+    town: "Toronto",
+    title: "Facials for Toronto | In2Skin — Bolton, Ontario",
+    desc: "Facials for Toronto clients at In2Skin — a private, one-on-one aesthetics studio in Bolton, about 45 minutes from downtown. Classic Facial $65, Anti-Aging $95 — the same quality as a $150–$300 downtown facial, for about half the price. Book online or call (289) 212-4124.",
+    cat: "Facials for Toronto",
+    h1: "Facials for Toronto",
+    img: "facial-massage.jpg",
+    imgAlt: "A client resting with eyes closed while an esthetician massages her face during a facial",
+    intro: [
+      "Toronto has no shortage of spas — but downtown prices have climbed past what a facial should cost. A custom facial downtown runs $150 to $300, a HydraFacial $190 to $400, and peels $150 to $400. In2Skin is the same quality of care — professional Circadia products, one-on-one attention, decades of experience — for $65 and $95.",
+      "Clients drive up from downtown, Etobicoke, North York and Scarborough for the quiet as much as the price: a private studio in Bolton where one guest is treated at a time, with no waiting room, no rush, and no one else's appointment running over into yours.",
+    ],
+    sections: [
+      {
+        h: "The drive from Toronto",
+        body: [
+          "Downtown Toronto to Bolton is about 45 minutes to an hour, by Highway 400 north to King Road or Highway 427 to Highway 50. From Etobicoke and North York it is quicker — often under 45 minutes. Directions are shared when you book, and the studio is by appointment, so there is never a wait when you arrive.",
+          "Evening and Sunday appointments — Private Hours — suit Toronto clients who work in the city all week: weekday mornings 7 to 9, evenings after 7, and Sundays, for $15 more per visit.",
+        ],
+      },
+      {
+        h: "The price gap, honestly",
+        body: [
+          "A quality facial downtown costs $150 to $300 — and that is before the add-ons. At In2Skin the Classic Facial is $65 for 55 minutes and the Anti-Aging Facial is $95 for 80 minutes. The difference is not the care: it is a small private studio in Bolton instead of a downtown medspa paying downtown rent.",
+          "That is the whole point — premium quality at about half the Toronto price. Not a cheap facial. The same professional products, the same unhurried hour, the same glow — for less.",
+        ],
+      },
+      {
+        h: "Treatments that fit",
+        ticks: [
+          "Classic Facial — $65 · 55 minutes. Deep cleanse, steam, massage and a custom mask, with no downtime.",
+          "Anti-Aging Facial — $95 · 80 minutes. Firming massage, targeted serums and rich hydration, for firm, youthful skin.",
+          "The Works — $135 with a Classic Facial, $165 with an Anti-Aging Facial. Facial, red light therapy and reflexology, all at once.",
+          "Add-ons from $25: NANO Needling $55, Microdermabrasion $45, Light Therapy $45, Reflexology $25 — or book an add-on on its own.",
+        ],
+      },
+      {
+        h: "Good to know",
+        body: [
+          "First visit? Take $10 toward any service. Gift certificates start at $10 and never expire, and a treatment voucher — a named facial, paid ahead — makes an easy gift for someone in Toronto who would never book for themselves.",
+        ],
+      },
+    ],
+    leadPrice: "$65",
+    leadMins: "Classic Facial · 55 minutes",
+    panelExtra: "Private Hours: <strong style=\"color:var(--sage-deep);\">$80</strong>",
+    faq: [
+      ["How far is In2Skin from downtown Toronto?", "About 45 minutes to an hour by Highway 400 or Highway 427. From Etobicoke and North York it is often under 45 minutes. Directions are shared when you book."],
+      ["Why drive to Bolton for a facial?", "For the same quality at about half the downtown price — a Classic Facial is $65 and an Anti-Aging Facial is $95, where a custom facial downtown runs $150 to $300 — in a private, one-on-one studio with no waiting room and no rush."],
+      ["What does a facial cost in Toronto?", "Downtown, a custom facial runs $150 to $300, a HydraFacial $190 to $400, and peels $150 to $400. At In2Skin the same kind of care is $65 for a Classic Facial and $95 for an Anti-Aging Facial."],
+      ["Do you have appointments after work?", "Yes — Private Hours run weekday evenings after 7 PM and on Sundays, for $15 more per visit."],
+    ],
+    areaServedExtra: "Toronto",
+  },
+  {
+    slug: "facials-mississauga",
+    town: "Mississauga",
+    title: "Facials in Mississauga | In2Skin — Bolton, Ontario",
+    desc: "Facials near Mississauga at In2Skin — a private, one-on-one aesthetics studio in Bolton, about 35 to 45 minutes away. Classic Facial $65, Anti-Aging $95 — about half what a facial costs in Mississauga. Book online or call (289) 212-4124.",
+    cat: "Facials near Mississauga",
+    h1: "Facials near Mississauga",
+    img: "quiet-candles.webp",
+    imgAlt: "A calm, candlelit treatment room with a facial bed, warm light and soft towels",
+    intro: [
+      "Mississauga has plenty of spas — most of them busy, and most of them charging about $130 for a facial, with medspas running $105 to $250. In2Skin is a private studio in Bolton, about 35 to 45 minutes away, where one guest is treated at a time and a Classic Facial is $65.",
+      "Clients come up from Port Credit, Streetsville, Erin Mills, Cooksville and Meadowvale for the quiet as much as the price: a proper facial, a real break, and no one rushing you out the door.",
+    ],
+    sections: [
+      {
+        h: "The drive from Mississauga",
+        body: [
+          "Highway 407 or Highway 401 to Highway 50 brings you to Bolton in about 35 to 45 minutes from most of Mississauga. Directions are shared when you book, and the studio is by appointment, so there is never a wait when you arrive.",
+          "Evening and Sunday appointments — Private Hours — suit Mississauga clients who work all week: weekday mornings 7 to 9, evenings after 7, and Sundays, for $15 more per visit.",
+        ],
+      },
+      {
+        h: "The price gap, honestly",
+        body: [
+          "A facial in Mississauga averages about $130, and a signature facial at a medspa can run $160 to $250. At In2Skin the Classic Facial is $65 for 55 minutes and the Anti-Aging Facial is $95 for 80 minutes. The difference is not the care: it is a small private studio in Bolton instead of a city spa paying city rent.",
+          "Premium quality at about half the price — not a cheap facial. The same professional products, the same unhurried hour, the same glow — for less.",
+        ],
+      },
+      {
+        h: "Treatments that fit",
+        ticks: [
+          "Classic Facial — $65 · 55 minutes. Deep cleanse, steam, massage and a custom mask, with no downtime.",
+          "Anti-Aging Facial — $95 · 80 minutes. Firming massage, targeted serums and rich hydration, for firm, youthful skin.",
+          "The Works — $135 with a Classic Facial, $165 with an Anti-Aging Facial. Facial, red light therapy and reflexology, all at once.",
+          "Add-ons from $25: NANO Needling $55, Microdermabrasion $45, Light Therapy $45, Reflexology $25.",
+        ],
+      },
+      {
+        h: "Good to know",
+        body: [
+          "First visit? Take $10 toward any service. Gift certificates start at $10 and never expire, and a treatment voucher — a named facial, paid ahead — makes an easy gift for someone in Mississauga who would never book for themselves.",
+        ],
+      },
+    ],
+    leadPrice: "$65",
+    leadMins: "Classic Facial · 55 minutes",
+    panelExtra: "Private Hours: <strong style=\"color:var(--sage-deep);\">$80</strong>",
+    faq: [
+      ["How far is In2Skin from Mississauga?", "About 35 to 45 minutes by Highway 407 or Highway 401 to Highway 50. Directions are shared when you book."],
+      ["What does a facial cost in Mississauga?", "About $130 on average, with medspas running $105 to $250. At In2Skin the Classic Facial is $65 for 55 minutes and the Anti-Aging Facial is $95 for 80 minutes."],
+      ["Why drive to Bolton for a facial?", "For the same quality at about half the price, in a private, one-on-one studio — one guest at a time, no waiting room, no rush."],
+      ["Do you have appointments after work?", "Yes — Private Hours run weekday evenings after 7 PM and on Sundays, for $15 more per visit."],
+    ],
+    areaServedExtra: "Mississauga",
+  },
 ];
 
 const CONDITIONS = [
@@ -890,7 +1000,7 @@ const QUESTIONS = {
     ["What are Private Hours?", "Premier appointments reserved just for you — weekday mornings 7 to 9, evenings after 7 PM, and Sundays — for $15 more per visit."],
     ["Can I buy a gift certificate?", "Yes — gift a Classic Facial ($65), an Anti-Aging Facial ($95), The Works ($135), or any custom amount from $10. A certificate code is emailed to the recipient, ready to redeem when they book, and gift codes never expire. You can also buy a treatment voucher: a named facial, paid ahead."],
     ["How do I book?", "Book online anytime on this website, or call (289) 212-4124. You pay in full securely by card when you book online and receive an email confirmation. Cash or Interac e-transfer are also welcome at the studio. Advance booking is recommended to get the time you want."],
-    ["Where is the studio?", "In2Skin is a private, one-on-one aesthetics studio in Bolton, Ontario. Appointments are by booking, and directions are shared when you book. Clients visit from Caledon, Kleinburg, Vaughan, Brampton, Nobleton, King City, Orangeville, Georgetown and across Toronto and the GTA."],
+    ["Where is the studio?", "In2Skin is a private, one-on-one aesthetics studio in Bolton, Ontario. Appointments are by booking, and directions are shared when you book. Clients visit from Caledon, Kleinburg, Vaughan, Brampton, Nobleton, King City, Orangeville, Georgetown, Mississauga and across Toronto and the GTA."],
     ["Can I book an appointment for a friend?", "Yes — in the online booking wizard, choose 'For a Friend' and add your friend's name, phone and email. The confirmation goes straight to them, and they just show up."],
     ["What payment methods do you take?", "Card online at booking (Visa, Mastercard, American Express, Apple Pay), or cash or Interac e-transfer at the studio. Card charges show as IN2SKIN on the statement. Plain Interac-only debit cards cannot be charged by card — those clients pay by e-transfer."],
     ["What if I need to change my booking?", "Call (289) 212-4124 and the studio will move it for you."],

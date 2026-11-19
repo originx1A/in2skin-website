@@ -43,6 +43,8 @@ const EXTRA_PAGES = [
   "/facials-king-city/",
   "/facials-orangeville/",
   "/facials-georgetown/",
+  "/facials-toronto/",
+  "/facials-mississauga/",
   "/acne-prone-skin/",
   "/rosacea-sensitive-skin/",
   "/dull-skin/",
