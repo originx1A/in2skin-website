@@ -174,8 +174,10 @@
 
       <section class="dash-sec" id="sec-backup" style="margin-top:36px;">
         <h2 style="font-size:1.4rem;"><span class="sec-sym" aria-hidden="true">&#8681;</span> Backup — bookings, gift codes &amp; payments</h2>
-        <p class="sub">Downloads everything as one file — every booking, gift certificate, payment and referral, plus the studio settings. A copy is also emailed to the studio every Monday morning.</p>
+        <p class="sub">Downloads everything as one file — every booking, gift certificate, payment and referral, plus the studio settings. A copy is also emailed to the studio every Monday morning, and on the 1st of every month.</p>
         <p style="margin-top:12px;"><button class="btn btn-book" id="backupBtn" type="button">Download full backup</button> <span id="backupMsg" style="color:var(--ink-soft); margin-left:8px;"></span></p>
+        <p class="sub" id="backupStatus" style="margin-top:8px;">Checking the monthly backup…</p>
+        <p style="margin-top:8px;"><button class="btn btn-ghost" id="monthlyBackupBtn" type="button" style="display:none;">Send the monthly backup email now</button> <span id="monthlyBackupMsg" style="color:var(--ink-soft); margin-left:8px;"></span></p>
       </section>
 
       <section class="dash-sec" id="sec-referrals" style="margin-top:36px;">
@@ -2188,6 +2190,40 @@
               m.textContent = "Downloaded — " + res.j.counts.bookings + " bookings, " + res.j.counts.gifts + " gift codes, " + res.j.counts.payments + " payments, " + (res.j.counts.deleted || 0) + " deleted items backed up. A copy is also emailed every Monday morning.";
             })
             .catch(function(){ m.textContent = "Could not make the backup — check your connection."; });
+        });
+        // ---- monthly backup status (Tony Nov 19, 2026): nothing can be
+        // deleted until the first monthly backup email has gone out. The
+        // button below sends it now, which activates the monthly backup.
+        function loadBackupStatus(){
+          fetch("/api/admin/data?view=backup&status=1")
+            .then(function(r){ return r.json(); })
+            .then(function(j){
+              var s = document.getElementById("backupStatus");
+              var btn = document.getElementById("monthlyBackupBtn");
+              if (j.monthlyActive){
+                s.textContent = "Monthly backup: active — last sent " + String(j.lastMonthly || "").slice(0, 10) + ". Deletions are open.";
+                btn.style.display = "none";
+              } else {
+                s.textContent = "Monthly backup: not active yet — deletions are paused until the first monthly backup email goes out.";
+                btn.style.display = "";
+              }
+            })
+            .catch(function(){ document.getElementById("backupStatus").textContent = "Could not check the monthly backup — check your connection."; });
+        }
+        loadBackupStatus();
+        document.getElementById("monthlyBackupBtn").addEventListener("click", function(){
+          var m = document.getElementById("monthlyBackupMsg");
+          var btn = document.getElementById("monthlyBackupBtn");
+          m.textContent = "Sending…";
+          btn.disabled = true;
+          postAdmin({ view:"backup", action:"send-monthly" })
+            .then(function(res){
+              if (!res.ok){ m.textContent = res.j.error || "Could not send the monthly backup."; btn.disabled = false; return; }
+              if (!res.j.emailed){ m.textContent = "The backup could not be emailed — check the studio email setup."; btn.disabled = false; return; }
+              m.textContent = "Monthly backup email sent — deletions are open now.";
+              loadBackupStatus();
+            })
+            .catch(function(){ m.textContent = "Could not send the monthly backup — check your connection."; btn.disabled = false; });
         });
       })();
     </script>

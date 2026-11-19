@@ -213,6 +213,16 @@ async function listDeletedArchive() {
   return (await kvGet("backup:deleted")) || [];
 }
 
+// Delete gate (Tony Nov 19, 2026): nothing — no booking, message,
+// payment, gift code, or referral — can be deleted until the first
+// monthly backup email has gone out. The flag is set when a monthly
+// backup is sent (the 1st-of-the-month cron, or the dashboard's
+// send-now button). Every delete branch below checks this first.
+async function monthlyBackupActive() {
+  return !!(await kvGet("backup:lastMonthly"));
+}
+const DELETE_BLOCKED_MSG = "Monthly backup isn't active yet — deletions are paused until the first monthly backup email goes out. Use the Backup section to send it now.";
+
 // Every booking, found by scanning the per-day indexes — a backup must not
 // miss a booking just because it is older than some window. Falls back to
 // a wide date range if SCAN is unavailable.
@@ -273,13 +283,14 @@ async function exportBackup() {
   };
 }
 
-async function sendBackupEmail(backup) {
+async function sendBackupEmail(backup, period) {
   const to = adminEmails();
   if (!to.length) return false;
+  const label = period === "monthly" ? "monthly" : "weekly";
   const json = JSON.stringify(backup, null, 2);
   return sendEmail({
     to,
-    subject: `In2Skin weekly backup — ${backup.counts.bookings} bookings, ${backup.counts.gifts} gift codes (${backup.exportedAt.slice(0, 10)})`,
+    subject: `In2Skin ${label} backup — ${backup.counts.bookings} bookings, ${backup.counts.gifts} gift codes (${backup.exportedAt.slice(0, 10)})`,
     html: `<p>In2Skin weekly backup — ${backup.exportedAt}.</p>`
       + `<p>Bookings: <strong>${backup.counts.bookings}</strong> · Gift codes: <strong>${backup.counts.gifts}</strong> · Payments: <strong>${backup.counts.payments}</strong> · Referrals: <strong>${backup.counts.referrals}</strong> · Deleted items backed up: <strong>${backup.counts.deleted || 0}</strong>.</p>`
       + `<p>The full backup is below as text — save it somewhere safe. You can also download the same file any time from the admin dashboard (Backup section).</p>`
@@ -291,10 +302,15 @@ async function sendBackupEmail(backup) {
 const UPCOMING = ["pending", "unpaid", "paid", "consultation"];
 
 module.exports = async (req, res) => {
-  // Weekly backup, fired by the Vercel cron (vercel.json) — a cron call
-  // carries no admin cookie, so it authenticates with the CRON_SECRET env
-  // var, which Vercel sends as a Bearer token. Fail CLOSED: without the
-  // secret set, or with the wrong token, nothing is sent and nothing leaks.
+  // Weekly + monthly backups, fired by the Vercel crons (vercel.json) — a
+  // cron call carries no admin cookie, so it authenticates with the
+  // CRON_SECRET env var, which Vercel sends as a Bearer token. Fail
+  // CLOSED: without the secret set, or with the wrong token, nothing is
+  // sent and nothing leaks. period=monthly runs on the 1st of the month
+  // (Tony Nov 19, 2026); anything else is the weekly Monday run. A
+  // successful send records backup:lastWeekly / backup:lastMonthly — the
+  // monthly flag is the delete gate: nothing can be deleted until the
+  // first monthly backup email has gone out (Tony Nov 19, 2026).
   if (req.method === "GET" && (req.query || {}).view === "backup" && (req.query || {}).cron === "1") {
     const secret = process.env.CRON_SECRET;
     if (!secret) return res.status(503).json({ error: "CRON_SECRET is not set." });
@@ -302,9 +318,11 @@ module.exports = async (req, res) => {
       return res.status(401).json({ error: "Not authorized." });
     }
     try {
+      const period = (req.query || {}).period === "monthly" ? "monthly" : "weekly";
       const backup = await exportBackup();
-      const emailed = await sendBackupEmail(backup);
-      return res.status(200).json({ ok: true, emailed, counts: backup.counts, exportedAt: backup.exportedAt });
+      const emailed = await sendBackupEmail(backup, period);
+      if (emailed) await kvSet(period === "monthly" ? "backup:lastMonthly" : "backup:lastWeekly", backup.exportedAt);
+      return res.status(200).json({ ok: true, emailed, period, counts: backup.counts, exportedAt: backup.exportedAt });
     } catch (err) {
       return res.status(err.status || 500).json({ error: err.message });
     }
@@ -314,6 +332,17 @@ module.exports = async (req, res) => {
   try {
     if (req.method === "POST") {
       const b = req.body || {};
+      // Send the monthly backup email now (Tony Nov 19, 2026) — activates
+      // the monthly backup, which opens deletions (see the delete gate).
+      if (b.view === "backup" && b.action === "send-monthly") {
+        const backup = await exportBackup();
+        const emailed = await sendBackupEmail(backup, "monthly");
+        if (emailed) {
+          await kvSet("backup:lastMonthly", backup.exportedAt);
+          await logAudit(session, "backup.send-monthly", `monthly backup email sent (${backup.exportedAt.slice(0, 10)}) — deletions are open now`);
+        }
+        return res.status(200).json({ ok: true, emailed, exportedAt: backup.exportedAt });
+      }
       if (b.view === "transfer-hours" && b.settings) {
         const settings = await saveSettings(b.settings);
         await logAudit(session, "settings.transfer-hours", "call hours saved");
@@ -330,6 +359,7 @@ module.exports = async (req, res) => {
         return res.status(200).json({ referral });
       }
       if (b.view === "referrals" && b.action === "delete") {
+        if (!(await monthlyBackupActive())) return res.status(503).json({ error: DELETE_BLOCKED_MSG });
         const ref = await getReferralByCode(b.code);
         if (!ref) return res.status(404).json({ error: "That referral code is already gone." });
         // Backup first (Tony Nov 19, 2026) — the archive write must succeed
@@ -374,6 +404,7 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true });
       }
       if (b.view === "messages" && b.action === "delete") {
+        if (!(await monthlyBackupActive())) return res.status(503).json({ error: DELETE_BLOCKED_MSG });
         const ok = await deleteMessage(b.id);
         if (!ok) return res.status(404).json({ error: "Message not found." });
         await logAudit(session, "messages.delete", `message ${b.id} deleted`);
@@ -427,6 +458,7 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true });
       }
       if (b.view === "codes" && b.action === "delete") {
+        if (!(await monthlyBackupActive())) return res.status(503).json({ error: DELETE_BLOCKED_MSG });
         const gift = await getGift(b.code);
         if (!gift) return res.status(404).json({ error: "That code is already gone." });
         // Backup first (Tony Nov 19, 2026) — the archive write must succeed
@@ -438,6 +470,7 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true });
       }
       if (b.view === "payments" && b.action === "delete" && b.paymentId) {
+        if (!(await monthlyBackupActive())) return res.status(503).json({ error: DELETE_BLOCKED_MSG });
         const payment = await getPayment(b.paymentId);
         if (!payment) return res.status(404).json({ error: "That payment is already gone." });
         if (payment.bookingId) {
@@ -521,6 +554,7 @@ module.exports = async (req, res) => {
         return res.status(200).json({ booking: publicBooking(updated), emailed });
       }
       if (b.view === "bookings" && b.action === "delete" && b.bookingId) {
+        if (!(await monthlyBackupActive())) return res.status(503).json({ error: DELETE_BLOCKED_MSG });
         const booking = await getBooking(b.bookingId);
         if (!booking) return res.status(404).json({ error: "Booking not found." });
         await deleteBooking(booking.id);
@@ -674,6 +708,11 @@ module.exports = async (req, res) => {
         pushConfigured: pushConfigured(),
         vapidPublicKey: pushPublicKey(),
       });
+    }
+    if ((req.query || {}).view === "backup" && (req.query || {}).status === "1") {
+      const lastMonthly = await kvGet("backup:lastMonthly");
+      const lastWeekly = await kvGet("backup:lastWeekly");
+      return res.status(200).json({ monthlyActive: !!lastMonthly, lastMonthly: lastMonthly || null, lastWeekly: lastWeekly || null });
     }
     if ((req.query || {}).view === "backup") {
       const backup = await exportBackup();

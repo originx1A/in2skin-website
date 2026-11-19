@@ -7,6 +7,9 @@ const assert = require("assert");
 
 // --- in-memory KV, stubbed before any lib loads ---
 const mem = new Map();
+// The monthly backup is active in tests (Tony Nov 19, 2026 — the delete
+// gate needs it); section 19 tests the gate itself by removing this flag.
+mem.set("backup:lastMonthly", new Date().toISOString());
 const kvPath = require.resolve("../lib/kv");
 require.cache[kvPath] = {
   exports: {
@@ -666,6 +669,59 @@ async function run() {
   check("archive has the gift", deleted.some((d) => d.type === "gift" && d.record && d.record.code === delGift2.code), true);
   check("archive has no booking entries", types.includes("booking"), false);
   check("archive has no message entries", types.includes("message"), false);
+
+  // ---------- 19. monthly backup + delete gate (Tony Nov 19, 2026) ----------
+  // Nothing can be deleted until the first monthly backup email has gone
+  // out. Remove the flag: every delete is refused (503) and nothing is
+  // removed. Send-monthly without an email key reports emailed:false and
+  // leaves the flag unset. Set the flag: deletes open again.
+  const gatePay = { id: "pay_gate_test", kind: "pay-spot", amountCents: 2500, clientName: "Gate Test", serviceLabel: "Classic Facial", method: "cash", createdAt: new Date().toISOString() };
+  await bookingsLib.recordPayment(gatePay);
+  const gateRefRes = await callAdmin({ view: "referrals", action: "create", name: "Gate Ref", email: "gateref@test.example", phone: "9055550133" });
+  const gateRefCode = gateRefRes.body.referral.code;
+  const gateGift = await bookingsLib.ensureGiftCode(voucherSession("cs_admin_gate", "Classic Facial — $65", 6500, "gift"));
+  const gateMsg = await messagesLib.saveMessage({ name: "Gate Msg", phone: "9055550112", reason: "gate test", callId: "call_gate" });
+  const gateBooking = { id: "bk_gate_test", date: d2, time: "2:00 PM", service: "classic-facial", serviceName: "Classic Facial", status: "cancelled", name: "Gate Test", phone: "(905) 555-0997", email: "gate@test.example", addons: [], createdAt: new Date().toISOString() };
+  await bookingsLib.saveBooking(gateBooking);
+  mem.delete("backup:lastMonthly");
+  let gateRes = await callAdmin({ view: "payments", action: "delete", paymentId: "pay_gate_test" });
+  check("gate: payment delete -> 503", gateRes.statusCode, 503);
+  check("gate: payment delete names the monthly backup", /Monthly backup/.test(gateRes.body.error || ""), true);
+  check("gate: payment kept", !!(await bookingsLib.getPayment("pay_gate_test")), true);
+  gateRes = await callAdmin({ view: "referrals", action: "delete", code: gateRefCode });
+  check("gate: referral delete -> 503", gateRes.statusCode, 503);
+  check("gate: referral kept", !!(await referralsLib.getReferralByCode(gateRefCode)), true);
+  gateRes = await callAdmin({ view: "codes", action: "delete", code: gateGift.code });
+  check("gate: gift delete -> 503", gateRes.statusCode, 503);
+  check("gate: gift kept", !!(await bookingsLib.getGift(gateGift.code)), true);
+  gateRes = await callAdmin({ view: "messages", action: "delete", id: gateMsg.id });
+  check("gate: message delete -> 503", gateRes.statusCode, 503);
+  check("gate: message kept", (await messagesLib.listMessages()).some((m) => m.id === gateMsg.id), true);
+  gateRes = await callAdmin({ view: "bookings", action: "delete", bookingId: "bk_gate_test" });
+  check("gate: booking delete -> 503", gateRes.statusCode, 503);
+  check("gate: booking kept", !!(await bookingsLib.getBooking("bk_gate_test")), true);
+  const statusBefore = await callAdmin(null, { view: "backup", status: "1" });
+  check("backup status -> monthlyActive false", statusBefore.body.monthlyActive, false);
+  gateRes = await callAdmin({ view: "backup", action: "send-monthly" });
+  check("send-monthly -> 200", gateRes.statusCode, 200);
+  check("send-monthly without email key -> emailed false", gateRes.body.emailed, false);
+  check("send-monthly without email -> flag still unset", mem.get("backup:lastMonthly"), undefined);
+  mem.set("backup:lastMonthly", new Date().toISOString());
+  const statusAfter = await callAdmin(null, { view: "backup", status: "1" });
+  check("backup status -> monthlyActive true", statusAfter.body.monthlyActive, true);
+  gateRes = await callAdmin({ view: "payments", action: "delete", paymentId: "pay_gate_test" });
+  check("gate open: payment delete -> 200", gateRes.statusCode, 200);
+  gateRes = await callAdmin({ view: "referrals", action: "delete", code: gateRefCode });
+  check("gate open: referral delete -> 200", gateRes.statusCode, 200);
+  gateRes = await callAdmin({ view: "codes", action: "delete", code: gateGift.code });
+  check("gate open: gift delete -> 200", gateRes.statusCode, 200);
+  gateRes = await callAdmin({ view: "messages", action: "delete", id: gateMsg.id });
+  check("gate open: message delete -> 200", gateRes.statusCode, 200);
+  gateRes = await callAdmin({ view: "bookings", action: "delete", bookingId: "bk_gate_test" });
+  check("gate open: booking delete -> 200", gateRes.statusCode, 200);
+  const vercel = JSON.parse(require("fs").readFileSync(require("path").join(__dirname, "..", "vercel.json"), "utf8"));
+  check("vercel has a weekly backup cron", (vercel.crons || []).some((c) => c.schedule === "0 13 * * 1" && (c.path || "").includes("view=backup")), true);
+  check("vercel has a monthly backup cron on the 1st", (vercel.crons || []).some((c) => c.schedule === "0 13 1 * *" && (c.path || "").includes("period=monthly")), true);
 
   console.log(`admin tests: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
