@@ -43,6 +43,16 @@
 //   → mark a caller message read / unread.
 // POST /api/admin/data { view:"messages", action:"delete", id }
 //   → delete a caller message.
+// GET /api/admin/data ?view=counts&since=<ISO>
+//   → what is new since `since`: unread caller messages + recent
+//     events (bookings, payments, messages), for the dashboard chime,
+//     banner, and icon badge; also carries the push setup state.
+// POST /api/admin/data { view:"push", action:"subscribe", subscription }
+//   → store this phone's Web Push subscription (pop-up alerts on).
+// POST /api/admin/data { view:"push", action:"unsubscribe", endpoint }
+//   → drop a stored subscription (pop-up alerts off).
+// POST /api/admin/data { view:"push", action:"test" }
+//   → send a test pop-up to every subscribed phone.
 // POST /api/admin/data { view:"codes", action:"delete", code }
 //   → delete a gift certificate / voucher for good (record, index entry,
 //     checkout-session link). The remaining balance is gone.
@@ -67,6 +77,10 @@ const {
   getBufferMins, setBufferMins, listBlocks, addBlock, removeBlock, studioForDate,
 } = require("../../lib/studio");
 const { listMessages, markMessageRead, deleteMessage } = require("../../lib/messages");
+const {
+  configured: pushConfigured, publicKey: pushPublicKey, addSub, removeSub,
+  listEvents, listEventsSince, badgeCount, sendPush,
+} = require("../../lib/push");
 const { sendEmail } = require("../../lib/email");
 
 function publicBooking(b) {
@@ -296,6 +310,33 @@ module.exports = async (req, res) => {
         await logAudit(session, "messages.delete", `message ${b.id} deleted`);
         return res.status(200).json({ ok: true });
       }
+      if (b.view === "push" && b.action === "subscribe") {
+        if (!pushConfigured()) return res.status(503).json({ error: "Pop-up alerts are not set up yet — the studio keys are missing." });
+        const sub = b.subscription || {};
+        if (!sub.endpoint || !sub.keys || !sub.keys.p256dh || !sub.keys.auth) {
+          return res.status(400).json({ error: "That subscription looks incomplete — try again from the dashboard." });
+        }
+        const ok = await addSub(sub);
+        if (!ok) return res.status(400).json({ error: "That subscription could not be saved." });
+        await logAudit(session, "push.subscribe", "pop-up alerts turned on for this device");
+        return res.status(200).json({ ok: true });
+      }
+      if (b.view === "push" && b.action === "unsubscribe") {
+        await removeSub(String(b.endpoint || ""));
+        await logAudit(session, "push.unsubscribe", "pop-up alerts turned off for this device");
+        return res.status(200).json({ ok: true });
+      }
+      if (b.view === "push" && b.action === "test") {
+        if (!pushConfigured()) return res.status(503).json({ error: "Pop-up alerts are not set up yet — the studio keys are missing." });
+        const out = await sendPush({
+          title: "In2Skin — test pop-up",
+          body: "Pop-ups are working. New bookings, payments, and caller messages will land here.",
+          badge: await badgeCount(),
+          url: "/admin/dashboard.html",
+        });
+        await logAudit(session, "push.test", `test pop-up sent to ${out.sent} device(s)`);
+        return res.status(200).json({ ok: true, sent: out.sent });
+      }
       if (b.view === "codes" && b.action === "delete") {
         const ok = await deleteGift(b.code);
         if (!ok) return res.status(404).json({ error: "That code is already gone." });
@@ -504,6 +545,19 @@ module.exports = async (req, res) => {
     if ((req.query || {}).view === "messages") {
       const messages = await listMessages();
       return res.status(200).json({ messages });
+    }
+    if ((req.query || {}).view === "counts") {
+      const since = String((req.query || {}).since || "");
+      const messages = await listMessages();
+      const unreadMessages = messages.filter((m) => !m.read).length;
+      const events = listEventsSince(await listEvents(), since);
+      return res.status(200).json({
+        unreadMessages,
+        events,
+        badge: await badgeCount(),
+        pushConfigured: pushConfigured(),
+        vapidPublicKey: pushPublicKey(),
+      });
     }
     if ((req.query || {}).view === "backup") {
       const backup = await exportBackup();

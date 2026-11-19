@@ -13,6 +13,7 @@
 // (Sarah + Tony). Email never throws — a missing key just means no email.
 const { getSettings, transferStatus } = require("../lib/transfer");
 const { saveMessage } = require("../lib/messages");
+const { notifyPush } = require("../lib/push");
 const { sendEmail } = require("../lib/email");
 const { adminEmails } = require("../lib/auth");
 
@@ -46,6 +47,13 @@ module.exports = async (req, res) => {
           html: `<h2 style="font-family:Georgia,serif;color:#2F4A2C;">New message from a caller</h2><p><strong>${escapeHtml(name)}</strong> called while the studio couldn't answer.</p><ul><li>Phone: <a href="tel:${phone.replace(/[^0-9+]/g, "")}">${escapeHtml(phone)}</a></li><li>Reason: ${escapeHtml(reason || "No reason given.")}</li><li>When: ${escapeHtml(when)} (Toronto time)</li></ul><p>Call them back at ${escapeHtml(phone)}, or see all messages on the studio dashboard.</p><p>— In2Skin, Bolton</p>`,
         });
       }
+      // Same moment as the email: a pop-up on the studio phone +
+      // a dashboard event (chime + banner while it is open).
+      await notifyPush({
+        type: "message",
+        title: "New message from a caller",
+        body: `${name} — ${reason || "No reason given."}`,
+      });
       return res.status(200).json({ ok: true, id: record.id, emailed });
     }
     const settings = await getSettings();

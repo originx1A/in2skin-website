@@ -51,6 +51,7 @@
       <h1 style="font-family:'Cormorant Garamond',serif; font-size:2rem; margin-bottom:4px;">Studio dashboard</h1>
       <p class="sub" id="dashSub">Signed in — loading today…</p>
       <div id="dashMsg" style="min-height:1.4em; color:#7A3B2E; margin-bottom:10px;"></div>
+      <div id="alertBanner" style="display:none; background:var(--cream); border:2px solid var(--gold); border-radius:8px; padding:10px 12px; margin-bottom:10px;"></div>
       <nav class="dash-nav" aria-label="Dashboard sections">
         <div class="dash-nav-row">
           <button class="btn btn-ghost dash-nav-toggle" id="dashNavToggle" type="button" aria-expanded="false">&#9776; Sections</button>
@@ -209,6 +210,15 @@
       <section class="dash-sec" id="sec-messages" style="margin-top:36px;">
         <h2 style="font-size:1.4rem;"><span class="sec-sym" aria-hidden="true">&#9993;</span> Messages — from callers</h2>
         <p class="sub">Messages the phone assistant took when it couldn't put a caller through. Newest first — tap the number to call back.</p>
+        <div class="act-panel" style="margin-bottom:12px;">
+          <strong>Pop-up alerts</strong>
+          <p class="sub" style="margin:4px 0 8px;">Get a pop-up on your phone when a booking, payment, or caller message lands — even with the dashboard closed. While the dashboard is open, new arrivals also play a soft chime and show a gold banner at the top.</p>
+          <p class="sub" id="alertStatus" style="margin:4px 0 8px;">Checking alerts…</p>
+          <button class="btn btn-book" id="alertEnable" type="button" style="display:none;">Turn on pop-ups</button>
+          <button class="btn btn-ghost" id="alertTest" type="button" style="display:none;">Send a test pop-up</button>
+          <button class="btn btn-ghost" id="alertOff" type="button" style="display:none;">Turn off pop-ups</button>
+          <button class="btn btn-ghost" id="chimeToggle" type="button" style="display:none;" aria-pressed="true">Sound: on</button>
+        </div>
         <div id="msgList" style="margin-top:12px;">Loading messages…</div>
       </section>
 
@@ -1089,6 +1099,214 @@
           }
         });
         loadMessages();
+
+        // ---- pop-up alerts + chime (Tony Nov 19, 2026): a pop-up on the
+        // studio phone + a counter on the dashboard icon when a booking,
+        // payment, or caller message lands — even with the dashboard
+        // closed. While the dashboard is open, the same arrivals play a
+        // soft chime and show a gold banner at the top. The phone side
+        // needs the dashboard on the home screen + Allow tapped once;
+        // nothing else to install. The chime works on its own — it
+        // needs no keys, only the dashboard open. ----
+        var alertStatus = document.getElementById("alertStatus");
+        var alertEnableBtn = document.getElementById("alertEnable");
+        var alertTestBtn = document.getElementById("alertTest");
+        var alertOffBtn = document.getElementById("alertOff");
+        var chimeBtn = document.getElementById("chimeToggle");
+        var alertBanner = document.getElementById("alertBanner");
+        var alertSupported = ("serviceWorker" in navigator) && ("PushManager" in window) && ("Notification" in window);
+        var alertSub = null; // this phone's push subscription, if any
+        var alertConfigured = false;
+        var vapidKey = null;
+        var lastPollAt = new Date().toISOString();
+        var newSinceOpen = 0;
+
+        function chimeOn(){ try { return localStorage.getItem("in2skin-chime") !== "off"; } catch (e){ return true; } }
+        function setChimeLabel(){ if (chimeBtn){ chimeBtn.textContent = chimeOn() ? "Sound: on" : "Sound: off"; chimeBtn.setAttribute("aria-pressed", chimeOn() ? "true" : "false"); } }
+        if (chimeBtn){
+          setChimeLabel();
+          chimeBtn.addEventListener("click", function(){
+            try { localStorage.setItem("in2skin-chime", chimeOn() ? "off" : "on"); } catch (e){}
+            setChimeLabel();
+          });
+        }
+        // Soft two-tone chime, made in the browser — no audio file.
+        // Sound only works after a tap somewhere on the page (the
+        // browser's rule), so the first tap unlocks it.
+        var audioCtx = null;
+        function ensureAudio(){
+          try {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+          } catch (e){}
+        }
+        document.addEventListener("pointerdown", ensureAudio);
+        function playChime(){
+          if (!chimeOn()) return;
+          ensureAudio();
+          if (!audioCtx || audioCtx.state !== "running") return;
+          try {
+            [880, 1318.5].forEach(function(freq, i){
+              var o = audioCtx.createOscillator();
+              var g = audioCtx.createGain();
+              o.type = "sine"; o.frequency.value = freq;
+              var t = audioCtx.currentTime + i * 0.16;
+              g.gain.setValueAtTime(0.0001, t);
+              g.gain.exponentialRampToValueAtTime(0.12, t + 0.03);
+              g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+              o.connect(g); g.connect(audioCtx.destination);
+              o.start(t); o.stop(t + 0.55);
+            });
+          } catch (e){}
+        }
+        function setBadge(n){
+          try {
+            if (!("setAppBadge" in navigator)) return;
+            var p = n > 0 ? navigator.setAppBadge(n) : navigator.clearAppBadge();
+            if (p && p.catch) p.catch(function(){});
+          } catch (e){}
+        }
+        function showAlertBanner(ev){
+          if (!alertBanner || !ev) return;
+          var gotoId = ev.type === "message" ? "sec-messages" : "sec-payments";
+          alertBanner.innerHTML = "<strong>" + esc(ev.title) + "</strong> — " + esc(ev.body)
+            + ' <a href="#' + gotoId + '">View</a>'
+            + ' <button type="button" id="alertBannerX" style="float:right; background:none; border:none; font-size:1rem; cursor:pointer;" aria-label="Dismiss">×</button>';
+          alertBanner.style.display = "block";
+          var x = document.getElementById("alertBannerX");
+          if (x) x.addEventListener("click", function(){ alertBanner.style.display = "none"; });
+        }
+        function refreshAlertButtons(){
+          if (chimeBtn) chimeBtn.style.display = "";
+          if (!alertStatus) return;
+          if (!alertSupported){
+            alertStatus.textContent = "Pop-ups aren't available in this browser — open the dashboard from your home-screen icon on your iPhone and try again.";
+            return;
+          }
+          if (!alertConfigured){
+            alertStatus.textContent = "Pop-ups are not set up yet — the studio keys still need adding.";
+            return;
+          }
+          if (Notification.permission === "denied"){
+            alertStatus.textContent = "Pop-ups are blocked for this phone — allow notifications for the dashboard in your iPhone Settings, then come back.";
+            return;
+          }
+          if (alertSub){
+            alertStatus.textContent = "Pop-ups are on for this phone.";
+            alertEnableBtn.style.display = "none";
+            alertTestBtn.style.display = "";
+            alertOffBtn.style.display = "";
+          } else {
+            alertStatus.textContent = "Pop-ups are off — turn them on and new bookings, payments, and caller messages will pop up on this phone.";
+            alertEnableBtn.style.display = "";
+            alertTestBtn.style.display = "none";
+            alertOffBtn.style.display = "none";
+          }
+        }
+        function urlBase64ToUint8Array(base64){
+          var padding = "=".repeat((4 - (base64.length % 4)) % 4);
+          var b64 = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
+          var raw = window.atob(b64);
+          var out = new Uint8Array(raw.length);
+          for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+          return out;
+        }
+        function checkAlerts(){
+          fetch("/api/admin/data?view=counts&since=" + encodeURIComponent(lastPollAt))
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok) return;
+              var j = res.j;
+              if (typeof j.pushConfigured === "boolean") alertConfigured = j.pushConfigured;
+              if (j.vapidPublicKey) vapidKey = j.vapidPublicKey;
+              lastPollAt = new Date().toISOString();
+              var fresh = j.events || [];
+              if (fresh.length){
+                newSinceOpen += fresh.length;
+                setBadge(newSinceOpen);
+                playChime();
+                showAlertBanner(fresh[0]);
+                loadMessages(); loadPayments(); loadWeek(); loadCal();
+              }
+              refreshAlertButtons();
+            })
+            .catch(function(){ /* a missed poll just waits for the next one */ });
+        }
+        if (alertEnableBtn){
+          alertEnableBtn.addEventListener("click", function(){
+            if (!alertSupported || !vapidKey){ refreshAlertButtons(); return; }
+            alertStatus.textContent = "Turning on pop-ups…";
+            var perm = Notification.permission;
+            var ask = perm === "granted" ? Promise.resolve("granted")
+              : perm === "default" ? Notification.requestPermission()
+              : Promise.resolve(perm);
+            ask.then(function(result){
+              if (result !== "granted"){
+                alertStatus.textContent = "Pop-ups are blocked for this phone — allow notifications for the dashboard in your iPhone Settings, then come back.";
+                refreshAlertButtons();
+                return;
+              }
+              return navigator.serviceWorker.register("/admin/sw.js")
+                .then(function(reg){ return reg.pushManager.getSubscription().then(function(sub){ return { reg: reg, sub: sub }; }); })
+                .then(function(pair){
+                  if (pair.sub) return pair.sub;
+                  return pair.reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapidKey) });
+                })
+                .then(function(sub){
+                  alertSub = sub;
+                  return postAdmin({ view:"push", action:"subscribe", subscription: sub.toJSON ? sub.toJSON() : sub });
+                })
+                .then(function(res){
+                  if (!res.ok){ alertStatus.textContent = res.j.error || "Could not turn on pop-ups — try again."; alertSub = null; return; }
+                  alertStatus.textContent = "Pop-ups are on for this phone.";
+                  refreshAlertButtons();
+                });
+            }).catch(function(){
+              alertStatus.textContent = "Could not turn on pop-ups — open the dashboard from your home-screen icon and try again.";
+              alertSub = null;
+              refreshAlertButtons();
+            });
+          });
+        }
+        if (alertTestBtn){
+          alertTestBtn.addEventListener("click", function(){
+            alertStatus.textContent = "Sending a test pop-up…";
+            postAdmin({ view:"push", action:"test" })
+              .then(function(res){
+                alertStatus.textContent = res.ok
+                  ? "Test sent — it should pop up on this phone in a few seconds."
+                  : (res.j.error || "Could not send the test pop-up.");
+              })
+              .catch(function(){ alertStatus.textContent = "Could not send the test pop-up — check your connection."; });
+          });
+        }
+        if (alertOffBtn){
+          alertOffBtn.addEventListener("click", function(){
+            var ep = alertSub ? alertSub.endpoint : "";
+            var done = function(){
+              alertSub = null;
+              postAdmin({ view:"push", action:"unsubscribe", endpoint: ep }).catch(function(){});
+              refreshAlertButtons();
+            };
+            if (alertSub && alertSub.unsubscribe) alertSub.unsubscribe().then(done).catch(done);
+            else done();
+          });
+        }
+        // Register the worker early so it is ready when pop-ups are
+        // turned on; opening the dashboard clears the icon counter —
+        // she is looking at it.
+        if ("serviceWorker" in navigator){
+          navigator.serviceWorker.register("/admin/sw.js").catch(function(){});
+          navigator.serviceWorker.ready.then(function(reg){
+            if (reg.pushManager) reg.pushManager.getSubscription().then(function(sub){ alertSub = sub || null; refreshAlertButtons(); }).catch(function(){ refreshAlertButtons(); });
+            else refreshAlertButtons();
+          }).catch(function(){ refreshAlertButtons(); });
+        } else {
+          refreshAlertButtons();
+        }
+        setBadge(0);
+        checkAlerts();
+        setInterval(checkAlerts, 30000);
 
         var methodSel = document.getElementById("spMethod");
         var contactWrap = document.getElementById("spContactWrap");
