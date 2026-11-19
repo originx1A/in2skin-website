@@ -585,6 +585,8 @@
       .pay-qr-cap{ font-size:.88rem; color:#5A5041; margin-top:4px; line-height:1.45; }
       .pay-qr-note{ background:var(--cream); border:1px solid var(--line); border-radius:8px; padding:13px 15px; font-size:.95rem; color:var(--ink-soft); margin-bottom:18px; }
       .pay-qr-note strong{ color:var(--sage-deep); }
+      /* QR note inside a two-column field pair spans the full width. */
+      .form-2col > .pay-qr-note{ grid-column:1 / -1; }
       .pay-picks-3{ grid-template-columns:repeat(3,1fr); }
       @media (max-width:640px){ .pay-picks-3{ grid-template-columns:1fr; } .pay-qr-box svg{ width:180px; height:180px; } }
       .pay-receipt{ max-width:520px; margin:0 auto; background:var(--paper); border:1px solid var(--gold); border-radius:10px; padding:24px 22px; box-shadow:var(--shadow); }
@@ -654,6 +656,13 @@
         .chat-panel .chat-chips{ display:none; }
         .chat-panel .chat-form{ padding:8px; padding-bottom:calc(8px + env(safe-area-inset-bottom)); }
         .chat-panel .msg{ padding:9px 12px; }
+      }
+      /* PC chat chips (Tony Nov 18, 2026): the quick-reply chips were
+         oversized on desktop — same compact size as the phone sheet, so
+         they stop eating the panel. Phones keep their own rule above. */
+      @media (min-width:861px){
+        .chat-panel .chat-chips{ gap:6px; padding:8px 12px 2px; }
+        .chat-panel .chat-chip{ padding:5px 10px; font-size:.8rem; min-height:30px; }
       }
 
       /* ---------- back to top ---------- */

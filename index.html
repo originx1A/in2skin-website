@@ -1895,11 +1895,13 @@
               '<button type="button" class="pick' + (isEmail ? " sel" : "") + '" data-pick-paymethod="email"><span class="t">Email</span><span class="d">To the client\u2019s email address</span></button>' +
               '<button type="button" class="pick' + (isQr ? " sel" : "") + '" data-pick-paymethod="qr"><span class="t">QR Code</span><span class="d">Show on this phone — client scans it</span></button>' +
             '</div>' +
+            '<div class="form-2col">' +
             (isQr ?
               '<div class="pay-qr-note"><strong>No number or email needed.</strong> Tap Show QR Code below and a code appears on this phone. The client points their phone camera at it and the pay link opens on their phone.</div>' :
               '<div class="field"><label for="pfContact">' + (isEmail ? "Client\u2019s email" : "Client\u2019s mobile number") + '</label>' +
               '<input id="pfContact" type="' + (isEmail ? "email" : "tel") + '" placeholder="' + (isEmail ? "client@example.com" : "e.g. (905) 555-0100") + '" value="' + pay.contact + '" /></div>') +
             '<div class="field"><label for="pfGift">Gift certificate code (optional)</label><input id="pfGift" type="text" autocomplete="off" placeholder="e.g. IN2SKIN-ABC123" value="' + (pay.giftCode || "") + '" /></div>' +
+            '</div>' +
             '<div class="err" id="payErr"></div>' +
             '<div class="book-nav"><span class="spacer"></span>' +
             '<button type="submit" class="btn btn-call btn-big">' + (isQr ? "Show QR Code →" : "Send Payment Link →") + '</button></div>' +
