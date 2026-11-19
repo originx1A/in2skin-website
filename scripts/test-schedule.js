@@ -62,9 +62,9 @@ check("Add-on 10:00 -> 12:00 add-on free", taken([B("10:00 AM", "reflexology")],
 // appointment, premium once per visit.
 check("Classic + Light is 75 min", durationForBooking("classic-facial", ["light-therapy"]), 75);
 check("Classic + 2 add-ons is 95 min", durationForBooking("classic-facial", ["light-therapy", "reflexology"]), 95);
-check("Consult + Light is 80 min (60-min hold + 20)", durationForBooking("microneedling", ["light-therapy"]), 80);
-check("Classic + Microdermabrasion is 70 min (55 + 15, still 15)", durationForBooking("classic-facial", ["microdermabrasion"]), 70);
-check("Classic + Micro + Light is 90 min (55 + 15 + 20)", durationForBooking("classic-facial", ["microdermabrasion", "light-therapy"]), 90);
+check("Microneedling + Light is 40 min (20 + 20)", durationForBooking("microneedling", ["light-therapy"]), 40);
+check("Classic + Microdermabrasion is 75 min (55 + 20)", durationForBooking("classic-facial", ["microdermabrasion"]), 75);
+check("Classic + Micro + Light is 95 min (55 + 20 + 20)", durationForBooking("classic-facial", ["microdermabrasion", "light-therapy"]), 95);
 check("Classic + Light regular is $140", baseCentsFor("classic-facial", ["light-therapy"], "regular"), 14000);
 check("Classic + Light Private Hours is $155 (premium once)", baseCentsFor("classic-facial", ["light-therapy"], "after"), 15500);
 check("Classic + 2 add-ons Private Hours is $190", baseCentsFor("classic-facial", ["light-therapy", "reflexology"], "after"), 19000);

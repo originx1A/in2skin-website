@@ -189,6 +189,18 @@ async function run() {
     delete process.env.RESEND_API_KEY;
   }
 
+  // 16. Needling is one treatment (Tony Nov 19, 2026): microneedling and
+  //     NANO needling are the same thing, just the needle size — a booking
+  //     picks one or the other, never both.
+  await assert.rejects(
+    buildBooking(base({ service: "microneedling", addons: ["nano-needling"], date: futureDate(20) }), { bufferMins: 60, blocks: [], via: "web" }),
+    /one treatment/,
+  );
+  //     ...and microneedling on its own is now a plain $65 / 20-minute booking.
+  b = await buildBooking(base({ service: "microneedling", date: futureDate(21) }), { bufferMins: 60, blocks: [], via: "web" });
+  assert.equal(b.amountCents, 5500, "Microneedling alone first visit is $55, got " + b.amountCents);
+  assert.equal(b.minsLabel, "20 minutes", "microneedling alone is 20 minutes");
+
   console.log("booking-addons tests: passed");
 }
 

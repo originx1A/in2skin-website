@@ -29,7 +29,7 @@ const TREATMENT_LINKS = [
   ["light-therapy", "Light Therapy", "$55"],
   ["reflexology", "Reflexology", "$35"],
   ["chemical-peels", "Chemical Peels", "$125–$475"],
-  ["microneedling", "Microneedling", "From $150"],
+  ["microneedling", "Microneedling", "$65"],
   ["skin-tightening", "Skin Tightening", "Custom"],
 ];
 
@@ -254,7 +254,7 @@ const LOCATIONS = [
       {
         h: "Treatments that fit",
         ticks: [
-          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a custom mask. The everyday refresh, and the best first facial.",
+          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a hydration mask. The everyday refresh, and the best first facial.",
           "Anti-Aging Facial — $125 · 80 minutes. Firming massage, targeted serums and rich hydration, for firm, youthful skin.",
           "The Works — $160 with a Classic Facial, $195 with an Anti-Aging Facial. Facial, red light therapy and reflexology, all at once while the mask works.",
           "Add-ons from $35: NANO Needling $65, Microdermabrasion $55, Light Therapy $55, Reflexology $35 — add one to any facial, or book one on its own.",
@@ -301,7 +301,7 @@ const LOCATIONS = [
       {
         h: "Treatments that fit",
         ticks: [
-          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a custom mask, with no downtime.",
+          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a hydration mask, with no downtime.",
           "Anti-Aging Facial — $125 · 80 minutes. Firming massage, targeted serums and rich hydration, for firm, youthful skin.",
           "The Works — $160 with a Classic Facial, $195 with an Anti-Aging Facial. Facial, red light therapy and reflexology, all at once.",
           "Add-ons from $35: NANO Needling $65, Microdermabrasion $55, Light Therapy $55, Reflexology $35.",
@@ -348,7 +348,7 @@ const LOCATIONS = [
       {
         h: "Treatments that fit",
         ticks: [
-          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a custom mask. The everyday refresh.",
+          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a hydration mask. The everyday refresh.",
           "Anti-Aging Facial — $125 · 80 minutes. Firming massage, targeted serums and rich hydration, for firm, youthful skin.",
           "The Works — $160 with a Classic Facial, $195 with an Anti-Aging Facial. Facial, red light therapy and reflexology, all at once.",
           "Add-ons from $35: NANO Needling $65, Microdermabrasion $55, Light Therapy $55, Reflexology $35 — or book an add-on on its own.",
@@ -395,9 +395,9 @@ const LOCATIONS = [
       {
         h: "Treatments that fit",
         ticks: [
-          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a custom mask, with no downtime.",
+          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a hydration mask, with no downtime.",
           "Anti-Aging Facial — $125 · 80 minutes. Firming massage, targeted serums and rich hydration, for firm, youthful skin.",
-          "Microdermabrasion — $55 · 15 minutes. A precision polish for brighter, smoother skin — a favourite before events and photos.",
+          "Microdermabrasion — $55 · 20 minutes. A precision polish for brighter, smoother skin — a favourite before events and photos.",
           "The Works — $160 with a Classic Facial, $195 with an Anti-Aging Facial. Facial, red light therapy and reflexology, all at once.",
         ],
       },
@@ -442,7 +442,7 @@ const LOCATIONS = [
       {
         h: "Treatments that fit",
         ticks: [
-          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a custom mask. The everyday refresh.",
+          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a hydration mask. The everyday refresh.",
           "Anti-Aging Facial — $125 · 80 minutes. Firming massage, targeted serums and rich hydration, for firm, youthful skin.",
           "Reflexology — $35 · 20 minutes. Gentle pressure on the feet that leaves the whole body calm — book it on its own, or add it to a facial.",
           "The Works — $160 with a Classic Facial, $195 with an Anti-Aging Facial. Facial, red light therapy and reflexology, all at once.",
@@ -489,7 +489,7 @@ const LOCATIONS = [
       {
         h: "Treatments that fit",
         ticks: [
-          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a custom mask, with no downtime.",
+          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a hydration mask, with no downtime.",
           "Anti-Aging Facial — $125 · 80 minutes. Eighty unhurried minutes of firming massage, targeted serums and rich hydration.",
           "The Works — $160 with a Classic Facial, $195 with an Anti-Aging Facial. Facial, red light therapy and reflexology, all at once — many clients drift off.",
           "Add-ons from $35: NANO Needling $65, Microdermabrasion $55, Light Therapy $55, Reflexology $35.",
@@ -536,7 +536,7 @@ const LOCATIONS = [
       {
         h: "Treatments that fit",
         ticks: [
-          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a custom mask, with no downtime.",
+          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a hydration mask, with no downtime.",
           "Anti-Aging Facial — $125 · 80 minutes. Firming massage, targeted serums and rich hydration, for firm, youthful skin.",
           "The Works — $160 with a Classic Facial, $195 with an Anti-Aging Facial. Facial, red light therapy and reflexology, all at once.",
           "Add-ons from $35: NANO Needling $65, Microdermabrasion $55, Light Therapy $55, Reflexology $35.",
@@ -583,7 +583,7 @@ const LOCATIONS = [
       {
         h: "Treatments that fit",
         ticks: [
-          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a custom mask, with no downtime.",
+          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a hydration mask, with no downtime.",
           "Anti-Aging Facial — $125 · 80 minutes. Firming massage, targeted serums and rich hydration, for firm, youthful skin.",
           "The Works — $160 with a Classic Facial, $195 with an Anti-Aging Facial. Facial, red light therapy and reflexology, all at once.",
           "Add-ons from $35: NANO Needling $65, Microdermabrasion $55, Light Therapy $55, Reflexology $35 — or book an add-on on its own.",
@@ -637,7 +637,7 @@ const LOCATIONS = [
       {
         h: "Treatments that fit",
         ticks: [
-          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a custom mask, with no downtime.",
+          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a hydration mask, with no downtime.",
           "Anti-Aging Facial — $125 · 80 minutes. Firming massage, targeted serums and rich hydration, for firm, youthful skin.",
           "The Works — $160 with a Classic Facial, $195 with an Anti-Aging Facial. Facial, red light therapy and reflexology, all at once.",
           "Add-ons from $35: NANO Needling $65, Microdermabrasion $55, Light Therapy $55, Reflexology $35 — or book an add-on on its own.",
@@ -691,7 +691,7 @@ const LOCATIONS = [
       {
         h: "Treatments that fit",
         ticks: [
-          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a custom mask, with no downtime.",
+          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a hydration mask, with no downtime.",
           "Anti-Aging Facial — $125 · 80 minutes. Firming massage, targeted serums and rich hydration, for firm, youthful skin.",
           "The Works — $160 with a Classic Facial, $195 with an Anti-Aging Facial. Facial, red light therapy and reflexology, all at once.",
           "Add-ons from $35: NANO Needling $65, Microdermabrasion $55, Light Therapy $55, Reflexology $35.",
@@ -740,8 +740,8 @@ const CONDITIONS = [
       {
         h: "Treatments that help",
         ticks: [
-          "Classic Facial — $85 · 55 minutes. Deep cleanse, gentle exfoliation, steam and a custom mask. The best first step for breakout-prone skin.",
-          "Microdermabrasion — $55 · 15 minutes. A gentle polish that sweeps away dull, rough surface cells so pores stay clear and skin looks brighter.",
+          "Classic Facial — $85 · 55 minutes. Deep cleanse, gentle exfoliation, steam and a hydration mask. The best first step for breakout-prone skin.",
+          "Microdermabrasion — $55 · 20 minutes. A gentle polish that sweeps away dull, rough surface cells so pores stay clear and skin looks brighter.",
           "Light Therapy — $55 · 20 minutes. Warm red light that encourages a calmer, more even complexion.",
           "Chemical Peels — $125–$475 · 25 minutes. Gentle to advanced strengths, matched to your skin at consultation — the exact price is confirmed up front.",
         ],
@@ -786,7 +786,7 @@ const CONDITIONS = [
       {
         h: "Treatments that help",
         ticks: [
-          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a custom mask — products chosen for sensitive skin, with no downtime.",
+          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a hydration mask — products chosen for sensitive skin, with no downtime.",
           "Light Therapy — $55 · 20 minutes. Warm red light that supports a calmer, more even complexion. Deeply restful, and pairs well with a facial.",
           "Anti-Aging Facial — $125 · 80 minutes. Gentle, unhurried care with products chosen for your skin that day, for comfort throughout.",
           "Reflexology — $35 · 20 minutes. Calm for the whole body while your skin rests — add it to a facial, or book it on its own.",
@@ -825,15 +825,15 @@ const CONDITIONS = [
       {
         h: "How a facial brings back the glow",
         body: [
-          "A facial for dull skin combines a gentle deep cleanse, soft exfoliation, warm steam and rich hydration, finished with a custom mask matched to your skin that day. Clearing dull surface build-up lets moisture absorb properly, so skin leaves soft, supple and comfortably hydrated.",
-          "Microdermabrasion is the quick version: a precision polish that sweeps away the rough outer layer in 15 minutes, for an instant radiant glow.",
+          "A facial for dull skin combines a gentle deep cleanse, soft exfoliation, warm steam and rich hydration, finished with a hydration mask matched to your skin that day. Clearing dull surface build-up lets moisture absorb properly, so skin leaves soft, supple and comfortably hydrated.",
+          "Microdermabrasion is the quick version: a precision polish that sweeps away the rough outer layer in 20 minutes, for an instant radiant glow.",
         ],
       },
       {
         h: "Treatments that help",
         ticks: [
-          "Microdermabrasion — $55 · 15 minutes. A precision polishing wand sweeps away dull, dead surface cells. Skin feels smoother right away and looks brighter — a favourite before weddings, events and photos.",
-          "Classic Facial — $85 · 55 minutes. Deep cleanse, exfoliation, steam, massage and a custom mask, with no downtime.",
+          "Microdermabrasion — $55 · 20 minutes. A precision polishing wand sweeps away dull, dead surface cells. Skin feels smoother right away and looks brighter — a favourite before weddings, events and photos.",
+          "Classic Facial — $85 · 55 minutes. Deep cleanse, exfoliation, steam, massage and a hydration mask, with no downtime.",
           "NANO Needling — $65 · 20 minutes. Ultra-fine tips help professional serums absorb more deeply, so skin looks plumper, smoother and more radiant.",
           "Light Therapy — $55 · 20 minutes. Warm red light that supports the skin's natural renewal, for a firmer-looking, more even glow.",
         ],
@@ -846,11 +846,11 @@ const CONDITIONS = [
       },
     ],
     leadPrice: "$55",
-    leadMins: "Microdermabrasion · 15 minutes",
+    leadMins: "Microdermabrasion · 20 minutes",
     panelExtra: "Classic Facial: <strong style=\"color:var(--sage-deep);\">$85 · 55 min</strong>",
     faq: [
       ["What makes skin look dull?", "Usually surface build-up: dead cells and dryness sitting on top, blocking light and stopping moisture from absorbing."],
-      ["What gives the fastest glow?", "Microdermabrasion, $55 for 15 minutes — skin looks brighter and feels smoother right away, with no downtime."],
+      ["What gives the fastest glow?", "Microdermabrasion, $55 for 20 minutes — skin looks brighter and feels smoother right away, with no downtime."],
       ["How long does the glow last?", "Days — and with a facial every 4 to 6 weeks, skin stays brighter month after month."],
       ["What does a full facial cost?", "The Classic Facial is $85 for 55 minutes. Microdermabrasion and Light Therapy are $55 each and can be added to a facial or booked on their own."],
     ],
@@ -873,22 +873,21 @@ const CONDITIONS = [
         h: "How treatments help fine lines",
         body: [
           "An anti-aging facial works on the surface and underneath: deep cleansing and exfoliation, firming and lifting massage, targeted serums, and rich hydration. Lines appear softer, skin looks firmer, and the glow is brighter and more even.",
-          "Microneedling goes deeper — fine needles create controlled micro-channels that prompt the skin's natural repair and new collagen, improving the look of fine lines, uneven texture and enlarged pores over a series of treatments.",
+          "Needling goes deeper — Sarah picks micro or nano needles for your face; fine needles create controlled micro-channels that prompt the skin's natural repair and new collagen, improving the look of fine lines, uneven texture and enlarged pores over a series of treatments.",
         ],
       },
       {
         h: "Treatments that help",
         ticks: [
           "Anti-Aging Facial — $125 · 80 minutes. Firming massage, targeted anti-aging serums and rich hydration, for firm, youthful skin.",
-          "NANO Needling — $65 · 20 minutes. Ultra-fine tips help serums absorb more deeply — fine lines appear softer, skin looks plumper and smoother.",
-          "Microneedling — from $150. Collagen induction therapy for fine lines, acne scarring, uneven texture and enlarged pores.",
+          "Needling (micro or nano) — $65 · 20 minutes. Sarah picks the needle size for your face — ultra-fine tips help serums absorb more deeply, and fine needles prompt new collagen, improving the look of fine lines, acne scarring, uneven texture and enlarged pores.",
           "Skin Tightening — custom, priced per consultation. Firming care for skin that has lost elasticity, so it looks tighter and more lifted over time.",
         ],
       },
       {
         h: "Good to know",
         body: [
-          "First visit? Take $10 toward any service. Microneedling and skin tightening are priced at consultation — the exact price is confirmed up front, before anything begins. Private Hours, early mornings and evenings by request, are the regular price plus $15 per visit.",
+          "First visit? Take $10 toward any service. Microneedling is $65 for 20 minutes; skin tightening is priced at consultation — the exact price is confirmed up front, before anything begins. Private Hours, early mornings and evenings by request, are the regular price plus $15 per visit.",
         ],
       },
     ],
@@ -897,7 +896,7 @@ const CONDITIONS = [
     panelExtra: "Classic Facial: <strong style=\"color:var(--sage-deep);\">$85 · 55 min</strong>",
     faq: [
       ["What is the best facial for fine lines?", "The Anti-Aging Facial, $125 for 80 minutes — firming massage, targeted serums and rich hydration, for firmer, smoother, brighter skin."],
-      ["What is microneedling?", "Collagen induction therapy: fine needles create controlled micro-channels, prompting the skin's natural repair and new collagen. Pricing is confirmed at consultation."],
+      ["What is microneedling?", "Collagen induction therapy: fine needles create controlled micro-channels, prompting the skin's natural repair and new collagen. It's $65 for 20 minutes, and Sarah picks the needle size (micro or nano) that's best for your face at the visit."],
       ["How often should I book?", "Every 4 to 6 weeks. Results build with regular visits."],
       ["Can I add anything to a facial for fine lines?", "Yes — NANO Needling, $65, helps serums absorb more deeply, and Light Therapy, $55, supports the skin's natural renewal."],
     ],
@@ -927,7 +926,7 @@ const CONDITIONS = [
         h: "Treatments that help",
         ticks: [
           "The Works — $160 with a Classic Facial, $195 with an Anti-Aging Facial. Facial, red light therapy and reflexology, all at once.",
-          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a custom mask. The everyday refresh, with no downtime.",
+          "Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a hydration mask. The everyday refresh, with no downtime.",
           "Reflexology — $35 · 20 minutes. Gentle pressure on the feet that leaves the whole body calm and rebalanced — many clients sleep beautifully that night.",
           "Light Therapy — $55 · 20 minutes. Warm red light that supports the skin's natural renewal, for a firmer-looking, more even glow.",
         ],
@@ -970,9 +969,9 @@ const QUESTIONS = {
         "Classic Facial — $85 · 55 minutes",
         "Anti-Aging Facial — $125 · 80 minutes",
         "The Works — $160 with a Classic Facial (55 min), $195 with an Anti-Aging Facial (80 min)",
-        "Add-ons — NANO Needling $65, Microdermabrasion $55, Light Therapy $55, Reflexology $35 (NANO Needling, Light Therapy, and Reflexology 20 minutes; Microdermabrasion 15 minutes)",
+        "Add-ons — NANO Needling $65, Microdermabrasion $55, Light Therapy $55, Reflexology $35 (all four add-ons 20 minutes)",
         "Chemical Peels — $125–$475, 25 minutes, exact price confirmed at consultation",
-        "Microneedling — from $150; Skin Tightening — custom, priced per consultation",
+        "Microneedling — $65 for 20 minutes; Skin Tightening — custom, priced per consultation",
         "First visit — $10 toward any service · Private Hours — the regular price plus $15 per visit",
       ],
     },
@@ -980,9 +979,9 @@ const QUESTIONS = {
   leadPrice: "$85",
   leadMins: "Classic Facial · 55 minutes",
   faq: [
-    ["How much does a facial cost in Bolton?", "At In2Skin, the Classic Facial is $85 for 55 minutes and the Anti-Aging Facial is $125 for 80 minutes. Add-ons run $35 to $65, chemical peels run $125 to $475, and microneedling and skin tightening are priced per consultation. First visits get $10 off any service."],
+    ["How much does a facial cost in Bolton?", "At In2Skin, the Classic Facial is $85 for 55 minutes and the Anti-Aging Facial is $125 for 80 minutes. Add-ons run $35 to $65, chemical peels run $125 to $475, and microneedling is $65 while skin tightening is priced per consultation. First visits get $10 off any service."],
     ["What does a facial do?", "A facial deep-cleanses, exfoliates, steams, massages and hydrates your skin, finished with a mask matched to your skin that day. Skin leaves brighter, fresher and more hydrated — with a glow that lasts for days."],
-    ["How long does a facial take?", "The Classic Facial takes 55 minutes and the Anti-Aging Facial takes 80 minutes. Add-ons take 20 minutes each, except Microdermabrasion at 15 minutes, and can be added to a facial or booked on their own."],
+    ["How long does a facial take?", "The Classic Facial takes 55 minutes and the Anti-Aging Facial takes 80 minutes. Add-ons take 20 minutes each, and can be added to a facial or booked on their own."],
     ["How often should I get a facial?", "Every 4 to 6 weeks. Most clients make it a monthly ritual."],
     ["What is a first visit like?", "A consultation first, then the treatment — with every step explained as it happens. It is tailored to your skin that day, and your first visit is $10 off any service."],
     ["What are Private Hours?", "Premier appointments reserved just for you — early mornings and evenings, by request. You pay the regular price of the services you pick, plus $15 per visit. Sundays the studio is closed."],
@@ -993,19 +992,19 @@ const QUESTIONS = {
     ["What payment methods do you take?", "Card online at booking (Visa, Mastercard, American Express, Apple Pay), or cash or Interac e-transfer at the studio. Card charges show as IN2SKIN on the statement. Plain Interac-only debit cards cannot be charged by card — those clients pay by e-transfer."],
     ["What if I need to change my booking?", "Call (289) 212-4124 and the studio will move it for you."],
     ["What are the benefits of a facial?", "A facial deep-cleanses, exfoliates and hydrates your skin, boosts circulation and leaves skin brighter, softer and glowing. Regular facials keep pores clear, help breakouts settle and slow the look of ageing — and the hour itself is deeply relaxing."],
-    ["What should I expect during a facial?", "A consultation first, then a deep cleanse, steam, gentle exfoliation, a relaxing face, neck and shoulder massage, a custom mask matched to your skin, and serum and moisturizer to finish. Every step is explained as it happens, and you can ask for anything to be gentler or skipped."],
+    ["What should I expect during a facial?", "A consultation first, then a deep cleanse, steam, extractions if needed, gentle exfoliation, a relaxing face, neck and décolletage massage, a hydration mask matched to your skin, and serum and moisturizer to finish. Every step is explained as it happens, and you can ask for anything to be gentler or skipped."],
     ["Why are your facials less expensive than other Bolton spas?", "In2Skin is a small private studio — one room, one guest at a time — so a Classic Facial is $85 for 55 minutes. For comparison, a medi-spa in Bolton lists its 60-minute facials at $120."],
     ["Is red light therapy safe?", "Yes — red light therapy is non-invasive and painless, with no recovery time. You lie back under warm red light for 20 restful minutes. It supports collagen and a calmer, more even complexion."],
     ["What is reflexology?", "Reflexology is gentle, rhythmic pressure on points on your feet that map to the rest of your body — the arch to your back, the toes to your head and neck. It helps the whole body unwind, and many clients sleep beautifully that night. It is $35 for 20 minutes, on its own or added to a facial."],
     ["How much downtime is there after a chemical peel?", "It depends on the strength of the peel. Gentle peels have little to no downtime — skin looks fresh right away. Deeper peels can mean a few days of flaking or peeling as fresh skin emerges. Your consultation matches the peel to your skin and confirms exactly what to expect, before anything begins."],
     ["What is the best facial in Bolton?", "There is no single best facial — the best first facial at In2Skin is the Classic Facial, $85 for 55 minutes, tailored to your skin that day. If fine lines are your main concern, the Anti-Aging Facial, $125 for 80 minutes, adds firming massage and targeted serums."],
-    ["Where can I get microneedling near Bolton?", "At In2Skin, a private, one-on-one aesthetics studio in Bolton, Ontario — call (289) 212-4124 to book. Microneedling is collagen induction therapy that prompts the skin’s natural repair and new collagen, improving the look of fine lines, acne scarring, uneven texture and enlarged pores over a series of treatments, and pricing starts at $150, with the exact price confirmed at consultation before anything begins."],
-    ["What is the difference between a facial and a chemical peel?", "A facial deep-cleanses, exfoliates, steams, massages and hydrates your skin, finished with a custom mask — the Classic Facial is $85 for 55 minutes. A chemical peel is a professional Circadia peel solution that lifts away dull surface layers so fresher, brighter skin emerges; peels are $125–$475 for 25 minutes, matched to your skin at consultation, with the exact price confirmed up front."],
+    ["Where can I get microneedling near Bolton?", "At In2Skin, a private, one-on-one aesthetics studio in Bolton, Ontario — call (289) 212-4124 to book. Microneedling is collagen induction therapy that prompts the skin’s natural repair and new collagen, improving the look of fine lines, acne scarring, uneven texture and enlarged pores over a series of treatments. It's $65 for 20 minutes, and Sarah picks the needle size (micro or nano) that's best for your face at the visit."],
+    ["What is the difference between a facial and a chemical peel?", "A facial deep-cleanses, exfoliates, steams, massages and hydrates your skin, finished with a hydration mask — the Classic Facial is $85 for 55 minutes. A chemical peel is a professional Circadia peel solution that lifts away dull surface layers so fresher, brighter skin emerges; peels are $125–$475 for 25 minutes, matched to your skin at consultation, with the exact price confirmed up front."],
     ["Do I need to book a facial in advance in Bolton?", "Yes — advance booking is recommended at In2Skin to get the time you want. You can book online anytime on the website or call (289) 212-4124, and you pay in full securely by card when you book online."],
     ["How much does The Works facial cost in Bolton?", "The Works is $160 with a Classic Facial (55 minutes) or $195 with an Anti-Aging Facial (80 minutes) at In2Skin in Bolton. It is a facial, red light therapy and reflexology all at the same time, while the mask works."],
     ["Can I book a facial early in the morning or on a Sunday in Bolton?", "Early mornings and evenings are available as Private Hours, by request — call (289) 212-4124 or email bookings@boltonfacials.com and Sarah will set it up. You pay the regular price of the services you pick, plus $15 per visit. Sundays the studio is closed."],
     ["Is there a facial for teenagers with acne in Bolton?", "Yes — the Classic Facial, $85 for 55 minutes, is the recommended affordable first step for teen acne at In2Skin in Bolton. It focuses on a thorough deep cleanse, gentle exfoliation and calming, hydrating care, with every step explained as it happens."],
-    ["How much does microneedling cost in Bolton?", "Microneedling at In2Skin starts at $150. Your consultation confirms your exact quote up front, before anything begins."],
+    ["How much does microneedling cost in Bolton?", "Microneedling at In2Skin is $65 for 20 minutes. Sarah picks the needle size (micro or nano) that's best for your face at the visit."],
   ],
   areaServedExtra: "Bolton",
 };
