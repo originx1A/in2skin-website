@@ -14,7 +14,7 @@ const {
 const { studioForDate } = require("../lib/studio");
 const {
   SITE_URL, newId, saveBooking, listBookingsForDate,
-  getBooking, finalizePaidBooking, sendHoldEmail,
+  getBooking, finalizePaidBooking, sendHoldEmail, notifyStudioBooking,
   buildBooking, createBookingCheckout,
 } = require("../lib/bookings");
 const { getOrCreateReferral } = require("../lib/referrals");
@@ -130,6 +130,7 @@ async function handleAgentHold(req, res, b) {
       booking.status = svc.priceNum === 0 ? "consultation" : "paid";
       await saveBooking(booking);
       await sendHoldEmail(booking, null);
+      await notifyStudioBooking(booking, "new");
       return res.status(200).json({ hold: true, bookingId: booking.id, consultation: booking.status === "consultation", holdUntil });
     }
 
@@ -160,6 +161,7 @@ async function handleAgentHold(req, res, b) {
     booking.checkoutUrl = session.url;
     await saveBooking(booking);
     await sendHoldEmail(booking, session.url);
+    await notifyStudioBooking(booking, "new");
     return res.status(200).json({
       hold: true,
       bookingId: booking.id,
@@ -244,6 +246,7 @@ module.exports = async (req, res) => {
       booking.amountPaidCents = 0;
       await saveBooking(booking);
       await finalizePaidBooking(booking);
+      await notifyStudioBooking(booking, "new");
       return res.status(200).json({ paid: true, bookingId: booking.id, consultation: booking.status === "consultation", myReferralCode: booking.myReferralCode });
     }
 
@@ -258,6 +261,7 @@ module.exports = async (req, res) => {
     if (booking.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(booking.email))) {
       try { await sendHoldEmail(booking, session.url); } catch (e) { console.error("[book:hold-email]", e); }
     }
+    await notifyStudioBooking(booking, "new");
     return res.status(200).json({ url: session.url, bookingId: booking.id });
   } catch (err) {
     console.error("[book]", err);
