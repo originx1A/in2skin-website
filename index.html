@@ -212,10 +212,11 @@
       </div>
     </footer>
 
-    <!-- mobile call bar -->
+    <!-- mobile bar (Tony Nov 19, 2026): Book Online + Chat — Call moved
+         out of the bar; it stays in the header. -->
     <div class="mobile-bar">
       <a class="btn btn-book" href="#/home" data-nav="home" data-scroll="book">Book Online</a>
-      <a class="btn btn-ghost" href="tel:+12892124124">Call</a>
+      <button class="btn btn-ghost" type="button" id="mobileChatBtn">Chat</button>
     </div>
 
     <!-- ================= AI ASSISTANT WIDGET ================= -->
@@ -1471,14 +1472,14 @@
     }
     /* Wizard bar active (Tony Nov 18, 2026): while the booking or gift
        summary bar is pinned, the body carries has-wiz-bar — the CSS hides
-       the bottom Book/Call bar and lifts the chat bubble clear above the
-       wizard bar, using the bar's measured height so it never sits on it. */
+       the bottom Book/Chat bar, so the wizard bar sits at the bottom
+       instead. (The chat bubble is PC-only — on a phone the chat lives in
+       the bar, so there is no bubble to lift.) */
     function syncWizBar(){
       var p = document.getElementById("pkgBar");
       var g = document.getElementById("giftBar");
       var bar = (p && p.classList.contains("show")) ? p : ((g && g.classList.contains("show")) ? g : null);
       document.body.classList.toggle("has-wiz-bar", !!bar);
-      if (bar) document.body.style.setProperty("--wiz-bar-h", bar.offsetHeight + "px");
     }
     function pkgBarShow(){
       var bar = document.getElementById("pkgBar");
@@ -2444,6 +2445,10 @@
        the viewport changes size while the chat is open. */
     window.addEventListener("resize", function(){ if (chatPanel && !chatPanel.hidden) chatScroll(); });
     chatFab.addEventListener("click", function(){ chatPanel.hidden ? openChat() : closeChat(); });
+    /* Mobile bar Chat button (Tony Nov 19, 2026): the floating bubble is
+       PC-only now, so on a phone the bar's Chat button opens the chat. */
+    var mobileChatBtn = document.getElementById("mobileChatBtn");
+    if (mobileChatBtn) mobileChatBtn.addEventListener("click", function(){ openChat(); });
     var toTop = document.getElementById("toTop");
     function toTopShow(){ if (toTop) toTop.classList.toggle("show", window.scrollY > 500 && !pkgBarVisible() && !giftBarVisible()); }
     var pkgContinue = document.getElementById("pkgContinue");

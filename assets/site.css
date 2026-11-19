@@ -667,7 +667,10 @@
       .chat-form input{ flex:1; min-width:0; font-family:"Jost",sans-serif; font-size:1rem; font-weight:300; padding:12px 16px; border:1.5px solid var(--line); border-radius:8px; background:var(--cream); color:var(--ink); }
       .chat-form .btn{ flex:0 0 auto; }
       @media (max-width:860px){
-        .chat-fab{ right:14px; bottom:calc(94px + env(safe-area-inset-bottom)); }
+        /* Chat bubble is PC-only (Tony Nov 19, 2026): on a phone the chat
+           lives in the bottom bar (Book Online + Chat), so the floating
+           bubble is hidden here instead of hovering above the bar. */
+        .chat-fab{ display:none; }
         /* Mobile chat is a full-screen sheet (Tony Nov 17): the floating
            panel hid answers on a real iPhone. The sheet fills the
            viewport, the messages area flexes between the header and the
@@ -1122,26 +1125,21 @@
         .visit-grid{ gap:14px; }
       }
       /* Package bar on phones/tablets: above the mobile bar (64px + safe
-         area), with right padding so the Continue button clears the round
-         chat fab (46px at right:14px). The back-to-top button hides while
-         the bar is up (see toTopShow), so no left clearance is needed. */
+         area). The back-to-top button hides while the bar is up (see
+         toTopShow), so no clearance padding is needed. */
       @media (max-width:860px){
-        .pkg-bar{ bottom:calc(72px + env(safe-area-inset-bottom)); padding-right:56px; }
+        .pkg-bar{ bottom:calc(72px + env(safe-area-inset-bottom)); }
         .pkg-text{ font-size:.9rem; }
       }
       /* Wizard bar active (Tony Nov 18, 2026): while the booking or gift
-         summary bar is pinned, the bottom Book/Call bar hides — you are
-         already booking — and the chat bubble lifts clear above the
-         wizard bar, using the bar's measured height (--wiz-bar-h, set by
-         syncWizBar in index.html) so it never sits on it. The bar also
-         drops its chat-clearance padding, giving the text room.
-         The bar sits right down at the bottom (Tony Nov 18, 2026): the
-         72px under it used to clear the Book/Call bar, but that bar is
-         hidden while a wizard bar shows, so the gap was dead space and
-         the bar floated up high. 12px above the safe area now; the chat
-         bubble sits 12px above the lowered bar. */
+         summary bar is pinned, the bottom Book/Chat bar hides — you are
+         already booking. The bar sits right down at the bottom (Tony
+         Nov 18, 2026): the 72px under it used to clear the Book/Chat
+         bar, but that bar is hidden while a wizard bar shows, so the gap
+         was dead space and the bar floated up high. 12px above the safe
+         area now. (The chat bubble is PC-only, so there is no bubble to
+         lift on a phone.) */
       @media (max-width:860px){
         body.has-wiz-bar .mobile-bar{ display:none; }
         body.has-wiz-bar .pkg-bar{ padding-right:14px; bottom:calc(12px + env(safe-area-inset-bottom)); }
-        body.has-wiz-bar .chat-fab{ bottom:calc(12px + var(--wiz-bar-h, 96px) + 12px + env(safe-area-inset-bottom)); }
       }
