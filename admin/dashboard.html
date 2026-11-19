@@ -10,6 +10,12 @@
     <style>
       /* Inline action panels under a booking + print-friendly reports. */
       .act-panel { background: var(--cream); border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-top: 10px; }
+      /* Booking rows stack, not flex: the shared .after-item is a flex row,
+         which squeezed the action panel (move/cancel/pay/email) off the
+         right edge on phones — Sarah couldn't see it at all. The panel
+         sits below the row, full width, on every screen. */
+      #calList .after-item, #payList .after-item { display: block; }
+      #calList .act-slot { width: 100%; }
       .act-panel label { display: block; font-size: .9rem; margin: 8px 0 4px; }
       .act-panel input, .act-panel select, .act-panel textarea { font-family: inherit; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); width: 100%; box-sizing: border-box; }
       .gap-btn[aria-pressed="true"] { background: var(--sage-deep); color: #fff; }
@@ -30,7 +36,10 @@
       .dash-nav-item { font-size:.8rem; padding:7px 6px; min-height:0; text-align:left; border:1.5px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink); font-family:inherit; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
       .dash-nav-item .sec-sym { margin-right:4px; }
       .dash-nav-row { display:flex; gap:8px; align-items:center; }
-      .talk-status { font-size:.82rem; color:var(--ink-soft); margin-top:6px; min-height:1.2em; }
+      .talk-status { font-size:.82rem; color:var(--ink-soft); margin-top:6px; min-height:1.2em; overflow-wrap:break-word; }
+      .talk-type { display:flex; gap:8px; margin-top:8px; }
+      .talk-type input { flex:1; min-width:0; font-size:.95rem; padding:8px 10px; border:1.5px solid var(--line); border-radius:8px; background:#fff; color:var(--ink); font-family:inherit; }
+      .talk-type input:focus { outline:2px solid var(--gold); outline-offset:1px; }
       #dashTalk[aria-pressed="true"] { background:var(--gold); color:#fff; border-color:var(--gold); animation:talk-pulse 1.6s ease-in-out infinite; }
       @keyframes talk-pulse { 0%,100%{ box-shadow:0 0 0 2px rgba(176,141,79,.4); } 50%{ box-shadow:0 0 0 4px rgba(176,141,79,.7); } }
       @media print {
@@ -58,7 +67,8 @@
           <button class="btn btn-ghost dash-nav-toggle" id="dashNavToggle" type="button" aria-expanded="false">&#9776; Sections</button>
           <button class="btn btn-ghost dash-nav-toggle" id="dashTalk" type="button" aria-pressed="false">Talk</button>
         </div>
-        <div class="talk-status" id="talkStatus" aria-live="polite">Talk fills in the form for you — try “Pay link 65 dollars for Alex” or “Block off tomorrow 2 to 5”.</div>
+        <div class="talk-status" id="talkStatus" aria-live="polite">Talk or type — try “Pay link 65 dollars for Alex” or “Show me the calendar”.</div>
+        <div class="talk-type"><input id="talkInput" type="text" inputmode="text" autocomplete="off" placeholder="Or type it here — the keyboard mic works too" aria-label="Type a Talk command"><button class="btn btn-book" id="talkGo" type="button">Go</button></div>
         <div class="dash-nav-panel" id="dashNavPanel" hidden>
           <button type="button" class="dash-nav-item" data-goto="sec-payments"><span class="sec-sym" aria-hidden="true">$</span>Payments</button>
           <button type="button" class="dash-nav-item" data-goto="sec-settings"><span class="sec-sym" aria-hidden="true">&#9881;</span>Settings</button>
@@ -302,7 +312,7 @@
         var TALK_SECTIONS = [
           ["payments", "sec-payments"], ["settings", "sec-settings"],
           ["walk-in", "sec-walkin"], ["walkin", "sec-walkin"],
-          ["calendar", "sec-calendar"], ["reports", "sec-reports"],
+          ["calendar", "sec-calendar"], ["bookings", "sec-calendar"], ["booking", "sec-calendar"], ["reports", "sec-reports"],
           ["backup", "sec-backup"], ["referral", "sec-referrals"],
           ["referrals", "sec-referrals"], ["gift", "sec-gifts"],
           ["gifts", "sec-gifts"], ["call", "sec-calls"], ["calls", "sec-calls"],
@@ -313,7 +323,7 @@
         var TALK_TENS = { twenty:20, thirty:30, forty:40, fifty:50, sixty:60, seventy:70, eighty:80, ninety:90 };
         var TALK_MONTHS = { january:0, february:1, march:2, april:3, may:4, june:5, july:6, august:7, september:8, october:9, november:10, december:11 };
         var TALK_DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-        var TALK_NAME_STOPS = ["a", "an", "the", "tomorrow", "today", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "at", "on", "for", "dollars", "dollar", "bucks", "pay", "link", "classic", "anti-aging", "anti", "aging", "facial", "treatment", "peel", "peels", "microneedling", "reflexology", "nano", "microdermabrasion", "light", "therapy", "skin", "tightening", "works", "combo", "certificate", "gift", "voucher", "referral", "block", "book", "cancel", "move", "next", "this", "walk", "in", "off", "up", "me", "us", "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+        var TALK_NAME_STOPS = ["a", "an", "the", "tomorrow", "today", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "at", "on", "for", "dollars", "dollar", "bucks", "pay", "link", "classic", "anti-aging", "anti", "aging", "facial", "treatment", "peel", "peels", "microneedling", "reflexology", "nano", "microdermabrasion", "light", "therapy", "skin", "tightening", "works", "combo", "certificate", "gift", "voucher", "referral", "block", "book", "cancel", "move", "next", "this", "walk", "in", "off", "up", "me", "us", "to", "by", "saying", "say", "complete", "completed", "finished", "done", "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
         function talkIso(d){ return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
         function talkWordsToNumber(text){
           var words = String(text).toLowerCase().replace(/-/g, " ").split(/[^a-z]+/).filter(function(w){ return !!w; });
@@ -342,13 +352,13 @@
           var w = talkWordsToNumber(text);
           return w ? w.value : null;
         }
-        function talkParseDay(text, baseISO){
+        function talkParseDay(text, baseISO, allowPast){
           var t = String(text).toLowerCase();
           var base = baseISO ? new Date(baseISO + "T12:00:00") : new Date();
           var m = /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})/.exec(t);
           if (m){
             var d = new Date(base.getFullYear(), TALK_MONTHS[m[1]], +m[2], 12);
-            if (d < base) d.setFullYear(d.getFullYear() + 1);
+            if (!allowPast && d < base) d.setFullYear(d.getFullYear() + 1);
             return talkIso(d);
           }
           for (var i = 0; i < 7; i++){
@@ -367,8 +377,9 @@
         function talkParseTimes(text){
           var t = String(text).toLowerCase().replace(/\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}\b/g, " ");
           var out = [];
-          var re = /(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/g, m;
+          var re = /(\d+)(?::(\d{2}))?\s*(am|pm)?/g, m;
           while ((m = re.exec(t)) && out.length < 2){
+            if (m[1].length > 2 && !m[2]) continue; // a longer digit run (phone number, amount) — not a time
             var h = +m[1], min = m[2] ? +m[2] : 0;
             var ap = m[3] || "";
             if (ap === "pm" && h < 12) h += 12;
@@ -383,13 +394,40 @@
           }
           return out;
         }
+        // "14:00" -> "2:00 PM" — the label the time dropdowns actually
+        // show. The availability API returns display strings, so a 24-hour
+        // value never matches an option.
+        function talkTimeLabel(hhmm){
+          var m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || ""));
+          if (!m) return hhmm;
+          var h = +m[1], min = m[2];
+          var ap = h >= 12 ? "PM" : "AM";
+          var h12 = h % 12; if (h12 === 0) h12 = 12;
+          return h12 + ":" + min + " " + ap;
+        }
         function talkParseName(text){
           var t = String(text).toLowerCase();
-          var m = /\b(?:for|client|book|booking)\s+([a-z]+(?:\s+[a-z]+)?)/.exec(t);
+          var re = /\b(?:for|client|book|booking|cancel|move|find|email|record|show|mark|is)\s+([a-z]+(?:\s+[a-z]+)?)/g;
+          var m;
+          while ((m = re.exec(t)) !== null){
+            var words = m[1].split(/\s+/).filter(function(w){ return TALK_NAME_STOPS.indexOf(w) < 0; });
+            if (!words.length) continue;
+            words = words.slice(0, 2);
+            if (words.length === 2 && words[0] === words[1]) words = words.slice(0, 1);
+            return words.map(function(w){ return w.charAt(0).toUpperCase() + w.slice(1); }).join(" ");
+          }
+          return null;
+        }
+        // The name in front of the job: "alex didn't show" — the name comes
+        // before the verb, so talkParseName can't see it.
+        function talkNameBefore(text, re){
+          var t = String(text).toLowerCase();
+          var m = re.exec(t);
           if (!m) return null;
-          var words = m[1].split(/\s+/).filter(function(w){ return TALK_NAME_STOPS.indexOf(w) < 0; });
+          var words = t.slice(0, m.index).split(/[^a-z]+/).filter(function(w){ return !!w && TALK_NAME_STOPS.indexOf(w) < 0 && TALK_DAYS.indexOf(w) < 0; });
           if (!words.length) return null;
-          words = words.slice(0, 2);
+          words = words.slice(-2);
+          if (words.length === 2 && words[0] === words[1]) words = words.slice(0, 1);
           return words.map(function(w){ return w.charAt(0).toUpperCase() + w.slice(1); }).join(" ");
         }
         function talkFindService(text){
@@ -402,23 +440,174 @@
           }
           return null;
         }
+        var TALK_DIGITS = { zero: "0", oh: "0", o: "0", one: "1", two: "2", three: "3", four: "4", five: "5", six: "6", seven: "7", eight: "8", nine: "9" };
+        // A phone number spoken digit by digit ("nine oh five five five five
+        // oh one oh oh") or as digits ("905-555-0100"). Amounts and times
+        // are short runs, so only runs of 7–11 digits count.
+        function talkFindPhone(text){
+          var tokens = String(text).toLowerCase().replace(/-/g, " ").split(/[^a-z0-9]+/).filter(function(w){ return !!w; });
+          var runs = [], cur = "";
+          tokens.forEach(function(tok){
+            if (/^\d+$/.test(tok)) cur += tok;
+            else if (TALK_DIGITS[tok] !== undefined) cur += TALK_DIGITS[tok];
+            else { if (cur) runs.push(cur); cur = ""; }
+          });
+          if (cur) runs.push(cur);
+          for (var i = 0; i < runs.length; i++){
+            var d = runs[i];
+            if (d.length === 11 && d.charAt(0) === "1") d = d.slice(1);
+            if (d.length === 10) return "(" + d.slice(0, 3) + ") " + d.slice(3, 6) + "-" + d.slice(6);
+            if (d.length === 7) return d.slice(0, 3) + "-" + d.slice(3);
+          }
+          return null;
+        }
+        // An email address, typed ("alex@example.com") or spoken
+        // ("alex at example dot com").
+        function talkFindEmail(text){
+          var raw = String(text);
+          var m = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i.exec(raw);
+          if (m) return m[0].toLowerCase();
+          var t = raw.toLowerCase();
+          var s = /([a-z0-9._%+-]+)\s+at\s+([a-z0-9]+(?:\s+dot\s+[a-z0-9]+)+)/.exec(t);
+          if (!s) return null;
+          var domain = s[2].replace(/\s+dot\s+/g, ".").replace(/\s+/g, "");
+          return (s[1] + "@" + domain).toLowerCase();
+        }
+        // A gift code spoken as "in2skin abc123" or typed "IN2SKIN-ABC123".
+        function talkFindGiftCode(text){
+          var m = /in2skin[\s-]?([a-z0-9]{6})/i.exec(String(text));
+          return m ? "IN2SKIN-" + m[1].toUpperCase() : null;
+        }
+        // A date range for reports: "from november 1 to november 15",
+        // "this week", "last week". Returns {from, to} or null.
+        function talkParseDateRange(text, baseISO){
+          var t = String(text).toLowerCase();
+          var base = baseISO ? new Date(baseISO + "T12:00:00") : new Date();
+          var week = null;
+          if (/\blast week\b/.test(t)) week = -1;
+          else if (/\bthis week\b/.test(t)) week = 0;
+          if (week !== null){
+            var dow = (base.getDay() + 6) % 7; // days since Monday
+            var mon = new Date(base); mon.setDate(mon.getDate() - dow + week * 7);
+            var sun = new Date(mon); sun.setDate(sun.getDate() + 6);
+            return { from: talkIso(mon), to: talkIso(sun) };
+          }
+          var m = /\bfrom\s+(.+?)\s+to\s+(.+)$/.exec(t);
+          if (m){
+            var from = talkParseDay(m[1], baseISO, true);
+            var to = talkParseDay(m[2], baseISO, true);
+            if (from && to) return { from: from, to: to };
+          }
+          return null;
+        }
         function parseTalk(text, todayISO){
           var t = String(text || "").toLowerCase().trim();
           if (!t) return { ok: false, message: "I didn't hear anything — tap Talk and try again." };
-          var jm = /^(go to|show|open|take me to)\s+(.+)$/.exec(t);
+          // Jump to a section: "show me the calendar", "go to the referrals
+          // section", "open settings". Only when what's left after the verb
+          // is just a section name — every word must name a section, so
+          // "show payments for friday" is NOT a jump (it's a payments job
+          // with a day) and "show me the pay link for alex" is a fill job.
+          // Exact section names beat prefix matches: "pay" goes to Pay on
+          // the spot, "payments" goes to Today's payments.
+          var jm = /^(go to|show me|take me to|show|open|go|take me)\s+(.+)$/.exec(t);
           if (jm){
-            var key = jm[2].trim();
-            for (var i = 0; i < TALK_SECTIONS.length; i++){
-              if (key.indexOf(TALK_SECTIONS[i][0]) === 0) return { ok: true, jump: TALK_SECTIONS[i][1], message: "Going to " + TALK_SECTIONS[i][0] + "." };
+            var key = jm[2].replace(/\b(the|me|my|please|section|page|tab|a|an)\b/g, " ").replace(/\s+/g, " ").trim();
+            var kw = key.split(" ").filter(function(w){ return !!w; });
+            if (kw.length && kw.length <= 3){
+              var sorted = TALK_SECTIONS.slice().sort(function(a, b){ return b[0].length - a[0].length; });
+              var hit = null;
+              for (var i = 0; i < sorted.length && !hit; i++){
+                var allMatch = true;
+                for (var k = 0; k < kw.length; k++){
+                  if (kw[k] !== sorted[i][0] && kw[k].indexOf(sorted[i][0]) !== 0 && sorted[i][0].indexOf(kw[k]) !== 0){ allMatch = false; break; }
+                }
+                if (allMatch) hit = sorted[i];
+              }
+              if (hit){
+                // Exact beats prefix: "pay" must land on Pay, not Payments.
+                for (var e = 0; e < sorted.length; e++){
+                  var exactAll = true;
+                  for (var k2 = 0; k2 < kw.length; k2++){ if (kw[k2] !== sorted[e][0]){ exactAll = false; break; } }
+                  if (exactAll){ hit = sorted[e]; break; }
+                }
+                return { ok: true, jump: hit[1], message: "Going to " + hit[0] + "." };
+              }
             }
+          }
+          // Settings jobs — Talk taps the switch itself: these are single,
+          // reversible settings, and the status line says what changed.
+          if (/\bgap\b/.test(t)){
+            var gm = /(\d{2,3})/.exec(t);
+            var gapVal = gm ? +gm[1] : (talkWordsToNumber(t) || {}).value;
+            if ([60, 75, 90, 120].indexOf(gapVal) < 0) return { ok: false, message: "The gap can be 60, 75, 90 or 120 minutes — which one?" };
+            return { ok: true, action: "gap", minutes: gapVal, message: "Gap set to " + gapVal + " minutes." };
+          }
+          if (/\bpause\b/.test(t)){
+            var pt = talkParseTimes(t);
+            if (!pt[0]) return { ok: false, message: "Pause transfers until when? Try “Pause transfers until 5”." };
+            return { ok: true, jump: "sec-calls", action: "pause", time: pt[0], message: "Pause time filled — tap “Pause transfers” to confirm." };
+          }
+          if (/\bresume\b/.test(t)){
+            return { ok: true, jump: "sec-calls", action: "resume", message: "Transfers resumed." };
+          }
+          if (/straight to me/.test(t)){
+            return { ok: true, jump: "sec-calls", action: "mode", mode: "direct", message: "Calls go straight to you now." };
+          }
+          if (/ai (assistant )?answers|assistant answers/.test(t)){
+            return { ok: true, jump: "sec-calls", action: "mode", mode: "agent", message: "The AI assistant answers the phone now." };
+          }
+          if (/\breport\b/.test(t)){
+            var range = talkParseDateRange(t, todayISO);
+            if (!range) return { ok: false, message: "Which dates? Try “Report from November 1 to November 15” or “Report for last week”." };
+            return { ok: true, jump: "sec-reports", action: "report", from: range.from, to: range.to, message: "Report dates filled — tap “Load report”." };
+          }
+          if (/\bpayments?\b/.test(t)){
+            var pday = talkParseDay(t, todayISO);
+            if (pday) return { ok: true, jump: "sec-payments", action: "payments", day: pday, message: "Showing payments for " + pday + "." };
+          }
+          if (/\bcalendar\b/.test(t) || /\bbookings?\b/.test(t)){
+            var cday = talkParseDay(t, todayISO);
+            if (cday) return { ok: true, jump: "sec-calendar", action: "calendar", day: cday, message: "Showing bookings for " + cday + "." };
+          }
+          // Booking jobs by name — Talk finds the booking and opens its
+          // panel; Sarah still taps the confirming button. It never cancels,
+          // moves, charges or deletes on its own.
+          if (/\bcancel\b/.test(t)){
+            var cxName = talkParseName(t);
+            if (!cxName) return { ok: false, message: "I heard “cancel” but not who — try “Cancel Alex Taylor”." };
+            return { ok: true, jump: "sec-calendar", action: "cancel", name: cxName, day: talkParseDay(t, todayISO), message: "Looking for " + cxName + "…" };
+          }
+          if (/\bmove\b/.test(t)){
+            var mvName = talkParseName(t);
+            if (!mvName) return { ok: false, message: "I heard “move” but not who — try “Move Alex to Friday at 2”." };
+            var mvTimes = talkParseTimes(t);
+            return { ok: true, jump: "sec-calendar", action: "move", name: mvName, day: talkParseDay(t, todayISO), time: mvTimes[0] || null, message: "Looking for " + mvName + "…" };
+          }
+          if (/no-?show|didn'?t show|did not show/.test(t) || /\bcomplete\b|\bfinished\b|\bdone\b/.test(t)){
+            var ocName = talkParseName(t) || talkNameBefore(t, /no-?show|didn'?t show|did not show|complete|finished|done/);
+            if (!ocName) return { ok: false, message: "I heard the outcome but not who — try “Mark Alex complete”." };
+            var outcome = /no-?show|didn'?t show|did not show/.test(t) ? "no-show" : "complete";
+            return { ok: true, jump: "sec-calendar", action: "outcome", outcome: outcome, name: ocName, day: talkParseDay(t, todayISO), message: "Looking for " + ocName + "…" };
+          }
+          if (/\brecord\b/.test(t)){
+            var rcAmt = talkFindAmount(t);
+            var rcName = talkParseName(t);
+            if (rcAmt == null || !rcName) return { ok: false, message: "I heard “record” but not the amount or who — try “Record 65 dollars cash for Alex”." };
+            var rcMethod = /\be-?transfer\b/.test(t) ? "e-transfer" : /\bcard\b/.test(t) ? "card" : /\bcash\b/.test(t) ? "cash" : null;
+            return { ok: true, jump: "sec-calendar", action: "record-payment", name: rcName, amount: rcAmt, method: rcMethod, day: talkParseDay(t, todayISO), message: "Looking for " + rcName + "…" };
           }
           if (/\bblock\b/.test(t)){
             var fills = [];
             var day = talkParseDay(t, todayISO);
             if (day) fills.push({ id: "blkDate", value: day, label: "Day" });
-            var times = talkParseTimes(t);
-            if (times[0]) fills.push({ id: "blkStart", value: times[0], label: "From" });
-            if (times[1]) fills.push({ id: "blkEnd", value: times[1], label: "To" });
+            if (/\bwhole day\b|\ball day\b/.test(t)){
+              fills.push({ id: "blkAllDay", check: true, label: "Whole day" });
+            } else {
+              var times = talkParseTimes(t);
+              if (times[0]) fills.push({ id: "blkStart", value: times[0], label: "From" });
+              if (times[1]) fills.push({ id: "blkEnd", value: times[1], label: "To" });
+            }
             if (!fills.length) return { ok: false, message: "I heard “block off” but not the day or times — try “Block off tomorrow 2 to 5”." };
             return { ok: true, jump: "sec-settings", fills: fills, message: "Filled the blocked-off time — check it, then tap “Block off this time”." };
           }
@@ -426,19 +615,37 @@
             var fills2 = [];
             var nm = talkParseName(t);
             if (nm) fills2.push({ id: "wkName", value: nm, label: "Name" });
+            var ph = talkFindPhone(t);
+            if (ph) fills2.push({ id: "wkPhone", value: ph, label: "Phone" });
+            var em2 = talkFindEmail(t);
+            if (em2) fills2.push({ id: "wkEmail", value: em2, label: "Email" });
             var d2 = talkParseDay(t, todayISO);
             if (d2) fills2.push({ id: "wkDate", value: d2, label: "Day" });
             var svc = talkFindService(t);
             if (svc) fills2.push({ id: "wkService", value: svc, label: "Treatment", service: true });
             var tm = talkParseTimes(t);
             if (tm[0]) fills2.push({ id: "wkTime", value: tm[0], label: "Time", time: true });
+            if (/private hours|after hours/.test(t)) fills2.push({ id: "wkType", value: "after", label: "Hours", select: true });
+            else if (/regular hours/.test(t)) fills2.push({ id: "wkType", value: "regular", label: "Hours", select: true });
+            if (/pay at the visit|pay later|\blater\b/.test(t)) fills2.push({ id: "wkPay", value: "later", label: "Payment", select: true });
+            else if (/pay-?link|card link/.test(t)) fills2.push({ id: "wkPay", value: "pay-link", label: "Payment", select: true });
+            else if (/e-?transfer/.test(t)) fills2.push({ id: "wkPay", value: "e-transfer", label: "Payment", select: true });
+            else if (/\bcash\b/.test(t)) fills2.push({ id: "wkPay", value: "cash", label: "Payment", select: true });
+            var gc = talkFindGiftCode(t);
+            if (gc) fills2.push({ id: "wkGift", value: gc, label: "Gift code" });
+            if (/not (a )?first/.test(t)) fills2.push({ id: "wkFirst", check: false, label: "First visit" });
             if (!fills2.length) return { ok: false, message: "I heard “book” but not who or when — try “Book Alex Taylor tomorrow at 2”." };
             return { ok: true, jump: "sec-walkin", fills: fills2, message: "Filled the walk-in — check it, then tap “Book this appointment”." };
           }
           if (/\breferral\b/.test(t)){
             var nm3 = talkParseName(t);
             if (!nm3) return { ok: false, message: "I heard “referral” but not the name — try “Referral for Alex Taylor”." };
-            return { ok: true, jump: "sec-referrals", fills: [{ id: "refName", value: nm3, label: "Name" }], message: "Filled the name — add the email and phone, then tap “Create Referral Code”." };
+            var fillsR = [{ id: "refName", value: nm3, label: "Name" }];
+            var em3 = talkFindEmail(t);
+            if (em3) fillsR.push({ id: "refEmail", value: em3, label: "Email" });
+            var ph3 = talkFindPhone(t);
+            if (ph3) fillsR.push({ id: "refPhone", value: ph3, label: "Phone" });
+            return { ok: true, jump: "sec-referrals", fills: fillsR, message: "Filled the referral — check it, then tap “Create Referral Code”." };
           }
           if (/\bpay\b/.test(t) || /\bpayment\b/.test(t) || /\blink\b/.test(t)){
             var fills3 = [];
@@ -448,8 +655,26 @@
             if (nm4) fills3.push({ id: "spName", value: nm4, label: "Name" });
             var svc2 = talkFindService(t);
             if (svc2) fills3.push({ id: "spLabel", value: svc2, label: "What for" });
+            var gc3 = talkFindGiftCode(t);
+            if (gc3) fills3.push({ id: "spGift", value: gc3, label: "Gift code" });
+            if (/\bby text\b|\btext (it|the link|him|her|them)\b/.test(t)) fills3.push({ id: "spMethod", value: "text", label: "Share by", select: true });
+            else if (/\bby email\b|\bemail (it|the link|him|her|them)\b/.test(t)) fills3.push({ id: "spMethod", value: "email", label: "Share by", select: true });
+            else if (/\bqr\b|\bshow (it|the code)\b/.test(t)) fills3.push({ id: "spMethod", value: "qr", label: "Share by", select: true });
+            var ph4 = talkFindPhone(t);
+            if (ph4) fills3.push({ id: "spContact", value: ph4, label: "Contact" });
             if (!fills3.length) return { ok: false, message: "I heard “pay” but not the amount or name — try “Pay link 65 dollars for Alex”." };
             return { ok: true, jump: "sec-spot", fills: fills3, message: "Filled the payment — check it, then tap “Create Payment Link”." };
+          }
+          if (/\bemail\b/.test(t)){
+            var emName = talkParseName(t);
+            if (!emName) return { ok: false, message: "I heard “email” but not who — try “Email Alex saying thanks for coming”." };
+            var emSay = /\bsaying\s+(.+)$/.exec(t) || /\bsay\s+(.+)$/.exec(t);
+            return { ok: true, jump: "sec-calendar", action: "email", name: emName, note: emSay ? emSay[1].replace(/[.]+$/, "") : null, day: talkParseDay(t, todayISO), message: "Looking for " + emName + "…" };
+          }
+          if (/\bfind\b/.test(t) || /\bwhere\b/.test(t) || /'s (appointment|booking)\b/.test(t)){
+            var fName = talkParseName(t) || talkNameBefore(t, /'s (appointment|booking)\b/);
+            if (!fName) return { ok: false, message: "I heard “find” but not who — try “Find Alex Taylor”." };
+            return { ok: true, jump: "sec-calendar", action: "find", name: fName, day: talkParseDay(t, todayISO), message: "Looking for " + fName + "…" };
           }
           for (var j = 0; j < TALK_SECTIONS.length; j++){
             if (t === TALK_SECTIONS[j][0]) return { ok: true, jump: TALK_SECTIONS[j][1], message: "Going to " + TALK_SECTIONS[j][0] + "." };
@@ -473,8 +698,71 @@
             var sec = document.getElementById(r.jump);
             if (sec) sec.scrollIntoView({ behavior: "smooth", block: "start" });
           }
+          // Setting switches Talk taps itself: single, reversible, and the
+          // status line says what changed. Everything that creates, charges,
+          // moves, cancels or deletes is only filled/opened — Sarah taps.
+          if (r.action === "gap"){
+            var gb = document.querySelector('[data-gap="' + r.minutes + '"]');
+            if (gb) gb.click();
+            return [];
+          }
+          if (r.action === "mode"){
+            var mb = document.querySelector('[data-mode="' + r.mode + '"]');
+            if (mb) mb.click();
+            return [];
+          }
+          if (r.action === "resume"){
+            var rb = document.getElementById("resumeBtn");
+            if (rb && rb.style.display !== "none") rb.click();
+            else r.message = "Transfers aren't paused right now.";
+            return [];
+          }
+          if (r.action === "calendar"){
+            var cf = document.getElementById("calFrom"), ct = document.getElementById("calTo");
+            if (cf && ct && r.day){ cf.value = r.day; ct.value = r.day; loadCal(); }
+            return [];
+          }
+          if (r.action === "payments"){
+            var pd = document.getElementById("payDate");
+            if (pd && r.day){ pd.value = r.day; pd.dispatchEvent(new Event("change", { bubbles: true })); }
+            return ["Day"];
+          }
+          if (r.action === "report"){
+            var rf = document.getElementById("repFrom"), rt = document.getElementById("repTo");
+            if (rf && rt && r.from && r.to){ talkFillField(rf, r.from); talkFillField(rt, r.to); }
+            return ["From", "To"];
+          }
+          if (r.action === "pause"){
+            var pu = document.getElementById("pauseUntil");
+            if (pu && r.time){ talkFillField(pu, r.time); return ["Pause until"]; }
+            return [];
+          }
+          if (r.action === "cancel" || r.action === "move" || r.action === "outcome" || r.action === "record-payment" || r.action === "email" || r.action === "find"){
+            talkResolveBooking(r);
+            return [];
+          }
           var filled = [];
           (r.fills || []).forEach(function(f){
+            if (f.select){
+              var sel2 = document.getElementById(f.id);
+              if (sel2){
+                for (var si = 0; si < sel2.options.length; si++){
+                  if (sel2.options[si].value === f.value){
+                    sel2.selectedIndex = si;
+                    sel2.dispatchEvent(new Event("change", { bubbles: true }));
+                    talkFillField(sel2, sel2.value);
+                    filled.push(f.label);
+                    break;
+                  }
+                }
+              }
+              return;
+            }
+            if (f.check !== undefined){
+              var cbx = document.getElementById(f.id);
+              if (cbx){ cbx.checked = !!f.check; cbx.dispatchEvent(new Event("change", { bubbles: true })); filled.push(f.label); }
+              return;
+            }
             if (f.service){
               var sel = document.getElementById("wkService");
               if (sel){
@@ -496,12 +784,17 @@
                 var selT = document.getElementById("wkTime");
                 var done = false;
                 if (selT){
+                  var want = talkTimeLabel(f.value);
                   for (var j = 0; j < selT.options.length; j++){
-                    if (selT.options[j].value === f.value){
+                    if (selT.options[j].value === want || selT.options[j].value === f.value){
                       selT.selectedIndex = j;
                       selT.dispatchEvent(new Event("change", { bubbles: true }));
-                      talkFillField(selT, f.value);
+                      talkFillField(selT, selT.value);
                       filled.push(f.label);
+                      // The time loads a beat after the status line is
+                      // written, so add it to the list there too.
+                      var ts2 = document.getElementById("talkStatus");
+                      if (ts2 && /Filled: /.test(ts2.textContent) && ts2.textContent.indexOf("Time") < 0) ts2.textContent = ts2.textContent.replace(/\.$/, ", Time.");
                       done = true;
                       break;
                     }
@@ -522,18 +815,146 @@
           });
           return filled;
         }
+        // Find a booking by client name in the loaded calendar rows (today
+        // plus 30 days). Soonest live booking first; cancelled ones only if
+        // nothing live matches.
+        function talkLookupBooking(name, day){
+          var needles = String(name || "").toLowerCase().split(/\s+/).filter(function(w){ return !!w; });
+          if (!needles.length) return null;
+          var list = Object.keys(calBookings || {}).map(function(id){ return calBookings[id]; });
+          var hits = list.filter(function(b){
+            var nm = String(b.guestName || b.name || "").toLowerCase();
+            if (!needles.every(function(w){ return nm.indexOf(w) >= 0; })) return false;
+            if (day && b.date !== day) return false;
+            return true;
+          });
+          hits.sort(function(a, b){ return String(a.date + " " + (a.time || "")).localeCompare(String(b.date + " " + (b.time || ""))); });
+          var live = hits.filter(function(b){ return b.status !== "cancelled"; });
+          return live[0] || hits[0] || null;
+        }
+        function talkGlowBookingRow(id){
+          var btn = document.querySelector('[data-act="move"][data-id="' + id + '"]') || document.querySelector('[data-act="delete"][data-id="' + id + '"]');
+          if (!btn) return false;
+          var row = btn.closest(".after-item");
+          if (!row) return false;
+          row.scrollIntoView({ behavior: "smooth", block: "center" });
+          row.classList.remove("glow-pick"); void row.offsetWidth; row.classList.add("glow-pick");
+          setTimeout(function(){ row.classList.remove("glow-pick"); }, 6000);
+          return true;
+        }
+        // Booking jobs by name: find the booking, then open its panel (or
+        // point at its row). Never submits — Sarah taps the confirming button.
+        function talkResolveBooking(r){
+          var ts = document.getElementById("talkStatus");
+          function say(t){ if (ts) ts.textContent = t; }
+          var tries = 0;
+          function attempt(){
+            var b = talkLookupBooking(r.name, r.day);
+            if (b){ act(b); return; }
+            // A named day outside the shown range: widen the calendar to
+            // that day and try again while it loads.
+            if (r.day && tries < 5){
+              tries++;
+              var cf = document.getElementById("calFrom"), ct = document.getElementById("calTo");
+              if (cf && ct && (cf.value !== r.day || ct.value !== r.day)){ cf.value = r.day; ct.value = r.day; loadCal(); }
+              setTimeout(attempt, 700);
+              return;
+            }
+            say("I couldn't find a booking for " + r.name + (r.day ? " on " + r.day : " in the next 30 days") + " — check the name, or widen the calendar dates.");
+          }
+          function act(b){
+            var who = (b.guestName || b.name || r.name) + " — " + fmtDate(b.date) + " " + b.time + ", " + b.serviceName;
+            if (r.action === "find"){ talkGlowBookingRow(b.id); say("Found " + who + " (" + b.status + ")."); }
+            else if (r.action === "cancel"){ openPanel(b.id, cancelPanel(b)); say("Found " + who + ". Check it, then tap “Yes, cancel this booking”."); }
+            else if (r.action === "outcome"){
+              talkGlowBookingRow(b.id);
+              say("Found " + who + ". Tap “" + (r.outcome === "complete" ? "Completed" : "No-show") + "” on their row.");
+            }
+            else if (r.action === "move"){
+              openPanel(b.id, movePanel(b));
+              var refresh = function(){ loadTimesInto(document.getElementById("mvTime"), document.getElementById("mvDate").value, b.service, document.getElementById("mvType").value); };
+              var md = document.getElementById("mvDate");
+              if (md){ md.addEventListener("change", refresh); if (r.day){ md.value = r.day; md.dispatchEvent(new Event("change", { bubbles: true })); } }
+              var mt = document.getElementById("mvType");
+              if (mt) mt.addEventListener("change", refresh);
+              refresh();
+              if (r.time){
+                var t2 = 0;
+                (function tryTime(){
+                  var selT = document.getElementById("mvTime");
+                  var done = false;
+                  if (selT){
+                    var wantT = talkTimeLabel(r.time);
+                    for (var j = 0; j < selT.options.length; j++){
+                      if (selT.options[j].value === wantT || selT.options[j].value === r.time){ selT.selectedIndex = j; selT.dispatchEvent(new Event("change", { bubbles: true })); talkFillField(selT, selT.value); done = true; break; }
+                    }
+                  }
+                  if (!done && ++t2 < 10) setTimeout(tryTime, 400);
+                  else if (!done) say("That time isn't free that day — pick one from the list.");
+                })();
+              }
+              say("Found " + who + ". Pick the new day and time, then tap “Save new time”.");
+            }
+            else if (r.action === "record-payment"){
+              openPanel(b.id, payPanel(b));
+              if (r.amount != null){ var pa = document.getElementById("pyAmount"); if (pa) talkFillField(pa, String(r.amount)); }
+              if (r.method){
+                var pm = document.getElementById("pyMethod");
+                if (pm){
+                  for (var k = 0; k < pm.options.length; k++){
+                    if (pm.options[k].value === r.method){ pm.selectedIndex = k; pm.dispatchEvent(new Event("change", { bubbles: true })); break; }
+                  }
+                }
+              }
+              say("Found " + who + ". Check the amount and method, then tap “Record payment”.");
+            }
+            else if (r.action === "email"){
+              openPanel(b.id, emailPanel(b));
+              if (r.note){ var em = document.getElementById("emMessage"); if (em) talkFillField(em, r.note); }
+              say("Found " + who + ". Check the note, then tap “Send note”.");
+            }
+          }
+          attempt();
+        }
         (function(){
           var talkBtn = document.getElementById("dashTalk");
           var talkStatus = document.getElementById("talkStatus");
+          var talkInput = document.getElementById("talkInput");
+          var talkGo = document.getElementById("talkGo");
           var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
           function talkSetStatus(t){ if (talkStatus) talkStatus.textContent = t; }
+          // One shared path for speech AND typed commands: parse it, jump to
+          // the section, fill the fields, say what happened.
+          function runTalkCommand(text){
+            var said = String(text || "").trim();
+            if (!said){ talkSetStatus("Type or say a job — try “Pay link 65 dollars for Alex” or “Show me the calendar”."); return false; }
+            var r = parseTalk(said, todayKey());
+            var ts = document.getElementById("talkStatus");
+            var before = ts ? ts.textContent : "";
+            var filled = applyTalk(r);
+            if (r.ok){
+              // A booking lookup sets its own status ("Found …") while it
+              // runs — don't overwrite it with the "Looking for …" line.
+              if (!ts || ts.textContent === before) talkSetStatus("Heard: “" + said + "” — " + r.message + (filled.length ? " Filled: " + filled.join(", ") + "." : ""));
+            }
+            else talkSetStatus(r.message);
+            return r.ok;
+          }
+          if (talkGo && talkInput){
+            talkGo.addEventListener("click", function(){
+              if (runTalkCommand(talkInput.value)) talkInput.value = "";
+            });
+            talkInput.addEventListener("keydown", function(ev){
+              if (ev.key === "Enter"){ ev.preventDefault(); if (runTalkCommand(talkInput.value)) talkInput.value = ""; }
+            });
+          }
           var talkRec = null, talkListening = false;
           if (talkBtn){
             talkBtn.addEventListener("click", function(){
-              if (!SR){ talkSetStatus("Voice typing isn't available in this browser — please type it in instead."); return; }
+              if (!SR){ talkSetStatus("Voice typing isn't available in this browser — type it in the box below instead."); if (talkInput) talkInput.focus(); return; }
               if (talkListening && talkRec){ try { talkRec.stop(); } catch (e) {} return; }
               var rec;
-              try { rec = new SR(); } catch (e){ talkSetStatus("Voice typing couldn't start on this phone — please type it in instead."); return; }
+              try { rec = new SR(); } catch (e){ talkSetStatus("Voice typing couldn't start on this phone — type it in the box below instead."); return; }
               talkRec = rec; talkListening = true;
               talkBtn.setAttribute("aria-pressed", "true");
               talkBtn.textContent = "Listening… tap to stop";
@@ -541,40 +962,42 @@
               rec.interimResults = true;
               rec.maxAlternatives = 1;
               rec.continuous = false;
-              var heard = "";
+              // iPhones often show the words as you speak but never send a
+              // final transcript — so the command also runs when listening
+              // stops, using whatever was heard. acted stops it running twice.
+              var heardFinal = "", heardShown = "", acted = false;
               rec.onresult = function(ev){
                 var interim = "", finalTxt = "";
                 for (var i = ev.resultIndex; i < ev.results.length; i++){
                   if (ev.results[i].isFinal) finalTxt += ev.results[i][0].transcript;
                   else interim += ev.results[i][0].transcript;
                 }
-                if (finalTxt) heard += finalTxt;
-                var show = (heard + interim).trim();
-                if (show) talkSetStatus("Hearing: “" + show + "”");
-                if (finalTxt){
-                  var r = parseTalk(heard.trim(), todayKey());
-                  var filled = applyTalk(r);
-                  if (r.ok) talkSetStatus("Heard: “" + heard.trim() + "” — " + r.message + (filled.length ? " Filled: " + filled.join(", ") + "." : ""));
-                  else talkSetStatus(r.message);
-                }
+                if (finalTxt) heardFinal += finalTxt;
+                var show = (heardFinal + interim).trim();
+                if (show){ heardShown = show; talkSetStatus("Hearing: “" + show + "”"); }
+                if (finalTxt){ acted = true; runTalkCommand(heardFinal.trim()); }
               };
               rec.onerror = function(ev){
                 var e = (ev && ev.error) || "";
-                if (e === "not-allowed" || e === "service-not-allowed") talkSetStatus("Microphone is blocked — allow it for Safari in the phone settings, or type it in instead.");
+                if (e === "not-allowed" || e === "service-not-allowed") talkSetStatus("Microphone is blocked — allow it for Safari in the phone settings, or type it in the box below instead.");
                 else if (e === "no-speech") talkSetStatus("Didn't hear anything — tap Talk and try again.");
                 else if (e === "network") talkSetStatus("Voice needs internet — check the connection and try again.");
-                else if (e !== "aborted") talkSetStatus("Voice typing didn't work just now — please type it in instead.");
+                else if (e !== "aborted") talkSetStatus("Voice typing didn't work just now — type it in the box below instead.");
               };
               rec.onend = function(){
                 talkListening = false; talkRec = null;
                 talkBtn.setAttribute("aria-pressed", "false");
                 talkBtn.textContent = "Talk";
+                if (!acted){
+                  var said = (heardFinal || heardShown).trim();
+                  if (said) runTalkCommand(said);
+                }
               };
               try { rec.start(); } catch (e){
                 talkListening = false; talkRec = null;
                 talkBtn.setAttribute("aria-pressed", "false");
                 talkBtn.textContent = "Talk";
-                talkSetStatus("Voice typing couldn't start on this phone — please type it in instead.");
+                talkSetStatus("Voice typing couldn't start on this phone — type it in the box below instead.");
               }
             });
           }
@@ -696,6 +1119,7 @@
                 if (b.status !== "cancelled"){
                   acts += ' <button class="btn btn-ghost btn-book-sm" type="button" data-act="email" data-id="' + b.id + '">Email</button>';
                 }
+                acts += ' <button class="btn btn-ghost btn-book-sm" type="button" data-act="delete" data-id="' + b.id + '">Delete</button>';
                 return '<div class="after-item"><div><strong>' + fmtDate(b.date) + ' · ' + b.time + '</strong> — ' + b.serviceName
                   + ' · ' + (b.guestName || b.name) + ' · ' + b.phone + ' · ' + b.email
                   + ' · <em>' + b.status + '</em>' + (b.type === "after" ? ' · Private Hours' : '')
@@ -787,6 +1211,18 @@
             } else if (kind === "cancel"){ openPanel(b.id, cancelPanel(b)); }
             else if (kind === "email"){ openPanel(b.id, emailPanel(b)); }
             else if (kind === "pay"){ openPanel(b.id, payPanel(b)); }
+            else if (kind === "delete"){
+              var label = b.serviceName + " · " + fmtDate(b.date) + " " + b.time + " · " + (b.guestName || b.name || "");
+              if (!confirm("Delete this booking for good?\n" + label + "\nIt won't come back.")) return;
+              actBtn.disabled = true;
+              postAdmin({ view:"bookings", action:"delete", bookingId: b.id })
+                .then(function(res){
+                  if (!res.ok){ msg.textContent = res.j.error || "Could not delete the booking."; return; }
+                  msg.textContent = "Booking deleted.";
+                  loadCal(); loadPayments();
+                })
+                .catch(function(){ msg.textContent = "Could not delete the booking — check your connection."; });
+            }
             return;
           }
           var mvBtn = ev.target.closest("[data-mv-save]");

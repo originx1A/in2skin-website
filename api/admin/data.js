@@ -19,6 +19,10 @@
 // POST /api/admin/data { view:"bookings", action:"cancel", bookingId, reason }
 //   → cancel an upcoming booking: frees the slot, restores gift/voucher +
 //     referral value, emails the client.
+// POST /api/admin/data { view:"bookings", action:"delete", bookingId }
+//   → delete a booking for good (test bookings, unneeded ones). Removes the
+//     record + its day index; gift/voucher codes and referral credits are
+//     left alone (a cancelled booking already restored them).
 // POST /api/admin/data { view:"bookings", action:"move", bookingId, date, time, type }
 //   → move a booking to a free slot (same slot rules as a new booking);
 //     Regular ↔ Private Hours changes the total by $15 (balance due / overpaid).
@@ -73,7 +77,7 @@ const { pipeline, kvGet, kvSet, kvDel } = require("../../lib/kv");
 const {
   listBookingsRange, listBookingsForDate, listPayments, listGifts, deleteGift,
   giftDisplayStatus, getBooking, markBookingOutcome, saveBooking,
-  cancelBooking, moveBooking, buildBooking, createBookingCheckout, createPayLink,
+  cancelBooking, moveBooking, deleteBooking, buildBooking, createBookingCheckout, createPayLink,
   sendBookingConfirmation, sendWalkInConfirmation, sendHoldEmail, finalizePaidBooking,
   balanceDue, recordPayment, newId, PHONE_DISPLAY,
   dueFinishChecks, notifyFinishCheck, markFinishDone, snoozeFinishCheck,
@@ -448,6 +452,13 @@ module.exports = async (req, res) => {
         const { booking: updated, emailed } = await cancelBooking(booking, b.reason);
         await logAudit(session, "bookings.cancel", `${booking.serviceName} — ${booking.date} ${booking.time}${b.reason ? " — " + String(b.reason).slice(0, 100) : ""}`);
         return res.status(200).json({ booking: publicBooking(updated), emailed });
+      }
+      if (b.view === "bookings" && b.action === "delete" && b.bookingId) {
+        const booking = await getBooking(b.bookingId);
+        if (!booking) return res.status(404).json({ error: "Booking not found." });
+        await deleteBooking(booking.id);
+        await logAudit(session, "bookings.delete", `${booking.serviceName} — ${booking.date} ${booking.time} · ${booking.guestName || booking.name || ""} (${booking.status})`);
+        return res.status(200).json({ ok: true });
       }
       if (b.view === "bookings" && b.action === "move" && b.bookingId) {
         const booking = await getBooking(b.bookingId);

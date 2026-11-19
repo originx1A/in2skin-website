@@ -595,6 +595,32 @@ async function run() {
   fcRes = await callAdmin({ view: "finish-check", action: "notify", bookingId: "bk_nope" });
   check("finish-check notify unknown -> not sent", fcRes.body.notified, false);
 
+  // ---------- 17. delete booking (Tony Nov 19, 2026) ----------
+  const delBooking = {
+    id: "bk_delete_test",
+    date: d2,
+    time: "1:00 PM",
+    service: "classic-facial",
+    serviceName: "Classic Facial",
+    status: "cancelled",
+    name: "Delete Test",
+    phone: "(905) 555-0998",
+    email: "delete@test.example",
+    addons: [],
+    createdAt: new Date().toISOString(),
+  };
+  await bookingsLib.saveBooking(delBooking);
+  check("delete target saved", !!(await bookingsLib.getBooking("bk_delete_test")), true);
+  check("delete target in day index", (await bookingsLib.listBookingsForDate(d2)).some((b) => b.id === "bk_delete_test"), true);
+  let delRes = await callAdmin({ view: "bookings", action: "delete", bookingId: "bk_delete_test" });
+  check("delete booking -> 200", delRes.statusCode, 200);
+  check("deleted booking is gone", (await bookingsLib.getBooking("bk_delete_test")), null);
+  check("deleted booking out of day index", (await bookingsLib.listBookingsForDate(d2)).some((b) => b.id === "bk_delete_test"), false);
+  delRes = await callAdmin({ view: "bookings", action: "delete", bookingId: "bk_delete_test" });
+  check("delete twice -> 404", delRes.statusCode, 404);
+  delRes = await callAdmin({ view: "bookings", action: "delete", bookingId: "bk_nope" });
+  check("delete unknown -> 404", delRes.statusCode, 404);
+
   console.log(`admin tests: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }
