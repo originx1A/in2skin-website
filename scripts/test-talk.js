@@ -207,7 +207,11 @@ eq(r.time, "17:00", "pause time");
 
 r = parseTalk("calls go straight to me", TODAY);
 eq(r.action, "mode", "mode action");
-eq(r.mode, "direct", "mode direct");
+eq(r.mode, "ring_me_first", "mode ring_me_first");
+
+r = parseTalk("messages only", TODAY);
+eq(r.action, "mode", "mode action messages only");
+eq(r.mode, "message_only", "mode message_only");
 
 r = parseTalk("report from november 1 to november 15", TODAY);
 eq(r.action, "report", "report action");
