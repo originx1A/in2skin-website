@@ -117,6 +117,9 @@
         <p><label><input id="blkAllDay" type="checkbox" /> Whole day (7:00 AM – 9:00 PM)</label></p>
         <p style="margin-top:12px;"><button class="btn btn-book" id="blkAdd" type="button">Block off this time</button> <span id="blkMsg" style="color:#7A3B2E; margin-left:8px;"></span></p>
         <div id="blkList" style="margin-top:12px;">Loading blocks…</div>
+        <h3 style="font-size:1.1rem; margin:22px 0 8px;">Video consult links — Google connection</h3>
+        <p class="sub">Connect the studio's Google account once, and every video consultation gets its own fresh Meet link automatically — no shared link, no pasting. Sarah signs in on Google's own screen and taps Allow; no password is shared with the site, and the connection can be removed here any time.</p>
+        <p style="margin-top:12px;"><button class="btn btn-book" id="googleConnectBtn" type="button">Connect Google</button> <button class="btn btn-ghost" id="googleDisconnectBtn" type="button" style="display:none;">Disconnect Google</button> <span id="googleConnectMsg" style="color:#7A3B2E; margin-left:8px;"></span></p>
         <h3 style="font-size:1.1rem; margin:22px 0 8px;">Video call link</h3>
         <p class="sub">Your one Google Meet link for video consultations — paste it here and it goes into every confirmation and reminder email. Until you paste one, clients are told the link is coming.</p>
         <div class="field"><label for="meetLink">Google Meet link</label><input id="meetLink" type="url" placeholder="https://meet.google.com/abc-defg-hij" /></div>
@@ -2043,6 +2046,22 @@
               gapCurrent = res.j.bufferMins;
               var meetInput = document.getElementById("meetLink");
               if (meetInput) meetInput.value = res.j.meetLink || "";
+              // ---- Google connection (video consult links) ----
+              var g = res.j.google || {};
+              var gm = document.getElementById("googleConnectMsg");
+              var gc = document.getElementById("googleConnectBtn");
+              var gd = document.getElementById("googleDisconnectBtn");
+              if (gc) gc.style.display = g.connected ? "none" : "";
+              if (gd) gd.style.display = g.connected ? "" : "none";
+              if (gm) {
+                var gflag = new URLSearchParams(window.location.search).get("google");
+                if (gflag === "connected") gm.textContent = "Connected — each video consultation gets its own fresh Meet link automatically.";
+                else if (gflag === "denied") gm.textContent = "Google sign-in was cancelled — nothing changed. Tap Connect Google to try again.";
+                else if (gflag === "error") gm.textContent = "That Google sign-in didn't go through — try Connect Google again. If it keeps failing, tell Cooper.";
+                else if (!g.configured) gm.textContent = "Google sign-in isn't set up yet — the studio keys are still being added. The button will work once they are.";
+                else if (g.connected) gm.textContent = "Connected" + (g.connectedAt ? " since " + fmtDate(String(g.connectedAt).slice(0, 10)) : "") + " — each video consultation gets its own fresh Meet link automatically.";
+                else gm.textContent = "Not connected yet — connect Google and each video consultation gets its own fresh Meet link automatically.";
+              }
               document.querySelectorAll(".gap-btn").forEach(function(btn){
                 btn.setAttribute("aria-pressed", String(+btn.getAttribute("data-gap") === gapCurrent));
               });
@@ -2064,6 +2083,28 @@
               m.textContent = res.j.meetLink ? "Video link saved — it will go into every consultation email." : "Video link cleared — clients will be told the link is coming.";
             })
             .catch(function(){ m.textContent = "Could not save — check your connection."; });
+        });
+        // ---- Google connection (video consult links) ----
+        document.getElementById("googleConnectBtn").addEventListener("click", function(){
+          var m = document.getElementById("googleConnectMsg");
+          m.textContent = "Opening Google sign-in…";
+          fetch("/api/admin/data", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ view:"google-connect", action:"start" }) })
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ m.textContent = res.j.error || "Could not start Google sign-in."; return; }
+              window.location.href = res.j.authUrl;
+            })
+            .catch(function(){ m.textContent = "Could not reach the server — check your connection and try again."; });
+        });
+        document.getElementById("googleDisconnectBtn").addEventListener("click", function(){
+          var m = document.getElementById("googleConnectMsg");
+          fetch("/api/admin/data", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ view:"google-connect", action:"disconnect" }) })
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ m.textContent = res.j.error || "Could not disconnect."; return; }
+              loadSettings();
+            })
+            .catch(function(){ m.textContent = "Could not reach the server — check your connection and try again."; });
         });
         document.getElementById("gapBtns").addEventListener("click", function(ev){
           var btn = ev.target.closest(".gap-btn");
