@@ -7,7 +7,7 @@
     {
       "id": "classic-facial",
       "name": "Classic Facial",
-      "category": "Signature Facial",
+      "category": "Signature Facial Treatments",
       "minutes": 55,
       "price": "$85",
       "priceCents": 8500
@@ -15,7 +15,7 @@
     {
       "id": "anti-aging-facial",
       "name": "Anti-Aging Facial",
-      "category": "Signature Facial",
+      "category": "Signature Facial Treatments",
       "minutes": 80,
       "price": "$125",
       "priceCents": 12500
@@ -284,7 +284,7 @@
         "href": "/contact/"
       },
       {
-        "label": "Questions about facials? See our answers",
+        "label": "Questions about facial treatments? See our answers",
         "href": "/questions/"
       },
       {

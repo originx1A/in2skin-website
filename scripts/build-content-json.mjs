@@ -21,7 +21,7 @@ const DEPOSIT = DEPOSIT_SENTENCE;
 /* Descriptive copy — from the frontend SERVICES in index.html. */
 const COPY = {
   "classic-facial": {
-    what: "A facial is a one-on-one professional skin treatment for your face, neck and décolletage. The Classic Facial is the signature treatment: cleansing, steam, extractions if needed, a hydration mask, and a facial massage including neck and décolletage — tailored to your skin that day.",
+    what: "A facial treatment is a one-on-one professional skin treatment for your face, neck and décolletage. The Classic Facial is the signature treatment: cleansing, steam, extractions if needed, a hydration mask, and a facial massage including neck and décolletage — tailored to your skin that day.",
     feelsLike: "Warm, gentle and deeply relaxing. Many clients drift off and wake up glowing.",
     goodFor: "Anyone who wants brighter, fresher, more even-looking skin and deep hydration. The perfect foundation for healthy skin, month after month. Perfect for first-timers — every step is explained.",
   },
@@ -41,12 +41,12 @@ const COPY = {
     goodFor: "Skin that feels noticeably smoother right away, a brighter and more even-looking complexion, and makeup that sits more beautifully. A favourite before events and photos.",
   },
   "light-therapy": {
-    what: "A 20-minute add-on. You lie back under warm red light for twenty restful minutes. The red light supports collagen, calms skin and evens tone while you rest. It adds to any facial.",
+    what: "A 20-minute add-on. You lie back under warm red light for twenty restful minutes. The red light supports collagen, calms skin and evens tone while you rest. It adds to any facial treatment.",
     feelsLike: "Warm and peaceful. Many clients nap while the light works.",
-    goodFor: "Firmer, more youthful-looking skin, a calmer and more even complexion, and better results from any facial.",
+    goodFor: "Firmer, more youthful-looking skin, a calmer and more even complexion, and better results from any facial treatment.",
   },
   "reflexology": {
-    what: "A 20-minute add-on. Gentle, skilled pressure across the reflex points of the feet. Points on your feet map to your back, neck and shoulders — the arch to the back, the toes to the head and neck — so tender points can show where the body is holding tension. The perfect finishing touch to any facial.",
+    what: "A 20-minute add-on. Gentle, skilled pressure across the reflex points of the feet. Points on your feet map to your back, neck and shoulders — the arch to the back, the toes to the head and neck — so tender points can show where the body is holding tension. The perfect finishing touch to any facial treatment.",
     feelsLike: "Gentle, rhythmic pressure — calm spreads through your whole body in minutes.",
     goodFor: "Deep relaxation that spreads through the whole body, and a lighter, calmer, more balanced feeling.",
   },
@@ -112,7 +112,7 @@ const knowledge = {
     id: c.id,
     name: c.name,
     price: c.price,
-    what: "Your facial + red light therapy + reflexology, all at once while your mask works. " +
+    what: "Your facial treatment + red light therapy + reflexology, all at once while your mask works. " +
       (c.id === "combo-classic"
         ? "With Classic ($160, 55 min): cleanse, steam, extractions if needed, hydration mask, facial massage incl. neck + décolletage."
         : "With Anti-Aging ($195, 80 min): all of that + a second mask + arm massage while the second mask is on + serums and Circadia products in the masks, matched to the skin."),
@@ -120,17 +120,17 @@ const knowledge = {
   deposit: DEPOSIT + " Book without a deposit and the slot is held for 30 minutes, then it opens back up. Sarah can waive the deposit for people she knows. Rescheduling is free with 24 hours' notice. On a no-show or late cancel the deposit is never refunded in cash and never lost — it stays as credit toward the next appointment.",
   forPeople: {
     brides: "Brides book ahead of the wedding for glowing skin in photos. Microdermabrasion is a favourite before events, and The Works is the full relaxing experience.",
-    business: "A facial is a calm reset in a busy week — many business clients book daytime appointments.",
+    business: "A facial treatment is a calm reset in a busy week — many business clients book daytime appointments.",
     teens: "Teen acne care is available in its own teen offering, below the adult services. Adults book first; teens are welcome with a parent.",
     vacation: "Book before a vacation so your skin looks its best on the trip.",
   },
   forSkin: {
-    acne: "A facial helps acne-prone skin with a thorough deep cleanse, gentle exfoliation and a mask matched to your skin that day. For acne scarring, Microneedling / NANO Needling is the treatment that helps most.",
-    dry: "A facial helps dry skin with a gentle deep cleanse, soft exfoliation, warm steam, a custom hydrating mask, and rich serum and moisturizer for deep hydration and a soft, supple feel.",
-    dull: "A facial helps dull skin with exfoliation and steam to lift away dullness, plus a brightening mask and serum for a fresh, glowing finish. Microdermabrasion is a great add-on for instant brightness.",
-    fineLines: "An anti-aging facial helps fine lines with firming massage, targeted serums and rich hydration. Microneedling / NANO Needling helps over a series of visits.",
-    rosacea: "A facial helps rosacea-prone skin with a gentle cleanse, calming care and a mask matched to sensitive skin. The esthetician adjusts everything to your skin that day.",
-    tired: "A facial helps tired skin with deep cleansing, massage, steam and a custom mask — most clients leave looking rested and glowing.",
+    acne: "A facial treatment helps acne-prone skin with a thorough deep cleanse, gentle exfoliation and a mask matched to your skin that day. For acne scarring, Microneedling / NANO Needling is the treatment that helps most.",
+    dry: "A facial treatment helps dry skin with a gentle deep cleanse, soft exfoliation, warm steam, a custom hydrating mask, and rich serum and moisturizer for deep hydration and a soft, supple feel.",
+    dull: "A facial treatment helps dull skin with exfoliation and steam to lift away dullness, plus a brightening mask and serum for a fresh, glowing finish. Microdermabrasion is a great add-on for instant brightness.",
+    fineLines: "An anti-aging facial treatment helps fine lines with firming massage, targeted serums and rich hydration. Microneedling / NANO Needling helps over a series of visits.",
+    rosacea: "A facial treatment helps rosacea-prone skin with a gentle cleanse, calming care and a mask matched to sensitive skin. The esthetician adjusts everything to your skin that day.",
+    tired: "A facial treatment helps tired skin with deep cleansing, massage, steam and a custom mask — most clients leave looking rested and glowing.",
   },
   services: knowledgeServices,
   studio: {
@@ -150,7 +150,7 @@ const knowledge = {
     referrals: "When three friends book and pay in full with your code, you earn $15 treatment credit and a free reflexology add-on. The reward repeats every three referrals. No cash value — credit is for treatments only.",
     regularHours: "Monday to Saturday, 10:00 AM to 4:00 PM. Sundays the studio is closed.",
     reschedule: "Call at least 24 hours ahead to move an appointment, no charge to reschedule.",
-    vouchers: "Pay ahead for a named facial plus add-ons and get a code to give as a gift. Any leftover value stays with the person who used the voucher. If the full total is used, the voucher ends when the treatment is completed. No cash value. We suggest enjoying it within 120 days, but the dollar value never expires.",
+    vouchers: "Pay ahead for a named facial treatment plus add-ons and get a code to give as a gift. Any leftover value stays with the person who used the voucher. If the full total is used, the voucher ends when the treatment is completed. No cash value. We suggest enjoying it within 120 days, but the dollar value never expires.",
     website: "https://boltonfacials.com",
   },
 };

@@ -1159,6 +1159,13 @@
         .hero-copy{ margin:0 auto; padding:0 18px 4px; }
         .hero-copy h1{ font-size:2.5rem; }
       }
+      /* Narrow phones (<=360px): the longer hero H1 wraps to five lines
+         at 2.5rem and pushes the hero promise under the sticky Book bar —
+         tighten hero type only at this width. */
+      @media (max-width:360px){
+        .hero-copy h1{ font-size:2.1rem; }
+        .hero-copy p.lede{ font-size:1.2rem; }
+      }
 
       /* ===== Mobile fixes: round chat button, welcome spacing, hero kicker ===== */
       #welcome{ padding-top:72px; }

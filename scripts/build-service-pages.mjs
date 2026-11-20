@@ -332,7 +332,7 @@ function page(s, override) {
     .join("");
   const works =
     s.id === "classic-facial" || s.id === "anti-aging-facial"
-      ? `<h2>Make it The Works</h2><p>Facial + red light + reflexology, all at once — <a href="/the-works/">The Works</a>. Just mention it when you book.</p>`
+      ? `<h2>Make it The Works</h2><p>Facial treatment + red light + reflexology, all at once — <a href="/the-works/">The Works</a>. Just mention it when you book.</p>`
       : "";
   const head = headBlock({
     title,
@@ -368,16 +368,16 @@ function page(s, override) {
 // panel (duration only, gold "See price and book" pre-picking the
 // Classic option). Copy below is the approved Works page copy.
 const WORKS_COPY = {
-  intro: ["Facial + red light therapy + reflexology, all at the same time while your mask works. So relaxing, clients fall asleep."],
+  intro: ["Facial treatment + red light therapy + reflexology, all at the same time while your mask works. So relaxing, clients fall asleep."],
   includes: [
-    "Your facial — Classic or Anti-Aging, tailored to your skin that day",
+    "Your facial treatment — Classic or Anti-Aging, tailored to your skin that day",
     "Warm red light therapy while your mask works",
     "Reflexology to finish — gentle foot pressure, whole-body calm",
     "One unhurried visit, one price",
   ],
   ways: ["The Works with Classic Facial — 55 minutes", "The Works with Anti-Aging Facial — 80 minutes"],
   faq: [
-    ["What is The Works?", "A facial, red light therapy and reflexology, all at the same time while your mask works — $160 with a Classic Facial (55 minutes) or $195 with an Anti-Aging Facial (80 minutes)."],
+    ["What is The Works?", "A facial treatment, red light therapy and reflexology, all at the same time while your mask works — $160 with a Classic Facial (55 minutes) or $195 with an Anti-Aging Facial (80 minutes)."],
     ["How does it feel?", "Warm, gentle & deeply relaxing. Many clients drift off — and wake up glowing."],
     ["Can I add anything else?", "Yes — NANO Needling ($65) or Microdermabrasion ($55) pair well with either option. Just mention it when you book."],
     ["Is it good for a first visit?", "Perfect for first-timers — the full experience in one visit."],
@@ -391,7 +391,7 @@ function worksPage() {
   const title = SEO_TITLES["the-works"];
   const desc = SEO_DESCS["the-works"];
   const img = "assets/works-massage.webp";
-  const imgAlt = "The Works treatment room — a massage table set with candles, white tulips and a rolled towel, ready for a facial, red light and reflexology session";
+  const imgAlt = "The Works treatment room — a massage table set with candles, white tulips and a rolled towel, ready for a facial treatment, red light and reflexology session";
   const faq = WORKS_COPY.faq
     .map(([q, a]) => {
       const teaser = /\$\s?\d/.test(a) ? ' data-price-teaser' : "";
@@ -501,7 +501,7 @@ writeFileSync(
     <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Page not found | In2Skin — Bolton, Ontario</title>
-    <meta name="description" content="That page isn't here — but a facial in Bolton is. Book online or call In2Skin on (289) 212-4124." />
+    <meta name="description" content="That page isn't here — but a facial treatment in Bolton is. Book online or call In2Skin on (289) 212-4124." />
     <meta name="robots" content="noindex" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

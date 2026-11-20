@@ -260,16 +260,16 @@ has(read("facials-toronto/index.html"), "An escape from the city", "Toronto keep
 // figure removal are completed with "more" — in the source data, so
 // body and JSON-LD FAQ copies agree.
 for (const s of [
-  "A quality facial downtown costs more — and that is before the add-ons.",
-  "where a custom facial downtown costs more — in a private, one-on-one studio with no waiting room and no rush.",
-  "Downtown, a custom facial, a HydraFacial, and peels all cost more.",
+  "A quality facial treatment downtown costs more — and that is before the add-ons.",
+  "where a custom facial treatment downtown costs more — in a private, one-on-one studio with no waiting room and no rush.",
+  "Downtown, a custom facial treatment, a HydraFacial, and peels all cost more.",
 ]) {
   has(read("facials-toronto/index.html"), s, `Toronto repair present: ${s.slice(0, 50)}…`);
 }
 for (const s of [
-  "most of them charging more for a facial, with medspas costing more.",
-  "A facial in Mississauga costs more on average, and a signature facial at a medspa can cost more.",
-  "On average, a facial costs more, with medspas costing more.",
+  "most of them charging more for a facial treatment, with medspas costing more.",
+  "A facial treatment in Mississauga costs more on average, and a signature facial treatment at a medspa can cost more.",
+  "On average, a facial treatment costs more, with medspas costing more.",
 ]) {
   has(read("facials-mississauga/index.html"), s, `Mississauga repair present: ${s.slice(0, 50)}…`);
 }

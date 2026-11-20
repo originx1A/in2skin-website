@@ -66,7 +66,7 @@ const FOOTER = {
   occasions: NAV.occasions,
   visit: [
     { label: "Contact and hours", href: "/contact/" },
-    { label: "Questions about facials? See our answers", href: "/questions/" },
+    { label: "Questions about facial treatments? See our answers", href: "/questions/" },
     { label: "Gift certificates", href: "/gift/" },
     { label: "Privacy — how we handle your information", href: "/privacy.html" },
   ],
@@ -175,7 +175,7 @@ const llms = `# In2Skin — Aesthetics Studio in Bolton, Ontario
 
 ${serviceLines}
 
-## The Works (facial + red light therapy + reflexology, all at once)
+## The Works (facial treatment + red light therapy + reflexology, all at once)
 
 ${comboLines}
 
@@ -189,7 +189,7 @@ ${giftLines}
 
 - Gift codes never expire. Any leftover value stays on the code for a future visit.
 
-## Facials near Bolton
+## Facial treatments near Bolton
 
 ${townLinks}
 
