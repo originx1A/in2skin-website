@@ -44,9 +44,17 @@
             var g = res.j;
             var isVoucher = g.kind === "voucher";
             title.textContent = isVoucher ? "Your treatment voucher is ready." : "Your gift is on its way.";
+            /* Print goes to the buyer to print; a future sendOn waits for
+               its date — the certificate email follows the same rule as
+               the server-side send (see lib/bookings.js). */
+            var sentLine = g.delivery === "print"
+              ? "The code below was emailed to you at " + (g.certificateTo || g.buyerEmail || "") + ", ready to print."
+              : g.sendOn
+                ? "The code below will be emailed to them at " + (g.certificateTo || g.recipientEmail || "") + " on " + g.sendOn + "."
+                : "The code below was also emailed to them at " + (g.certificateTo || g.recipientEmail || "") + ".";
             msg.textContent = isVoucher
-              ? "A treatment voucher for " + g.recipientName + " — Good for " + (g.voucherLabel || "") + ". The code below was also emailed to them at " + g.recipientEmail + "."
-              : "A " + money(g.amountCents) + " In2Skin gift certificate for " + g.recipientName + " — the code below was also emailed to them at " + g.recipientEmail + ".";
+              ? "A treatment voucher for " + g.recipientName + " — Good for " + (g.voucherLabel || "") + ". " + sentLine
+              : "A " + money(g.amountCents) + " In2Skin gift certificate for " + g.recipientName + " — " + sentLine;
             detail.innerHTML = '<div class="gift-code">' + g.code + '</div>'
               + (isVoucher
                 ? '<p style="color:var(--ink-soft);">This receipt <strong>is</strong> the voucher — print it or save it. Good for <strong>' + (g.voucherLabel || "") + '</strong>. We suggest enjoying it within 120 days' + (g.suggestedUseBy ? ' (by ' + g.suggestedUseBy + ')' : '') + ' — but the dollar value never expires, and any balance left after the visit stays with the person who used it. No cash value.</p>'

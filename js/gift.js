@@ -115,41 +115,88 @@
   });
 
   /* ---- Pay ----
-     COOPER: the real payment plugs in here. Replace createPreviewOrder() with
-       fetch("/api/gift-buy", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(order) })
-         .then(r => r.json()).then(({ url }) => { location.href = url; })     // Stripe Checkout session URL
-     `order` (built below) = { amount, treatment|null, toName, toPhone, message, delivery: "email"|"print", toEmail, sendOn: "now"|"YYYY-MM-DD", buyerName, buyerEmail, buyerPhone } (toEmail only when delivery is "email").
-     Server side: create the Stripe Checkout session (CAD), and on checkout.session.completed generate the IN2-XXXX code, store it,
-     email the certificate with emails/gift-code.html (to toEmail on sendOn, or to buyerEmail to print) and the buyer a receipt (emails/payer-receipt.html), then redirect back to /gift/?paid=<session>
-     and render the confirmation card from the stored gift. Until then this preview invents the code in the browser and charges nothing. */
+     Real payment: POST /api/gift-buy with the order below, then Stripe
+     Checkout. After payment Stripe returns to /gift/?paid=<session> and
+     the confirmation card renders from GET /api/gift?session_id= — the
+     code is made server-side, never in this browser. No code is stored
+     in this browser at all: the booking page checks codes against the
+     server (GET /api/gift?code=).
+     `order` = { amount, treatment|null, toName, toPhone, message, delivery: "email"|"print", toEmail, sendOn: "now"|"YYYY-MM-DD", buyerName, buyerEmail, buyerPhone } (toEmail only when delivery is "email").
+     Server side: a treatment NAME maps to a voucher (service id +
+     add-ons, priced by the server); an amount maps to a certificate.
+     Print delivery needs no recipient email — the certificate goes to
+     the buyer to print. A future sendOn holds the certificate email
+     until that date; the buyer receipt still goes out at payment. */
   function buildOrder() {
     return { amount: G.amt, treatment: G.tre, toName: G.name, toPhone: G.rphone, message: G.msg, delivery: G.del, toEmail: G.del === "email" ? G.remail : "",
       sendOn: G.del === "email" ? (G.when === "date" ? G.date : "now") : "", buyerName: G.buyer, buyerEmail: G.bemail, buyerPhone: G.bphone };
   }
-  function createPreviewOrder(order) {
-    var A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", c = "IN2-"; for (var i = 0; i < 4; i++) c += A.charAt(Math.floor(Math.random() * A.length));
-    return { code: c, order: order };
-  }
-  var LAST = null;
-  $("#giftPay").addEventListener("click", function () {
-    if (next() !== "pay") { toMissing(next()); return; }
-    LAST = createPreviewOrder(buildOrder()); var o = LAST.order;
+  function showDoneCard(o, code, statusText) {
     $("#gcAmt").textContent = o.treatment ? o.treatment : money(o.amount);
     $("#gcVal").textContent = o.treatment ? "Value " + money(o.amount) : "To spend on any treatment";
     $("#gcTo").textContent = o.toName; $("#gcFrom").textContent = o.buyerName;
     $("#gcMsg").textContent = o.message ? "“" + o.message + "”" : ""; $("#gcMsg").hidden = !o.message;
-    $("#gcCode").textContent = LAST.code;
-    $("#gdStatus").textContent = o.delivery === "email"
-      ? "We'll email it to " + o.toEmail + (o.sendOn === "now" ? " right away." : " on " + dateWords(o.sendOn) + ".") + " A receipt is on its way to " + o.buyerEmail + "."
-      : "It's on its way to " + o.buyerEmail + ", ready to print.";
-    var body = "Hi " + o.toName + ",\n\n" + o.buyerName + " has given you a gift certificate for In2Skin in Bolton: " + (o.treatment ? o.treatment + " (value " + money(o.amount) + ")" : money(o.amount)) + ".\n" +
-      (o.message ? "\n\"" + o.message + "\"\n" : "") + "\nYour code: " + LAST.code + "\nRedeem it when you book at boltonfacials.com or call (289) 212-4124.\n";
-    $("#gdSend").setAttribute("href", "mailto:" + encodeURIComponent(o.toEmail || "").replace("%40", "@") + "?subject=" + encodeURIComponent("A gift for you from " + o.buyerName) + "&body=" + encodeURIComponent(body));
-    /* preview only: remember the code in this browser so the booking pay step can apply it (COOPER: replaced by the real code store + POST /api/gift-redeem) */
-    try { var gl = JSON.parse(localStorage.getItem("in2-gifts-v1")) || {}; gl[LAST.code] = { amount: o.amount, balance: o.amount, to: o.toName, toPhone: o.toPhone, toEmail: o.toEmail, from: o.buyerName, fromEmail: o.buyerEmail, fromPhone: o.buyerPhone }; localStorage.setItem("in2-gifts-v1", JSON.stringify(gl)); } catch (e) {}
-    G.done = true; paint(); setTimeout(function () { go($("#gfDone")); }, RM.matches ? 0 : 140);
+    $("#gcCode").textContent = code;
+    $("#gdStatus").textContent = statusText;
+    var send = $("#gdSend");
+    if (o.delivery === "email" && o.toEmail) {
+      send.hidden = false;
+      var body = "Hi " + o.toName + ",\n\n" + o.buyerName + " has given you a gift certificate for In2Skin in Bolton: " + (o.treatment ? o.treatment + " (value " + money(o.amount) + ")" : money(o.amount)) + ".\n" +
+        (o.message ? "\n\"" + o.message + "\"\n" : "") + "\nYour code: " + code + "\nRedeem it when you book at boltonfacials.com or call (289) 212-4124.\n";
+      send.setAttribute("href", "mailto:" + encodeURIComponent(o.toEmail).replace("%40", "@") + "?subject=" + encodeURIComponent("A gift for you from " + o.buyerName) + "&body=" + encodeURIComponent(body));
+    } else { send.hidden = true; }
+    ["gf1", "gf2", "gf3", "gf4"].forEach(function (id) { var el = document.getElementById(id); if (el) el.hidden = true; });
+    G.paying = true; G.done = true; paint();
+    setTimeout(function () { go($("#gfDone")); }, RM.matches ? 0 : 140);
+  }
+  $("#giftPay").addEventListener("click", function () {
+    if (next() !== "pay") { toMissing(next()); return; }
+    var order = buildOrder();
+    var btn = $("#giftPay"); btn.disabled = true; btn.textContent = "Taking you to secure payment…";
+    var err = $("#giftPayErr"); if (err) { err.hidden = true; err.textContent = ""; }
+    fetch("/api/gift-buy", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(order) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok || !res.j.url) throw new Error((res.j && res.j.error) || "The gift could not be started — please try again.");
+        location.href = res.j.url; /* Stripe Checkout — paying completes the gift */
+      })
+      .catch(function (e) {
+        btn.disabled = false; btn.textContent = "Pay " + money(order.amount);
+        if (err) { err.hidden = false; err.textContent = e.message || "Something went wrong — please try again."; }
+      });
   });
   $("#gdPrint").addEventListener("click", function () { window.print(); });
+
+  /* ---- Returning from Stripe: /gift/?paid=<session> ----
+     The confirmation card renders from the stored gift — the code on it
+     is the server-made one. */
+  var paidSid = null;
+  try { paidSid = new URLSearchParams(location.search).get("paid"); } catch (e) { paidSid = null; }
+  if (paidSid) {
+    fetch("/api/gift?session_id=" + encodeURIComponent(paidSid), { headers: { Accept: "application/json" } })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok || !res.j.paid) {
+          $("#gdStatus").textContent = "Your payment has not come through yet. If you just paid, give it a moment — the certificate code will be emailed when it clears.";
+          ["gf1", "gf2", "gf3", "gf4"].forEach(function (id) { var el = document.getElementById(id); if (el) el.hidden = true; });
+          G.paying = true; G.done = true; paint();
+          return;
+        }
+        var g = res.j;
+        var o = { amount: g.amountCents / 100, treatment: g.kind === "voucher" ? (g.voucherLabel || "") : null, toName: g.recipientName, buyerName: g.buyerName, message: "", delivery: g.delivery || "email", toEmail: g.recipientEmail || "" };
+        var status = g.delivery === "print"
+          ? "It's on its way to " + (g.buyerEmail || "") + ", ready to print."
+          : g.sendOn
+            ? "We'll email it to " + (g.recipientEmail || "") + " on " + dateWords(g.sendOn) + ". A receipt is on its way to " + (g.buyerEmail || "") + "."
+            : "We'll email it to " + (g.recipientEmail || "") + " right away. A receipt is on its way to " + (g.buyerEmail || "") + ".";
+        showDoneCard(o, g.code, status);
+      })
+      .catch(function () {
+        $("#gdStatus").textContent = "We could not reach the gift service. If you just paid, the certificate code will be emailed when the payment clears.";
+        ["gf1", "gf2", "gf3", "gf4"].forEach(function (id) { var el = document.getElementById(id); if (el) el.hidden = true; });
+        G.paying = true; G.done = true; paint();
+      });
+  }
 
   paint();
 })();

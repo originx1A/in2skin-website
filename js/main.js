@@ -360,7 +360,7 @@
         (S.date ? '<p class="bs-when">' + dateLabel() + (S.time ? " · " + S.time : "") + "</p>" : "") + '<button type="button" class="bs-edit" id="bsEdit">Change treatments</button>';
       $("#step-date").classList.toggle("done", !!S.date); $("#step-time").classList.toggle("done", !!S.time); $("#step-details").classList.toggle("done", detailsValid()); $("#step-option").classList.toggle("done", !!S.option);
       $("#step-details").hidden = fr;
-      var gm = $("#gcodeMsg"); if (S.code) { gm.hidden = false; gm.className = "gcode-msg ok"; gm.textContent = "Code " + S.code.code + " applied, −" + money(creditAmt(T)) + "."; } else if (!gm.classList.contains("bad")) gm.hidden = true;
+      var gm = $("#gcodeMsg"); if (S.code) { var cr = creditAmt(T), left = Math.max(0, S.code.balance - cr); gm.hidden = false; gm.className = "gcode-msg ok"; gm.textContent = "Code " + S.code.code + " applied, −" + money(cr) + (left > 0 ? " · " + money(left) + " left on the code." : " · Code fully used."); } else if (!gm.classList.contains("bad")) gm.hidden = true;
       $$(".opt-card").forEach(function (c) { c.setAttribute("aria-checked", String(c.getAttribute("data-option") === S.option)); });
       var parts = [(S.who === "friend" && S.F.name ? "For " + S.F.name + ": " : "") + T.items.map(function (i) { return i.name; }).join(" + ")]; if (S.date) parts.push(dateLabel()); if (S.time) parts.push(S.time);
       $("#reserveSum").textContent = parts.join(" · ");
@@ -493,9 +493,10 @@
       website: "", formLoadedAt: String(LOADED_AT),
     };
     if (friend) {
-      payload.friend = { name: F.name, phone: F.phone, email: F.email || "" };
+      payload.friend = { name: F.name, phone: F.phone, email: F.email || "", msg: F.msg || "" };
       payload.booker = { name: F.yname, email: F.yemail, phone: F.yphone };
       payload.guestName = F.name; payload.guestPhone = F.phone; payload.guestEmail = F.email || "";
+      payload.friendMessage = F.msg || ""; /* the payer's short note — quoted in the friend-booked email + receipt */
     }
     if (S.referredBy) payload.referredBy = S.referredBy;
     fetch("/api/book", {

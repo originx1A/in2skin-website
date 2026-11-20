@@ -1055,7 +1055,7 @@
                 var del = !p.bookingId ? ' <div style="margin-top:8px;"><button class="btn btn-ghost btn-book-sm" type="button" data-pay-del="' + p.id + '">Delete</button></div><div class="act-slot" data-slot="pay-' + p.id + '"></div>' : '';
                 rows.push('<div class="after-item"><div><strong>' + money(p.amountCents) + '</strong> — ' + (p.serviceLabel || "In2Skin visit") + ' · ' + (p.clientName || "Client") + ' · pay on the spot</div>' + del + '</div>');
               });
-              j.bookings.forEach(function(b){ rows.push('<div class="after-item"><div><strong>' + money(b.amountPaidCents || 0) + '</strong> — ' + b.serviceName + ' · ' + (b.guestName || b.name || "Client") + ' · ' + b.time + ' · ' + (b.via === "admin" ? "walk-in" : "online booking") + (b.giftAppliedCents ? ' · ' + money(b.giftAppliedCents) + ' from gift code' : '') + ((b.balanceDueCents || 0) > 0 ? ' · <strong style="color:#7A3B2E;">owes ' + money(b.balanceDueCents) + '</strong>' : '') + '</div></div>'); });
+              j.bookings.forEach(function(b){ rows.push('<div class="after-item"><div><strong>' + money(b.amountPaidCents || 0) + '</strong> — ' + b.serviceName + ' · ' + (b.forWhom === "friend" ? "Paid by " + b.name + " for " + (b.guestName || "?") : (b.guestName || b.name || "Client")) + ' · ' + b.time + ' · ' + (b.via === "admin" ? "walk-in" : "online booking") + (b.giftAppliedCents ? ' · ' + money(b.giftAppliedCents) + ' from gift code' : '') + ((b.balanceDueCents || 0) > 0 ? ' · <strong style="color:#7A3B2E;">owes ' + money(b.balanceDueCents) + '</strong>' : '') + '</div></div>'); });
               document.getElementById("payList").innerHTML = rows.length ? rows.join("") : "<p style='color:var(--ink-soft);'>No payments recorded for this day yet.</p>";
             })
             .catch(function(){ msg.textContent = "Could not load payments — check your connection."; });
@@ -1177,7 +1177,11 @@
                 }
                 acts += ' <button class="btn btn-ghost btn-book-sm" type="button" data-act="delete" data-id="' + b.id + '">Delete</button>';
                 return '<div class="after-item"><div><strong>' + fmtDate(b.date) + ' · ' + b.time + '</strong> — ' + b.serviceName
-                  + ' · ' + (b.guestName || b.name) + ' · ' + b.phone + ' · ' + b.email
+                  + (b.forWhom === "friend"
+                    ? ' · <strong>Paid by ' + b.name + ' for ' + (b.guestName || "?") + '</strong>'
+                      + '<br/>Booker: <a href="tel:' + (b.phone || "").replace(/[^0-9+]/g, "") + '">' + b.phone + '</a> · <a href="mailto:' + b.email + '">' + b.email + '</a>'
+                      + '<br/>Guest: <a href="tel:' + (b.guestPhone || "").replace(/[^0-9+]/g, "") + '">' + (b.guestPhone || "—") + '</a>' + (b.guestEmail ? ' · <a href="mailto:' + b.guestEmail + '">' + b.guestEmail + '</a>' : ' · <strong style="color:#7A3B2E;">No email for ' + (b.guestName || "guest") + ' — studio phones them</strong>')
+                    : ' · ' + (b.guestName || b.name) + ' · ' + b.phone + ' · ' + b.email)
                   + ' · <em>' + b.status + '</em>' + (b.type === "after" ? ' · Private Hours' : '')
                   + (b.giftCode ? ' · gift ' + b.giftCode : '')
                   + (b.referredBy ? ' · referred by ' + b.referredBy : '')

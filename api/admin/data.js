@@ -102,6 +102,7 @@ const {
   balanceDue, recordPayment, getPayment, deletePayment, newId, PHONE_DISPLAY,
   dueFinishChecks, notifyFinishCheck, markFinishDone, snoozeFinishCheck,
   listConsultRequests, acceptConsultRequest, declineConsultRequest, sendDueConsultReminders,
+  sendDueGiftCertificates,
 } = require("../../lib/bookings");
 const {
   dateKey, money, SERVICES, COMBOS, QUIET_PREMIUM_CENTS,
@@ -138,7 +139,9 @@ function publicBooking(b) {
   return {
     id: b.id, serviceName: b.serviceName, service: b.service, format: b.format || null, date: b.date, time: b.time, type: b.type,
     name: b.name, phone: b.phone, email: b.email,
+    forWhom: b.forWhom || "me",
     guestName: b.guestName, guestPhone: b.guestPhone, guestEmail: b.guestEmail,
+    friendMessage: b.friendMessage || null, friendNoEmail: !!b.friendNoEmail,
     status: b.status, amountCents: b.amountCents, amountPaidCents: b.amountPaidCents,
     balanceDueCents: balanceDue(b),
     payMode: b.payMode || "full", depositCents: b.depositCents != null ? b.depositCents : null,
@@ -875,6 +878,9 @@ module.exports = async (req, res) => {
       // rides this poll (only fires while the dashboard is open).
       // Never throws — a reminder failure must not break the poll.
       await sendDueConsultReminders();
+      // Same ride: gift certificates scheduled for today go out on
+      // this poll — no cron, no new function (see sendDueGiftCertificates).
+      await sendDueGiftCertificates();
       return res.status(200).json({
         unreadMessages,
         events,

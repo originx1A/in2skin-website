@@ -7,6 +7,7 @@
 const { getStripe } = require("../lib/stripe");
 const {
   getGift, ensureGiftCode, sendGiftCertificate, sendGiftReceipt, sendVoucherCertificate,
+  certificateRecipient,
 } = require("../lib/bookings");
 const { getReferralByCode } = require("../lib/referrals");
 const { checkLimit } = require("../lib/rate-limit");
@@ -25,6 +26,8 @@ module.exports = async (req, res) => {
       }
       const gift = await ensureGiftCode(session);
       // Make sure the emails went out even if the webhook was delayed.
+      // A future sendOn stays gated here too — the certificate goes out
+      // ON that date via the dashboard-poll sweep, never early.
       if (gift.kind === "voucher") await sendVoucherCertificate(gift);
       else await sendGiftCertificate(gift);
       await sendGiftReceipt(gift);
@@ -32,11 +35,19 @@ module.exports = async (req, res) => {
         paid: true,
         code: gift.code,
         amountCents: gift.originalCents,
+        buyerName: gift.buyerName || "",
+        buyerEmail: gift.buyerEmail || "",
         recipientName: gift.recipientName,
         recipientEmail: gift.recipientEmail,
         kind: gift.kind || "gift",
         voucherLabel: gift.voucherLabel || "",
         suggestedUseBy: gift.suggestedUseBy || null,
+        // Where the certificate went / will go: print goes to the buyer,
+        // a future sendOn waits for its date.
+        delivery: gift.delivery || "email",
+        sendOn: gift.sendOn || null,
+        certificateTo: certificateRecipient(gift),
+        certificateSent: !!gift.certificateSent,
       });
     }
     const gift = await getGift(req.query.code);
