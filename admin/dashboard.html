@@ -120,6 +120,8 @@
         <h3 style="font-size:1.1rem; margin:22px 0 8px;">Video consult links — Google connection</h3>
         <p class="sub">Connect the studio's Google account once, and every video consultation gets its own fresh Meet link automatically — no shared link, no pasting. Sarah signs in on Google's own screen and taps Allow; no password is shared with the site, and the connection can be removed here any time.</p>
         <p style="margin-top:12px;"><button class="btn btn-book" id="googleConnectBtn" type="button">Connect Google</button> <button class="btn btn-ghost" id="googleDisconnectBtn" type="button" style="display:none;">Disconnect Google</button> <span id="googleConnectMsg" style="color:#7A3B2E; margin-left:8px;"></span></p>
+        <p style="margin-top:12px;"><button class="btn btn-ghost" id="googleMeetTestBtn" type="button">Test Meet link</button> <button class="btn btn-ghost" id="googleMeetTestDeleteBtn" type="button" style="display:none;">Delete test link</button> <span id="googleMeetTestMsg" style="color:#7A3B2E; margin-left:8px;"></span></p>
+        <p id="googleMeetTestLink" style="margin-top:8px;"></p>
         <h3 style="font-size:1.1rem; margin:22px 0 8px;">Video call link</h3>
         <p class="sub">Your one Google Meet link for video consultations — paste it here and it goes into every confirmation and reminder email. Until you paste one, clients are told the link is coming.</p>
         <div class="field"><label for="meetLink">Google Meet link</label><input id="meetLink" type="url" placeholder="https://meet.google.com/abc-defg-hij" /></div>
@@ -2103,6 +2105,44 @@
             .then(function(res){
               if (!res.ok){ m.textContent = res.j.error || "Could not disconnect."; return; }
               loadSettings();
+            })
+            .catch(function(){ m.textContent = "Could not reach the server — check your connection and try again."; });
+        });
+        // ---- Meet proof test: mint one real Meet link, then delete it ----
+        document.getElementById("googleMeetTestBtn").addEventListener("click", function(){
+          var m = document.getElementById("googleMeetTestMsg");
+          var out = document.getElementById("googleMeetTestLink");
+          var del = document.getElementById("googleMeetTestDeleteBtn");
+          m.textContent = "Making a test Meet link…";
+          out.textContent = "";
+          del.style.display = "none";
+          fetch("/api/admin/data", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ view:"google-connect", action:"meet-test" }) })
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ m.textContent = res.j.error || "Could not make a test link."; return; }
+              m.textContent = "Test link made — open it to check it, then delete it.";
+              out.innerHTML = "";
+              var a = document.createElement("a");
+              a.href = res.j.meetLink; a.textContent = res.j.meetLink; a.target = "_blank"; a.rel = "noopener";
+              out.appendChild(a);
+              del.setAttribute("data-event-id", res.j.eventId);
+              del.style.display = "";
+            })
+            .catch(function(){ m.textContent = "Could not reach the server — check your connection and try again."; });
+        });
+        document.getElementById("googleMeetTestDeleteBtn").addEventListener("click", function(){
+          var m = document.getElementById("googleMeetTestMsg");
+          var out = document.getElementById("googleMeetTestLink");
+          var del = document.getElementById("googleMeetTestDeleteBtn");
+          var eventId = del.getAttribute("data-event-id") || "";
+          m.textContent = "Deleting the test link…";
+          fetch("/api/admin/data", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ view:"google-connect", action:"meet-test-delete", eventId: eventId }) })
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ m.textContent = res.j.error || "Could not delete the test link."; return; }
+              m.textContent = "Test link deleted.";
+              out.textContent = "";
+              del.style.display = "none";
             })
             .catch(function(){ m.textContent = "Could not reach the server — check your connection and try again."; });
         });
