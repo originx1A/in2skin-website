@@ -128,6 +128,9 @@ const {
   storeTokens: googleStoreTokens,
   getStatus: googleStatus,
   disconnect: googleDisconnect,
+  getAccessToken: googleGetAccessToken,
+  createMeetEvent: googleCreateMeetEvent,
+  deleteMeetEvent: googleDeleteMeetEvent,
 } = require("../../lib/google");
 const { sendEmail } = require("../../lib/email");
 
@@ -147,6 +150,7 @@ function publicBooking(b) {
     checkoutUrl: b.checkoutUrl || null, paylinkId: b.paylinkId || null,
     consultCreditCode: b.consultCreditCode || null,
     consultCreditCents: b.consultCreditCents || 0,
+    meetLink: b.meetLink || null,
     via: b.via || null, createdAt: b.createdAt,
   };
 }
@@ -471,6 +475,55 @@ module.exports = async (req, res) => {
         await googleDisconnect();
         await logAudit(session, "google.disconnect", "Google account disconnected — video consults need a Meet link pasted in again");
         return res.status(200).json({ connected: false });
+      }
+      // Proof test (Tony Nov 20, 2026 — "Can we do an example so we know
+      // that it's working?"): mint ONE real Meet event on the connected
+      // Google account, right now, through the same createMeetEvent the
+      // booking flow uses — then delete it immediately with
+      // meet-test-delete. Admin-only, fixed test values, no attendees, no
+      // client data, no emails. The event is 20 minutes starting a few
+      // minutes in the future. If Google isn't connected, this answers
+      // 409 "not connected" instead of minting anything.
+      if (b.view === "google-connect" && b.action === "meet-test") {
+        const status = await googleStatus();
+        if (!status.connected) {
+          return res.status(409).json({ error: "Google is not connected — connect the studio's Google account first, then run the test again." });
+        }
+        try {
+          const accessToken = await googleGetAccessToken();
+          const start = new Date(Date.now() + 5 * 60 * 1000);
+          const end = new Date(start.getTime() + 20 * 60 * 1000);
+          const created = await googleCreateMeetEvent({
+            accessToken,
+            summary: "TEST — In2Skin Meet check — DELETE",
+            description: "Connection proof test — delete this event right after checking the link.",
+            startISO: start.toISOString(),
+            endISO: end.toISOString(),
+            attendeeEmail: "",
+          });
+          if (!created.meetLink || !created.eventId) {
+            return res.status(502).json({ error: "Google answered without a Meet link — the connection may need to be re-done." });
+          }
+          await logAudit(session, "google.meet-test", `Meet proof test — event ${created.eventId} created, delete it right after checking the link`);
+          return res.status(200).json({ ok: true, meetLink: created.meetLink, eventId: created.eventId, htmlLink: created.htmlLink || null });
+        } catch (err) {
+          return res.status(err.status || 500).json({ error: err.message });
+        }
+      }
+      // Delete the proof-test event minted by meet-test. Same admin-only
+      // gate; the event id comes from the meet-test answer. An event
+      // that is already gone counts as deleted.
+      if (b.view === "google-connect" && b.action === "meet-test-delete") {
+        const eventId = String(b.eventId || "").trim();
+        if (!eventId) return res.status(400).json({ error: "Missing event id — run meet-test first." });
+        try {
+          const accessToken = await googleGetAccessToken();
+          await googleDeleteMeetEvent({ accessToken, eventId });
+          await logAudit(session, "google.meet-test-delete", `Meet proof test — event ${eventId} deleted`);
+          return res.status(200).json({ ok: true, deleted: true, eventId });
+        } catch (err) {
+          return res.status(err.status || 500).json({ error: err.message });
+        }
       }
       if (b.view === "consult-requests" && (b.action === "accept" || b.action === "decline")) {
         try {
