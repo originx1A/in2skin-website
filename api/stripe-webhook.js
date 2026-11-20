@@ -5,9 +5,8 @@
 //   pay-spot link    -> mark the pay link paid, record the payment.
 // Raw body is required for signature verification.
 const { getStripe } = require("../lib/stripe");
-const { kvSet } = require("../lib/kv");
 const {
-  getBooking, finalizePaidBooking, markPaylinkPaid,
+  getBooking, finalizePaidBooking, markPaylinkPaid, markBookingCheckoutPaid,
   ensureGiftCode, sendGiftCertificate, sendGiftReceipt, sendVoucherCertificate,
 } = require("../lib/bookings");
 
@@ -34,12 +33,11 @@ module.exports = async (req, res) => {
       const meta = session.metadata || {};
       if (meta.type === "booking" && meta.bookingId) {
         const booking = await getBooking(meta.bookingId);
-        if (booking && booking.status !== "paid") {
-          booking.status = "paid";
-          booking.amountPaidCents = session.amount_total || booking.amountCents;
-          booking.stripePaymentIntentId = session.payment_intent || null;
-          await kvSet(`booking:${booking.id}`, booking);
-        }
+        // Deposit model (Tony Nov 19, 2026): the checkout paid the $30
+        // deposit (or the full $30 consultation, or the full amount when
+        // Sarah waived the deposit). The shared helper applies it — the
+        // status-page fallback replays the same step, idempotently.
+        if (booking) await markBookingCheckoutPaid(booking, session);
         if (booking) await finalizePaidBooking(booking);
       } else if (meta.type === "gift") {
         const gift = await ensureGiftCode(session);

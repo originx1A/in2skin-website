@@ -1,21 +1,26 @@
 // POST /api/book — create a booking + Stripe Checkout session.
-// Full payment at booking. Accepts an optional gift code (its balance comes
-// off the total; anything left stays on the code). Bookings fully covered
-// by a gift code need no payment — they are confirmed straight away.
+// Deposit model (Tony Nov 19, 2026): an online booking pays a $30 deposit
+// to hold the spot, credited toward the treatment; the balance is paid at
+// the visit. A consultation is $30 paid up front in full. Bookings fully
+// covered by a gift code need no payment — they are confirmed straight away.
+// A deposit fully covered by carried deposit credit (a past no-show) also
+// needs no checkout — it is confirmed straight away.
 const { getStripe } = require("../lib/stripe");
 const { kvGet, kvSet } = require("../lib/kv");
 const {
   findService, parseDateLocal, timesFor, parseTime, normalizeAddons,
-  durationForBooking, baseCentsFor,
+  durationForBooking, baseCentsFor, money,
   slotTaken, PENDING_HOLD_MS, dayIsFull, countsTowardCap,
 } = require("../lib/schedule");
 const { studioForDate } = require("../lib/studio");
 const {
   SITE_URL, newId, saveBooking, listBookingsForDate,
   getBooking, finalizePaidBooking, sendHoldEmail, notifyStudioBooking,
-  buildBooking, createBookingCheckout, createConsultRequest, CONSULT_ID,
+  buildBooking, createBookingCheckout, markBookingCheckoutPaid,
+  getDepositCredit, createConsultRequest, CONSULT_ID,
   CONSULT_FORMATS, consultFormatOf, consultName,
 } = require("../lib/bookings");
+const { depositCentsFor } = require("../lib/schedule");
 const { getReferralByEmailOrPhone } = require("../lib/referrals");
 const { getOrCreateReferral } = require("../lib/referrals");
 const { checkLimit } = require("../lib/rate-limit");
@@ -106,6 +111,13 @@ async function handleAgentHold(req, res, b) {
     const firstVisitDiscountCents = 0;
     const amountCents = Math.max(0, baseCents);
     const myRef = await getOrCreateReferral({ name: b.name, email: b.email, phone: b.phone });
+    // Deposit (Tony Nov 19, 2026): $30 to hold the spot, credited toward
+    // the treatment; the balance is paid at the visit. A consultation is
+    // $30 paid up front in full. Deposit credit carried from a past
+    // no-show / late cancel comes off the deposit first.
+    const isConsultAgent = svc.id === CONSULT_ID;
+    const depositCents = depositCentsFor(amountCents, isConsultAgent);
+    const depositCreditCents = isConsultAgent ? 0 : Math.min(await getDepositCredit(b.email, b.phone), depositCents);
     const booking = {
       id: newId("bk"),
       service: svc.id,
@@ -140,6 +152,14 @@ async function handleAgentHold(req, res, b) {
       myReferralCode: myRef.code,
       amountCents,
       amountPaidCents: 0,
+      depositCents,
+      depositPaidCents: 0,
+      depositWaived: false,
+      depositCreditCents,
+      depositCreditDeducted: false,
+      depositCreditBankedCents: 0,
+      needsReview: false,
+      reviewNote: null,
       status: "pending",
       via: "agent",
       emailSent: false,
@@ -159,6 +179,18 @@ async function handleAgentHold(req, res, b) {
       return res.status(200).json({ hold: true, bookingId: booking.id, consultation: booking.status === "consultation", holdUntil });
     }
 
+    // Deposit fully covered by carried credit: no checkout — the spot is
+    // held by the credit, and the booking is confirmed straight away.
+    const depositDueCents = isConsultAgent ? amountCents : Math.max(0, depositCents - depositCreditCents);
+    if (depositDueCents <= 0) {
+      booking.status = "deposit-paid";
+      booking.depositPaidCents = depositCents;
+      await saveBooking(booking);
+      await finalizePaidBooking(booking);
+      await notifyStudioBooking(booking, "new");
+      return res.status(200).json({ hold: true, bookingId: booking.id, depositPaid: true, depositCents: booking.depositCents, balanceDueCents: Math.max(0, amountCents - depositCents), holdUntil });
+    }
+
     await saveBooking(booking);
     const stripe = getStripe();
     const isConsult = svc.id === CONSULT_ID;
@@ -170,14 +202,16 @@ async function handleAgentHold(req, res, b) {
         quantity: 1,
         price_data: {
           currency: "cad",
-          unit_amount: amountCents,
+          unit_amount: depositDueCents,
           product_data: {
             // The consultation's checkout names the service plainly
             // (Tony Nov 19, 2026); the statement descriptor is IN2SKIN.
-            name: isConsult ? `${consultName(format)} — In2Skin` : `${serviceLabel} — ${b.date} at ${b.time}${type === "after" ? " (Private Hours)" : ""}`,
+            // A treatment checkout takes the $30 deposit only — the
+            // balance is paid at the visit.
+            name: isConsult ? `${consultName(format)} — In2Skin` : `${serviceLabel} — $30 deposit — ${b.date} at ${b.time}${type === "after" ? " (Private Hours)" : ""}`,
             description: isConsult
               ? `Payment for ${consultName(format)} · In2Skin, Bolton, Ontario — ${b.date} at ${b.time}`
-              : `In2Skin · Bolton, Ontario — held by phone`,
+              : `Deposit to hold your spot · In2Skin, Bolton, Ontario — ${money(Math.max(0, amountCents - depositDueCents))} balance paid at your visit`,
           },
         },
       }],
@@ -203,6 +237,9 @@ async function handleAgentHold(req, res, b) {
       time: booking.time,
       type: booking.type,
       amountCents: booking.amountCents,
+      depositCents: booking.depositCents,
+      depositDueCents,
+      balanceDueCents: Math.max(0, booking.amountCents - depositDueCents),
       checkoutUrl: session.url,
       holdUntil,
     });
@@ -229,12 +266,11 @@ module.exports = async (req, res) => {
       const bookingId = (session.metadata || {}).bookingId;
       const booking = await getBooking(bookingId);
       if (!booking) return res.status(404).json({ error: "Booking not found." });
-      if (booking.status !== "paid") {
-        booking.status = "paid";
-        booking.amountPaidCents = session.amount_total || booking.amountCents;
-        booking.stripePaymentIntentId = session.payment_intent || null;
-        await kvSet(`booking:${booking.id}`, booking);
-      }
+      // Deposit model (Tony Nov 19, 2026): the checkout paid the $30
+      // deposit (or the full $30 consultation, or the full amount when
+      // Sarah waived the deposit) — apply it through the shared helper
+      // the webhook uses, so the two paths can never disagree.
+      await markBookingCheckoutPaid(booking, session);
       await finalizePaidBooking(booking);
       return res.status(200).json({
         paid: true,
@@ -247,7 +283,12 @@ module.exports = async (req, res) => {
           name: booking.name,
           guestName: booking.guestName,
           email: booking.email,
+          amountCents: booking.amountCents,
           amountPaidCents: booking.amountPaidCents,
+          depositCents: booking.depositCents || 0,
+          depositPaidCents: booking.depositPaidCents || 0,
+          balanceDueCents: Math.max(0, (booking.amountCents || 0) - (booking.amountPaidCents || 0)),
+          status: booking.status,
           giftAppliedCents: booking.giftAppliedCents,
           giftKind: booking.giftKind || null,
           myReferralCode: booking.myReferralCode || null,
@@ -301,6 +342,19 @@ module.exports = async (req, res) => {
       return res.status(200).json({ paid: true, bookingId: booking.id, consultation: booking.status === "consultation", myReferralCode: booking.myReferralCode });
     }
 
+    // Deposit fully covered by carried deposit credit (a past no-show):
+    // no checkout — the spot is held by the credit, and the booking is
+    // confirmed straight away. finalizePaidBooking deducts the credit.
+    const depositDueCents = Math.max(0, (booking.depositCents || 0) - (booking.depositCreditCents || 0));
+    if (depositDueCents <= 0) {
+      booking.status = "deposit-paid";
+      booking.depositPaidCents = booking.depositCents;
+      await saveBooking(booking);
+      await finalizePaidBooking(booking);
+      await notifyStudioBooking(booking, "new");
+      return res.status(200).json({ paid: true, depositPaid: true, bookingId: booking.id, depositCents: booking.depositCents, balanceDueCents: Math.max(0, booking.amountCents - booking.depositCents), myReferralCode: booking.myReferralCode });
+    }
+
     await saveBooking(booking);
     const session = await createBookingCheckout(booking);
     booking.checkoutSessionId = session.id;
@@ -313,7 +367,7 @@ module.exports = async (req, res) => {
       try { await sendHoldEmail(booking, session.url); } catch (e) { console.error("[book:hold-email]", e); }
     }
     await notifyStudioBooking(booking, "new");
-    return res.status(200).json({ url: session.url, bookingId: booking.id });
+    return res.status(200).json({ url: session.url, bookingId: booking.id, amountCents: booking.amountCents, depositCents: booking.depositCents, depositDueCents, balanceDueCents: Math.max(0, booking.amountCents - depositDueCents) });
   } catch (err) {
     console.error("[book]", err);
     return res.status(err.status || 500).json({ error: err.message });
