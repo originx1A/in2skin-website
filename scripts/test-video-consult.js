@@ -58,6 +58,25 @@ global.fetch = async (url, opts) => {
   return { ok: true, json: async () => ({}) };
 };
 
+// --- clock stub: pin Toronto "now" to 10:00 AM when it is 22:00 or later ---
+// Sections 10–11 book a consult for TODAY at "30/120 minutes from now".
+// After 22:00 Toronto that wraps past midnight, lands in the past, and
+// the reminder never fires / the late-cancel wording changes (pre-existing
+// time-of-day flake: passes at 23:12, fails at 23:30+). Pinning mins to
+// 10:00 AM keeps the scenario constructible at any hour; the date stays
+// real (today) so the reminder sweep still finds today's bookings. The
+// stub is a no-op before 22:00, when the test already passes.
+const realTransfer = require("../lib/transfer");
+const transferPath = require.resolve("../lib/transfer");
+require.cache[transferPath] = {
+  exports: Object.assign({}, realTransfer, {
+    torontoNow: (now) => {
+      const r = realTransfer.torontoNow(now);
+      return r.mins >= 1320 ? Object.assign({}, r, { mins: 600, label: "10:00 AM" }) : r;
+    },
+  }),
+};
+
 const { kvGet, kvSet } = require("../lib/kv");
 const sched = require("../lib/schedule");
 const studio = require("../lib/studio");
@@ -93,11 +112,23 @@ function futureDate(daysAhead) {
   return d.toISOString().slice(0, 10);
 }
 // A future weekday (requests and bookings never run on Sundays).
+// Collision-proof AND stable per offset: the same offset always
+// returns the same date (tests intentionally re-book one date), but
+// the Sunday bump alone can push two different offsets onto the same
+// Monday (e.g. +58 and +59 both landing on the Monday after a
+// Sunday), so a new offset never repeats a date an earlier offset
+// already took — that collision is how this suite went flaky.
+const usedWeekdays = new Set();
+const weekdayByOffset = new Map();
 function futureWeekday(daysAhead) {
+  if (weekdayByOffset.has(daysAhead)) return weekdayByOffset.get(daysAhead);
   const d = new Date();
   d.setDate(d.getDate() + daysAhead);
-  while (d.getDay() === 0) d.setDate(d.getDate() + 1);
-  return d.toISOString().slice(0, 10);
+  while (d.getDay() === 0 || usedWeekdays.has(d.toISOString().slice(0, 10))) d.setDate(d.getDate() + 1);
+  const s = d.toISOString().slice(0, 10);
+  usedWeekdays.add(s);
+  weekdayByOffset.set(daysAhead, s);
+  return s;
 }
 // "2:30 PM" style label for a Toronto wall-clock minute count.
 function fmtMins(mins) {
@@ -493,7 +524,7 @@ async function run() {
   assert.ok(ipEmails[0].body.includes("See you at the studio"), "in-person reminder says where to go");
 
   // ---------- 12. walk-in no-charge: Tony's free VIDEO test pass ----------
-  res = await callAdmin({ view: "bookings", action: "walk-in", service: "consultation", format: "video", date: futureWeekday(58), time: "2:00 PM", type: "regular", name: "Tony", phone: "(416) 902-6122", email: "tony@test.example", first: "no", payment: "no-charge" });
+  res = await callAdmin({ view: "bookings", action: "walk-in", service: "consultation", format: "video", date: futureWeekday(56), time: "2:00 PM", type: "regular", name: "Tony", phone: "(416) 902-6122", email: "tony@test.example", first: "no", payment: "no-charge" });
   assert.equal(res.statusCode, 200, "Tony's free test consult books -> 200, got " + JSON.stringify(res.body));
   assert.equal(res.body.booking.status, "paid", "no-charge consult is paid in full");
   assert.equal(res.body.booking.amountCents, 0, "no-charge consult is $0");
@@ -505,7 +536,7 @@ async function run() {
   await B.markBookingOutcome(tonyBooking, "complete");
   assert.equal((await consultCreditsFor("tony@test.example", "(416) 902-6122")).length, 0, "a free consult earns no credit — nothing was paid");
   // in-person walk-in, pay later — confirmation says pay at the studio, no link
-  res = await callAdmin({ view: "bookings", action: "walk-in", service: "consultation", format: "in-person", date: futureWeekday(59), time: "2:00 PM", type: "regular", name: "Walk In Person", phone: "(905) 555-1200", email: "walkin@test.example", first: "no", payment: "later" });
+  res = await callAdmin({ view: "bookings", action: "walk-in", service: "consultation", format: "in-person", date: futureWeekday(57), time: "2:00 PM", type: "regular", name: "Walk In Person", phone: "(905) 555-1200", email: "walkin@test.example", first: "no", payment: "later" });
   assert.equal(res.statusCode, 200, "in-person walk-in -> 200, got " + JSON.stringify(res.body));
   assert.equal(res.body.booking.status, "unpaid", "pay-later walk-in is unpaid until the visit");
   const walkInEmail = lastEmailToWithSubject("walkin@test.example", "Your In2Skin booking — In-Person Consultation");
@@ -513,7 +544,7 @@ async function run() {
   assert.ok(walkInEmail.includes("Pay at the studio"), "in-person walk-in confirmation names the studio payment");
   assert.ok(!walkInEmail.includes("meet.google.com"), "in-person walk-in confirmation has no video link");
   // and the same booking works with no email at all (email is optional in person)
-  res = await callAdmin({ view: "bookings", action: "walk-in", service: "consultation", format: "in-person", date: futureWeekday(59), time: "4:00 PM", type: "regular", name: "No Email Person", phone: "(905) 555-1201", email: "", first: "no", payment: "later" });
+  res = await callAdmin({ view: "bookings", action: "walk-in", service: "consultation", format: "in-person", date: futureWeekday(57), time: "4:00 PM", type: "regular", name: "No Email Person", phone: "(905) 555-1201", email: "", first: "no", payment: "later" });
   assert.equal(res.statusCode, 200, "in-person walk-in without email -> 200, got " + JSON.stringify(res.body));
   assert.equal(res.body.booking.status, "unpaid", "no-email walk-in is unpaid until the visit");
 

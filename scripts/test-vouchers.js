@@ -66,14 +66,14 @@ async function run() {
   check("Classic + Reflexology Private Hours = $135 (premium once)", p.totalCents, 13500);
   p = sched.priceVoucher("classic-facial", ["light-therapy", "reflexology"], "after");
   check("Classic + Light + Reflexology Private Hours = $190 (premium once per visit)", p.totalCents, 19000);
-  p = sched.priceVoucher("anti-aging-facial", ["nano-needling", "light-therapy"], "regular");
-  check("Anti + NANO + Light = $245", p.totalCents, 24500);
+  p = sched.priceVoucher("anti-aging-facial", ["needling", "light-therapy"], "regular");
+  check("Anti + Needling + Light = $245", p.totalCents, 24500);
   p = sched.priceVoucher("combo-anti", [], "regular");
   check("The Works Anti alone = $195", p.totalCents, 19500);
   p = sched.priceVoucher("classic-facial", ["reflexology", "reflexology"], "regular");
   check("duplicate add-on counted once", p.totalCents, 12000);
   checkThrows("chemical peel cannot be a voucher main", () => sched.priceVoucher("chemical-peels", [], "regular"));
-  checkThrows("microneedling cannot be a voucher main", () => sched.priceVoucher("microneedling", [], "regular"));
+  checkThrows("needling cannot be a voucher main", () => sched.priceVoucher("needling", [], "regular"));
   checkThrows("a facial cannot be an add-on", () => sched.priceVoucher("classic-facial", ["classic-facial"], "regular"));
   checkThrows("unknown add-on rejected", () => sched.priceVoucher("classic-facial", ["nope"], "regular"));
 
