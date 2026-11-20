@@ -373,6 +373,29 @@ body.dock-off .dock{display:none!important}
 .ao-blocked{margin-top:12px}
 .ao-off{opacity:.62;background:rgba(239,220,201,.45);border-style:dashed;cursor:not-allowed}
 .ao-reason{font-size:.9rem;color:var(--ink-soft);flex:1 1 100%}
+/* guided in-place add-ons (Tony Nov 20): every offered add-on shows at
+   once. Compatible ones light gold; tap to add (green when added), tap
+   again to remove. Incompatible ones stay unlit in .ao-off above. */
+.ao-count{margin:0 0 12px;color:var(--ink-soft);font-size:.95rem}
+.ao-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(max-width:640px){.ao-grid{grid-template-columns:1fr}}
+.ao-pick-wrap{display:flex;flex-direction:column;gap:0}
+.ao-pick{display:flex;align-items:flex-start;gap:14px;width:100%;text-align:left;padding:16px;border-radius:24px;border:1.5px solid var(--gold);background:linear-gradient(160deg,#FFFDF7,#F8EEDD);color:var(--ink);font:inherit;cursor:pointer;transition:all .2s ease}
+.ao-pick:hover{transform:translateY(-2px);box-shadow:0 14px 28px rgba(58,48,32,.14)}
+.ao-pick .ao-main{min-width:0;display:flex;flex-direction:column;gap:2px}
+.ao-pick .ao-name{font:600 1.25rem/1.2 var(--serif)}
+.ao-pick .ao-meta{font-weight:500;color:var(--sage-deep)}
+.ao-pick .ao-why{margin:6px 0 2px;font-size:.98rem}
+.ao-pick .ao-check{margin:6px 0 0;padding:8px 12px;border-radius:12px;background:rgba(217,185,106,.16);border:1px dashed var(--gold);color:var(--gold-text);font-size:.9rem}
+.ao-pick .ao-state{margin-top:8px;font-weight:600;color:var(--gold-text);font-size:.92rem}
+.ao-pick.added{background:linear-gradient(135deg,#E3EBD8,#EEF3E3);border-color:var(--sage-deep)}
+.ao-pick.added .ao-state{color:var(--sage-deep)}
+.ao-pick-wrap .ao-more{margin:8px 2px 0}
+#addonsDone{margin-top:16px}
+.cal-help{margin:0 0 10px;font-size:.95rem;color:var(--ink-soft)}
+.reserve .step-hint{display:block;margin:0 0 10px}
+#step-details.glow-pick #detailsForm input{animation:piece-pulse 1.6s ease-in-out infinite;border-color:#C9A15A}
+@media (prefers-reduced-motion:reduce){#step-details.glow-pick #detailsForm input{animation:none;box-shadow:0 0 0 2px rgba(176,141,79,.95)}}
 .ao-card.current,.ao-done{scroll-margin-top:96px}
 
 /* items with an X (summary, side panel, booking) */
@@ -544,10 +567,9 @@ video[src*="products-hands"]{object-position:50% 60%}
 .tot-flash{animation:tot-flash .7s ease-out 1}
 /* cards themselves stay calm */
 .ao-card.glow-pick,#step-variant.glow-pick,#step-summary.glow-pick,.reserve.glow-pick{animation:none;box-shadow:none}
-/* 1 add-ons: Yes / No */
-.ao-card.current.glow-pick .ao-btns .btn{animation:piece-pulse 1.6s ease-in-out infinite}
-/* 2 the popular add-on: gentler glow + tag */
-.ao-card.current.popular.glow-pick .ao-btns .btn{animation:piece-soft 2.2s ease-in-out infinite}
+/* 1 add-ons: the lit ones glow (in-place picking) */
+#step-addons.glow-pick .ao-pick:not(.added){animation:piece-pulse 1.6s ease-in-out infinite}
+#step-addons.glow-pick .ao-pick.popular:not(.added){animation:piece-soft 2.2s ease-in-out infinite}
 .ao-pop{display:inline-block;vertical-align:middle;margin-left:6px;padding:2px 7px;border:1px solid #C9A15A;border-radius:4px;background:#FFF6DE;color:#8A6A2E;font:600 .62rem/1.3 var(--sans);letter-spacing:.14em;text-transform:uppercase}
 /* variant + summary continue */
 #step-variant.glow-pick .chip:not(.sel){animation:piece-pulse 1.6s ease-in-out infinite}
@@ -600,12 +622,12 @@ body[data-cx-next="join"] #cxMeet{display:inline-block;padding:10px 16px;border:
 @media(min-width:861px){.help-card{left:24px}}
 /* reduced motion: static gold ring instead of pulsing */
 @media (prefers-reduced-motion:reduce){
-  .ao-card.current.glow-pick .ao-btns .btn,#step-variant.glow-pick .chip:not(.sel),#step-summary.glow-pick #toBook,
+  #step-addons.glow-pick .ao-pick:not(.added),#step-variant.glow-pick .chip:not(.sel),#step-summary.glow-pick #toBook,
   #step-date.glow-pick .cal-days .day.few:not(:disabled):not(.sel),.reserve.glow-pick #reserveBtn,#dockGo.pulse-btn,
   body[data-gift-next="amount"] .gift-amt:not([aria-checked="true"]),body[data-gift-next="name"] #giftName,body[data-gift-next="buy"] #giftBuy,
   body[data-cx-next="day"] .cx-chip:not([aria-checked="true"]),body[data-cx-next="time"] .cx-time:not([aria-checked="true"]),
   body[data-cx-next="name"] #cxName,body[data-cx-next="email"] #cxEmail,body[data-cx-next="pay"] #cxPay,body[data-cx-next="join"] #cxMeet,.help-card{animation:none;box-shadow:0 0 0 2px rgba(176,141,79,.95)}
-  .ao-card.current.popular.glow-pick .ao-btns .btn{animation:none;box-shadow:0 0 0 1.5px rgba(176,141,79,.8)}
+  #step-addons.glow-pick .ao-pick.popular:not(.added){animation:none;box-shadow:0 0 0 1.5px rgba(176,141,79,.8)}
   .tot-flash{animation:none}
 }
 

@@ -40,7 +40,7 @@ window.IN2_COMPAT = {
     },
     "needling": {
       "*": "Serums sink deeper. Plumper, smoother skin.",
-      "anti-aging-facial": "A collagen boost for your anti-aging serums."
+      "anti-aging-facial": "Helps your anti-aging serums sink deeper."
     },
     "microdermabrasion": {
       "*": "A gentle polish so products work better."
@@ -51,9 +51,9 @@ window.IN2_COMPAT = {
   learn: {
     "light-therapy": "You lie back under warm red light for 20 minutes. It's non-invasive and painless, with no recovery time.",
     "reflexology": "Points on your feet map to your back, neck and shoulders. Gentle pressure helps your whole body unwind.",
-    "needling": "Collagen induction and serum infusion. Your esthetician picks the needle size (micro or nano) that's best for your face at the visit.",
+    "needling": "Ultra-fine nano tips open shallow channels so professional serums absorb more deeply. Plumper, smoother, more radiant skin.",
     "microdermabrasion": "A polishing wand sweeps away dull surface skin in 20 minutes: refined texture and a fresh glow, with no downtime."
   },
 
-  learnLinks: { "light-therapy": "/light-therapy/", "reflexology": "/reflexology/", "needling": "/microneedling/", "microdermabrasion": "/microdermabrasion/" }
+  learnLinks: { "light-therapy": "/light-therapy/", "reflexology": "/reflexology/", "needling": "/nano-needling/", "microdermabrasion": "/microdermabrasion/" }
 };

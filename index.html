@@ -97,7 +97,7 @@
     </div>
     <div class="steps" id="priceList" data-price-list>
       <div class="step who" id="step-who" data-step="who">
-        <div class="step-head"><h3>Who&rsquo;s this for?</h3></div>
+        <div class="step-head"><h3>Who&rsquo;s this for?</h3><span class="step-hint" id="hint-who" aria-live="polite"></span></div>
         <div class="who-cards" id="whoCards" role="radiogroup" aria-label="Who is this for">
           <button class="who-card" type="button" role="radio" aria-checked="true" data-who="me"><b>Me</b><span>Book my own visit.</span></button>
           <button class="who-card" type="button" role="radio" aria-checked="false" data-who="friend"><b>A friend</b><span>They get the appointment by email, all paid.</span></button>
@@ -146,7 +146,7 @@
     <div class="sec-head center on-dark">
       <p class="over"><span>Your appointment</span></p>
       <h2>Hold your time, <em>in under a minute</em></h2>
-      <p class="sub">Pick a day and time, then choose how to pay.</p>
+      <p class="sub">Pick a day and time, add your details, then choose how to pay.</p>
     </div>
 
     <div class="book-card" data-summary>
@@ -154,6 +154,7 @@
         <div class="cal-col">
           <div class="step" id="step-date" data-step="date">
             <div class="step-head"><span class="step-num" aria-hidden="true">4</span><h3>Pick a day</h3><span class="step-hint" id="hint-date" aria-live="polite"></span></div>
+            <p class="cal-help">Tap a day that is not greyed out — grey days are full or closed (Sundays).</p>
             <div class="cal" id="cal" aria-label="Calendar"></div>
           </div>
           <div class="step" id="step-time" data-step="time">
@@ -165,8 +166,19 @@
         <div class="book-sel" id="bookSel" aria-label="Your selection"></div>
       </div>
 
+      <div class="step" id="step-details" data-step="details">
+        <div class="step-head"><span class="step-num" aria-hidden="true">6</span><h3>Your details</h3><span class="step-hint" id="hint-details" aria-live="polite"></span></div>
+        <div class="friend-form" id="detailsForm">
+          <div class="ff-grid">
+            <label>Your name<input id="mName" autocomplete="name" maxlength="60" placeholder="e.g. Jordan Lee"></label>
+            <label>Your email<input id="mEmail" type="email" autocomplete="email" placeholder="you@example.com"></label>
+            <label>Your phone<input id="mPhone" type="tel" autocomplete="tel" placeholder="(905) 555-0100"></label>
+          </div>
+        </div>
+      </div>
+
       <div class="step" id="step-option" data-step="option">
-        <div class="step-head"><span class="step-num" aria-hidden="true">6</span><h3>How would you like to pay?</h3><span class="step-hint" id="hint-option" aria-live="polite"></span></div>
+        <div class="step-head"><span class="step-num" aria-hidden="true">7</span><h3>How would you like to pay?</h3><span class="step-hint" id="hint-option" aria-live="polite"></span></div>
         <div class="opt-cards" id="optCards" role="radiogroup" aria-label="Booking option">
           <button class="opt-card" type="button" role="radio" aria-checked="false" data-option="A">
             <span class="opt-badge" aria-hidden="true">A</span>
@@ -180,12 +192,6 @@
             <span class="opt-body">20 min on Google Meet, $30. Credited to your treatment.</span>
             <span class="opt-check" aria-hidden="true"></span>
           </button>
-          <button class="opt-card" type="button" role="radio" aria-checked="false" data-option="C">
-            <span class="opt-badge" aria-hidden="true">C</span>
-            <span class="opt-title">Book now, pay at the studio</span>
-            <span class="opt-body">Reserve now, pay when you arrive.</span>
-            <span class="opt-check" aria-hidden="true"></span>
-          </button>
         </div>
         <p class="opt-more"><a href="/consultation/?format=video">How video consults work →</a></p>
       </div>
@@ -197,14 +203,9 @@
       </div>
       <div class="reserve">
         <p class="reserve-sum" id="reserveSum">Your booking will appear here.</p>
+        <span class="step-hint" id="hint-reserve" aria-live="polite"></span>
         <button class="btn btn-gold btn-big" id="reserveBtn" type="button">Reserve my time</button>
         <p class="book-done" id="bookDone" role="status" hidden></p>
-      </div>
-      <div class="friend-done" id="friendDone" hidden role="status">
-        <p class="fd-over">Booked and paid</p>
-        <h3 id="fdTitle"></h3>
-        <div class="fd-mail"><p class="fd-sub" id="fdSubj"></p><p id="fdBody"></p></div>
-        <p class="fd-receipt" id="fdReceipt"></p>
       </div>
       <p class="policy">Free reschedule with 24 h notice. Deposit kept for no-shows. <span class="todo-inline">Wording TBC.</span></p>
     </div>
@@ -221,7 +222,7 @@
     </div>
     <div class="explore-grid">
       <div class="xcol"><h3>Skin concerns</h3><ul class="pills"><li><a href="/acne-prone-skin/">Acne-prone skin</a></li><li><a href="/rosacea-sensitive-skin/">Rosacea and sensitive skin</a></li><li><a href="/dull-skin/">Dull skin</a></li><li><a href="/fine-lines/">Fine lines</a></li><li><a href="/tired-skin/">Tired skin</a></li></ul></div>
-      <div class="xcol"><h3>Learn about a treatment</h3><ul class="pills"><li><a href="/classic-facial/">Classic Facial</a></li><li><a href="/anti-aging-facial/">Anti-Aging Facial</a></li><li><a href="/the-works/">The Works</a></li><li><a href="/chemical-peels/">Chemical Peels</a></li><li><a href="/microneedling/">Microneedling</a></li><li><a href="/nano-needling/">NANO Needling</a></li><li><a href="/microdermabrasion/">Microdermabrasion</a></li><li><a href="/light-therapy/">Light Therapy</a></li><li><a href="/reflexology/">Reflexology</a></li></ul></div>
+      <div class="xcol"><h3>Learn about a treatment</h3><ul class="pills"><li><a href="/classic-facial/">Classic Facial</a></li><li><a href="/anti-aging-facial/">Anti-Aging Facial</a></li><li><a href="/the-works/">The Works</a></li><li><a href="/chemical-peels/">Chemical Peels</a></li><li><a href="/nano-needling/">NANO Needling</a></li><li><a href="/microdermabrasion/">Microdermabrasion</a></li><li><a href="/light-therapy/">Light Therapy</a></li><li><a href="/reflexology/">Reflexology</a></li></ul></div>
     </div>
   </div>
 </section>
@@ -237,7 +238,7 @@
       <p class="f-line"><a href="mailto:bookings@boltonfacials.com">bookings@boltonfacials.com</a></p>
       <p class="f-line"><a href="https://www.facebook.com/profile.php?id=61596402642954" target="_blank" rel="noopener">Follow us on Facebook</a></p>
     </div>
-    <div class="fcol"><h4>Treatments</h4><ul><li><a href="/classic-facial/">Classic Facial</a></li><li><a href="/anti-aging-facial/">Anti-Aging Facial</a></li><li><a href="/the-works/">The Works</a></li><li><a href="/chemical-peels/">Chemical Peels</a></li><li><a href="/microneedling/">Microneedling</a></li><li><a href="/nano-needling/">NANO Needling</a></li><li><a href="/microdermabrasion/">Microdermabrasion</a></li><li><a href="/light-therapy/">Light Therapy</a></li><li><a href="/reflexology/">Reflexology</a></li></ul></div>
+    <div class="fcol"><h4>Treatments</h4><ul><li><a href="/classic-facial/">Classic Facial</a></li><li><a href="/anti-aging-facial/">Anti-Aging Facial</a></li><li><a href="/the-works/">The Works</a></li><li><a href="/chemical-peels/">Chemical Peels</a></li><li><a href="/nano-needling/">NANO Needling</a></li><li><a href="/microdermabrasion/">Microdermabrasion</a></li><li><a href="/light-therapy/">Light Therapy</a></li><li><a href="/reflexology/">Reflexology</a></li></ul></div>
     <div class="fcol"><h4>Help me choose</h4><ul><li><a href="/acne-prone-skin/">Acne-prone skin</a></li><li><a href="/rosacea-sensitive-skin/">Rosacea and sensitive skin</a></li><li><a href="/dull-skin/">Dull skin</a></li><li><a href="/fine-lines/">Fine lines</a></li><li><a href="/tired-skin/">Tired skin</a></li></ul>
       <h4 class="f-sub">Visit</h4><ul><li><a href="/contact/">Contact</a></li><li><a href="/questions/">Questions</a></li><li><a href="/gift/">Gift certificates</a></li><li><a href="/privacy/">Privacy</a></li></ul>
       <div class="f-hours"><h4 class="f-sub">Hours</h4>
