@@ -1,13 +1,14 @@
 // POST /api/stripe-webhook — verify the Stripe signature, then:
-//   booking checkout -> mark the booking paid, deduct any gift balance once,
-//                      send the confirmation email.
+//   booking checkout -> a full payment marks the booking paid, a $30
+//                      deposit marks it deposit-paid (balance due at the
+//                      visit); gift balance deducted once, confirmation
+//                      email sent. Referral credit waits for full payment.
 //   gift checkout    -> issue the gift code, email the certificate + receipt.
 //   pay-spot link    -> mark the pay link paid, record the payment.
 // Raw body is required for signature verification.
 const { getStripe } = require("../lib/stripe");
-const { kvSet } = require("../lib/kv");
 const {
-  getBooking, finalizePaidBooking, markPaylinkPaid,
+  getBooking, settleBookingPayment, markPaylinkPaid,
   ensureGiftCode, sendGiftCertificate, sendGiftReceipt, sendVoucherCertificate,
 } = require("../lib/bookings");
 
@@ -34,13 +35,10 @@ module.exports = async (req, res) => {
       const meta = session.metadata || {};
       if (meta.type === "booking" && meta.bookingId) {
         const booking = await getBooking(meta.bookingId);
-        if (booking && booking.status !== "paid") {
-          booking.status = "paid";
-          booking.amountPaidCents = session.amount_total || booking.amountCents;
-          booking.stripePaymentIntentId = session.payment_intent || null;
-          await kvSet(`booking:${booking.id}`, booking);
-        }
-        if (booking) await finalizePaidBooking(booking);
+        // One shared settle step (also used by the GET fallback): a full
+        // payment flips the booking to paid; a $30 deposit flips it to
+        // deposit-paid with a balance due at the visit.
+        if (booking) await settleBookingPayment(booking, session);
       } else if (meta.type === "gift") {
         const gift = await ensureGiftCode(session);
         if (gift.kind === "voucher") await sendVoucherCertificate(gift);

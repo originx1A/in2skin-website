@@ -324,7 +324,7 @@
           { keys: ["light therapy", "red light"], label: "Light Therapy" },
           { keys: ["reflexology"], label: "Reflexology" },
           { keys: ["chemical peel", "peel"], label: "Chemical Peels" },
-          { keys: ["microneedling"], label: "Microneedling" },
+          { keys: ["microneedling"], label: "NANO Needling" },
           { keys: ["the works", "works"], label: "The Works" }
         ];
         var TALK_SECTIONS = [
@@ -1114,6 +1114,7 @@
                 rec.count++; rec.cents += (b.amountCents || 0);
                 total++; totalCents += (b.amountCents || 0);
                 if (b.status === "paid") paidCents += (b.amountPaidCents || b.amountCents || 0);
+                if (b.status === "deposit-paid") paidCents += (b.amountPaidCents || 0);
               });
               var rows = days.map(function(dy){
                 return '<div class="after-item"><div><strong>' + dy.label + '</strong> — ' + (dy.count ? dy.count + (dy.count === 1 ? " booking" : " bookings") + " · " + money(dy.cents) : "No bookings") + '</div></div>';
@@ -1158,13 +1159,13 @@
               calBookings = {};
               var rows = res.j.bookings.map(function(b){
                 calBookings[b.id] = b;
-                var needsOutcome = (b.status === "paid" || b.status === "consultation" || b.status === "unpaid") && isPastBooking(b);
+                var needsOutcome = (b.status === "paid" || b.status === "deposit-paid" || b.status === "consultation" || b.status === "unpaid") && isPastBooking(b);
                 var outcome = "";
-                if (b.status === "paid" || b.status === "consultation" || b.status === "unpaid"){
+                if (b.status === "paid" || b.status === "deposit-paid" || b.status === "consultation" || b.status === "unpaid"){
                   outcome = ' <button class="btn btn-book btn-book-sm" type="button" data-outcome="complete" data-id="' + b.id + '">Completed</button>'
                     + ' <button class="btn btn-ghost btn-book-sm" type="button" data-outcome="no-show" data-id="' + b.id + '">No-show</button>';
                 }
-                var upcoming = ["pending", "unpaid", "paid", "consultation"].indexOf(b.status) >= 0;
+                var upcoming = ["pending", "unpaid", "paid", "deposit-paid", "consultation"].indexOf(b.status) >= 0;
                 var acts = "";
                 if (upcoming){
                   acts = ' <button class="btn btn-ghost btn-book-sm" type="button" data-act="move" data-id="' + b.id + '">Move</button>'
@@ -2264,7 +2265,7 @@
               var out = document.getElementById("walkResult");
               if (!res.ok){ err.textContent = res.j.error || "Could not book."; return; }
               var b = res.j.booking;
-              out.innerHTML = '<div class="book-step on" style="text-align:center;"><h3>Booked — ' + b.serviceName + '</h3><p>' + fmtDate(b.date) + ' at ' + b.time + ' · ' + (b.guestName || b.name) + ' · Total ' + money(b.amountCents) + (b.amountCents === 0 ? ' · No charge' : b.status === "paid" ? ' · Paid' : b.status === "unpaid" ? ' · Pay at the visit' : b.status === "pending" ? ' · Card link sent' : '') + '</p>'
+              out.innerHTML = '<div class="book-step on" style="text-align:center;"><h3>Booked — ' + b.serviceName + '</h3><p>' + fmtDate(b.date) + ' at ' + b.time + ' · ' + (b.guestName || b.name) + ' · Total ' + money(b.amountCents) + (b.amountCents === 0 ? ' · No charge' : b.status === "paid" ? ' · Paid' : b.status === "deposit-paid" ? ' · Deposit paid, ' + money(b.balanceDueCents || 0) + ' due at the visit' : b.status === "unpaid" ? ' · Pay at the visit' : b.status === "pending" ? ' · Card link sent' : '') + '</p>'
                 + (res.j.checkoutUrl ? '<p><a class="btn btn-book" href="' + res.j.checkoutUrl + '" target="_blank" rel="noopener">Open the card payment link →</a></p><p style="color:var(--ink-soft);">The link was also emailed to the client.</p>' : '')
                 + '</div>';
               loadCal(); loadPayments(); loadWeek();

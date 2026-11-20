@@ -141,6 +141,7 @@ function publicBooking(b) {
     guestName: b.guestName, guestPhone: b.guestPhone, guestEmail: b.guestEmail,
     status: b.status, amountCents: b.amountCents, amountPaidCents: b.amountPaidCents,
     balanceDueCents: balanceDue(b),
+    payMode: b.payMode || "full", depositCents: b.depositCents != null ? b.depositCents : null,
     paymentMethod: b.paymentMethod || null, amountNote: b.amountNote || null,
     giftCode: b.giftCode, giftAppliedCents: b.giftAppliedCents, giftKind: b.giftKind || null,
     referralCode: b.referralCode || null, referralAppliedCents: b.referralAppliedCents || 0,
@@ -327,7 +328,7 @@ async function sendBackupEmail(backup, period) {
   });
 }
 
-const UPCOMING = ["pending", "unpaid", "paid", "consultation"];
+const UPCOMING = ["pending", "unpaid", "paid", "deposit-paid", "consultation"];
 
 module.exports = async (req, res) => {
   // Weekly + monthly backups, fired by the Vercel crons (vercel.json) — a
@@ -695,8 +696,8 @@ module.exports = async (req, res) => {
       if (b.view === "bookings" && (b.action === "complete" || b.action === "no-show") && b.bookingId) {
         const booking = await getBooking(b.bookingId);
         if (!booking) return res.status(404).json({ error: "Booking not found." });
-        if (!["paid", "consultation", "unpaid"].includes(booking.status)) {
-          return res.status(400).json({ error: "Only a paid, consultation or unpaid booking can be marked complete or no-show." });
+        if (!["paid", "deposit-paid", "consultation", "unpaid"].includes(booking.status)) {
+          return res.status(400).json({ error: "Only a paid, deposit-paid, consultation or unpaid booking can be marked complete or no-show." });
         }
         const updated = await markBookingOutcome(booking, b.action);
         await logAudit(session, `bookings.${b.action}`, `${booking.serviceName} — ${booking.date} ${booking.time}`);
@@ -740,7 +741,7 @@ module.exports = async (req, res) => {
         if (booking.status === "pending") {
           return res.status(400).json({ error: "This booking still has a card payment link out — wait for it to be paid, or cancel it and book again." });
         }
-        if (!["unpaid", "paid", "consultation"].includes(booking.status)) {
+        if (!["unpaid", "paid", "deposit-paid", "consultation"].includes(booking.status)) {
           return res.status(400).json({ error: "Payments can only be recorded on an upcoming or paid booking." });
         }
         const amountCents = Math.round(Number(b.amountCents));
@@ -758,7 +759,7 @@ module.exports = async (req, res) => {
           createdAt: new Date().toISOString(),
         });
         let finalized = false;
-        if (booking.status === "unpaid" && booking.amountPaidCents >= (booking.amountCents || 0)) {
+        if ((booking.status === "unpaid" || booking.status === "deposit-paid") && booking.amountPaidCents >= (booking.amountCents || 0)) {
           booking.status = "paid";
           await finalizePaidBooking(booking);
           finalized = true;
@@ -774,7 +775,7 @@ module.exports = async (req, res) => {
         if (booking.status === "pending") {
           return res.status(400).json({ error: `This booking still has a card payment link out for ${money(booking.amountCents)} — cancel it and book again, or record the difference after they pay.` });
         }
-        if (!["unpaid", "paid", "consultation"].includes(booking.status)) {
+        if (!["unpaid", "paid", "deposit-paid", "consultation"].includes(booking.status)) {
           return res.status(400).json({ error: "The amount can only be changed on an upcoming or paid booking." });
         }
         const amountCents = Math.round(Number(b.amountCents));
@@ -1002,7 +1003,7 @@ module.exports = async (req, res) => {
     if ((req.query || {}).view === "payments") {
       const date = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || "") ? req.query.date : dateKey(new Date());
       const spot = await listPayments(date, date);
-      const bookings = (await listBookingsForDate(date)).filter((b) => ["paid", "consultation", "unpaid"].includes(b.status));
+      const bookings = (await listBookingsForDate(date)).filter((b) => ["paid", "deposit-paid", "consultation", "unpaid"].includes(b.status));
       // Booking payment records are the audit trail for money already in a
       // booking's amountPaidCents — only pay-on-the-spot payments with no
       // booking add to the total, or the day's cash would count twice.

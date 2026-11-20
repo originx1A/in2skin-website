@@ -1,6 +1,8 @@
 // POST /api/book — create a booking + Stripe Checkout session.
-// Full payment at booking. Accepts an optional gift code (its balance comes
-// off the total; anything left stays on the code). Bookings fully covered
+// Deposit at booking ($30 for a booking for yourself; friend bookings
+// and consultations pay in full). The balance is due at the visit.
+// Accepts an optional gift code (its balance comes off the total;
+// anything left stays on the code). Bookings fully covered
 // by a gift code need no payment — they are confirmed straight away.
 const { getStripe } = require("../lib/stripe");
 const { kvGet, kvSet } = require("../lib/kv");
@@ -12,7 +14,8 @@ const {
 const { studioForDate } = require("../lib/studio");
 const {
   SITE_URL, newId, saveBooking, listBookingsForDate,
-  getBooking, finalizePaidBooking, sendHoldEmail, notifyStudioBooking,
+  getBooking, finalizePaidBooking, settleBookingPayment, balanceDue,
+  sendHoldEmail, notifyStudioBooking,
   buildBooking, createBookingCheckout, createConsultRequest, CONSULT_ID,
   CONSULT_FORMATS, consultFormatOf, consultName, meetLinkFor,
 } = require("../lib/bookings");
@@ -229,13 +232,10 @@ module.exports = async (req, res) => {
       const bookingId = (session.metadata || {}).bookingId;
       const booking = await getBooking(bookingId);
       if (!booking) return res.status(404).json({ error: "Booking not found." });
-      if (booking.status !== "paid") {
-        booking.status = "paid";
-        booking.amountPaidCents = session.amount_total || booking.amountCents;
-        booking.stripePaymentIntentId = session.payment_intent || null;
-        await kvSet(`booking:${booking.id}`, booking);
-      }
-      await finalizePaidBooking(booking);
+      // One shared settle step (also used by the webhook): a full payment
+      // flips the booking to paid; a $30 deposit flips it to deposit-paid
+      // with a balance due at the visit.
+      await settleBookingPayment(booking, session);
       return res.status(200).json({
         paid: true,
         booking: {
@@ -247,7 +247,11 @@ module.exports = async (req, res) => {
           name: booking.name,
           guestName: booking.guestName,
           email: booking.email,
+          status: booking.status,
+          amountCents: booking.amountCents,
           amountPaidCents: booking.amountPaidCents,
+          balanceDueCents: balanceDue(booking),
+          payMode: booking.payMode || "full",
           giftAppliedCents: booking.giftAppliedCents,
           giftKind: booking.giftKind || null,
           myReferralCode: booking.myReferralCode || null,
@@ -318,7 +322,7 @@ module.exports = async (req, res) => {
       try { await sendHoldEmail(booking, session.url); } catch (e) { console.error("[book:hold-email]", e); }
     }
     await notifyStudioBooking(booking, "new");
-    return res.status(200).json({ url: session.url, bookingId: booking.id });
+    return res.status(200).json({ url: session.url, bookingId: booking.id, payMode: booking.payMode, depositCents: booking.depositCents, amountCents: booking.amountCents });
   } catch (err) {
     console.error("[book]", err);
     return res.status(err.status || 500).json({ error: err.message });
