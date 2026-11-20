@@ -627,6 +627,13 @@ const LOCATIONS = [
         ],
       },
       {
+        h: "An escape from the city",
+        body: [
+          "Clients travel in from across Toronto & the GTA — downtown, Etobicoke, North York, Scarborough and Mississauga — for a slower pace, and a studio that feels a world away from the city.",
+          "No waiting room, no rush, and no one else's appointment running over into yours. Just a quiet room, one guest at a time — worth the drive.",
+        ],
+      },
+      {
         h: "The price gap, honestly",
         body: [
           "A quality facial downtown costs $150 to $300 — and that is before the add-ons. At In2Skin the Classic Facial is $85 for 55 minutes and the Anti-Aging Facial is $125 for 80 minutes. The difference is not the care: it is a small private studio in Bolton instead of a downtown medspa paying downtown rent.",

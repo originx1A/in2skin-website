@@ -44,6 +44,7 @@ const EXTRA_PAGES = [
   "/facials-georgetown/",
   "/facials-toronto/",
   "/facials-mississauga/",
+  "/the-works/",
   "/acne-prone-skin/",
   "/rosacea-sensitive-skin/",
   "/dull-skin/",
@@ -82,7 +83,7 @@ function page(s) {
     `</ul>`;
   const works =
     s.id === "classic-facial" || s.id === "anti-aging-facial"
-      ? `<h2>Make it The Works</h2><p>Facial + red light + reflexology, all at once — <strong>The Works: ${s.id === "classic-facial" ? "$160" : "$195"}</strong>. Just mention it when you book.</p>`
+      ? `<h2>Make it The Works</h2><p>Facial + red light + reflexology, all at once — <strong><a href="/the-works/">The Works</a>: ${s.id === "classic-facial" ? "$160" : "$195"}</strong>. Just mention it when you book.</p>`
       : "";
   const priceOffer =
     s.priceNum > 0

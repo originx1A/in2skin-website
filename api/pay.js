@@ -6,7 +6,9 @@
 //     webhook runs. The webhook never fired for the Nov 17 test payment
 //     (zero invocations in the Vercel logs), so the redirect page is the
 //     fallback that marks the link paid; either order is safe (idempotent).
-//   POST → the studio creates a Stripe payment link (was /api/pay-spot)
+//   POST → the studio creates a Stripe payment link (was /api/pay-spot).
+//     Admin-only: the creation form lives in the dashboard behind
+//     Sarah's sign-in (Tony Nov 19, 2026); GET redemption stays public.
 // The client pays on THEIR OWN phone: by text, by email, or by scanning the
 // QR code on the studio phone. The link is emailed when the contact is an
 // email address. Automatic texting is NOT set up (Resend is email-only) —
@@ -19,6 +21,7 @@ const { kvGet } = require("../lib/kv");
 const { getStripe } = require("../lib/stripe");
 const { createPayLink, markPaylinkPaid } = require("../lib/bookings");
 const { checkLimit } = require("../lib/rate-limit");
+const { requireAdmin } = require("../lib/auth");
 
 module.exports = async (req, res) => {
   if (req.method === "POST") {
@@ -62,6 +65,12 @@ module.exports = async (req, res) => {
       });
     }
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed." });
+    // Creating a pay link is the studio's tool (Tony Nov 19, 2026) — the
+    // dashboard's Pay on the spot form, behind Sarah's sign-in. The
+    // session cookie travels on the dashboard's same-origin fetch, so
+    // this also keeps the old public form from ever working again.
+    // GET redemption (the client's /pay.html link) stays public.
+    if (!(await requireAdmin(req, res))) return;
     const b = req.body || {};
     const amountCents = Math.round(parseFloat(b.amount) * 100);
     const out = await createPayLink({
