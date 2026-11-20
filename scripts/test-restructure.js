@@ -113,4 +113,32 @@ has(index, 'href="/consultation/"', "home links the consultation page");
 has(read("js/chat.js"), 'href: "/consultation/?format=video"', "chat links the consultation page");
 has(read("questions/index.html"), 'href="/consultation/"', "questions page links the consultation page");
 
+// (11) Main picker rebuild (Tony Nov 20, 2026): real booking wire, details
+// step, deposit rule, guided in-place add-ons, ?service= preselection.
+has(index, 'id="step-details"', "picker has a details step");
+has(index, 'id="mName"', "details step has a name field");
+has(index, 'id="mEmail"', "details step has an email field");
+has(index, 'id="mPhone"', "details step has a phone field");
+has(index, 'id="hint-details"', "details step has an explainer line");
+has(index, 'id="hint-reserve"', "reserve step has an explainer line");
+lacks(index, 'data-option="C"', "no pay-at-the-studio option card in the picker");
+lacks(index, "Book now, pay at the studio", "no pay-at-the-studio wording in the picker");
+lacks(index, 'id="friendDone"', "no fake local friend-done panel");
+has(mainJs, "detailsNext", "picker guards the details step");
+has(mainJs, "guardDetails", "reserve is guarded by the details check");
+has(mainJs, '"/api/book"', "reserve posts to the real booking API");
+has(mainJs, '"/api/gift?code="', "gift codes are checked server-side");
+lacks(mainJs, "holdSlot(", "no local demo hold left in the picker");
+lacks(mainJs, "useCode(", "no local demo gift-code use left in the picker");
+lacks(mainJs, "giftsLoad(", "no local demo gift loading left in the picker");
+has(mainJs, "ao-pick", "guided in-place add-on picking");
+has(mainJs, "ao-off", "incompatible add-ons render unlit with a reason");
+has(mainJs, "addonsDone", "add-on step completes in place");
+has(mainJs, 'get("service")', "picker reads ?service= preselection");
+for (const [dir, sid] of [["classic-facial", "classic-facial"], ["anti-aging-facial", "anti-aging-facial"], ["the-works", "the-works"], ["chemical-peels", "chemical-peels"], ["nano-needling", "nano-needling"], ["microdermabrasion", "microdermabrasion"], ["light-therapy", "light-therapy"], ["reflexology", "reflexology"]]) {
+  has(read(`${dir}/index.html`), `/?service=${sid}#services`, `${dir} Book buttons preselect ${sid}`);
+}
+lacks(index, 'href="/microneedling/"', "home no longer links the microneedling page");
+lacks(index, "Pay in full securely by card when you book", "home no longer promises pay-in-full");
+
 console.log(`test-restructure: all ${n} checks passed`);

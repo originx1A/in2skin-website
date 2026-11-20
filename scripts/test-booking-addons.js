@@ -36,7 +36,7 @@ delete process.env.RESEND_API_KEY;
 process.env.AGENT_API_KEY = "test-agent-key";
 
 const { kvGet, kvSet } = require("../lib/kv");
-const { buildBooking, saveBooking, sendBookingConfirmation } = require("../lib/bookings");
+const { buildBooking, saveBooking, sendBookingConfirmation, settleBookingPayment } = require("../lib/bookings");
 const book = require("../api/book");
 
 function mockRes() {
@@ -165,6 +165,12 @@ async function run() {
   assert.equal(res3.statusCode, 200, "POST /api/book with no email -> 200, got " + res3.statusCode + " " + JSON.stringify(res3.body));
   assert.ok(res3.body.url, "no-email booking returns a checkout URL");
   assert.equal(lastCheckoutArgs.customer_email, undefined, "no customer_email sent to Stripe for a no-email booking");
+  // Deposit (Tony Nov 20, 2026): a web booking for yourself charges the
+  // $30 deposit at checkout — the full $85 stays the amount owed.
+  assert.equal(res3.body.payMode, "deposit", "web booking defaults to deposit payMode");
+  assert.equal(res3.body.depositCents, 3000, "web deposit is $30");
+  assert.equal(res3.body.amountCents, 8500, "web booking total is still the full $85");
+  assert.equal(lastCheckoutArgs.line_items[0].price_data.unit_amount, 3000, "Stripe checkout charges the $30 deposit, not the full $85");
 
   // 14. The confirmation email with no recipient never sends, never throws.
   const noEmailBooking = await buildBooking(base({ email: "", phone: "(905) 555-0900", date: futureDate(18) }), { bufferMins: 60, blocks: [], via: "web" });
@@ -191,6 +197,47 @@ async function run() {
     global.fetch = realFetch;
     delete process.env.RESEND_API_KEY;
   }
+
+  // 17. Friend booking via POST /api/book: paid in FULL — the checkout
+  //     charges the whole $85, not a $30 deposit (Tony Nov 20, A6).
+  const res4 = mockRes();
+  await book({ method: "POST", headers: {}, body: { service: "classic-facial", date: futureDate(22), time: "10:00 AM", type: "regular", name: "Gift Giver", phone: "(905) 555-1000", email: "giver@test.example", first: "yes", who: "friend", forWhom: "friend", guestName: "Alex Taylor", guestPhone: "(905) 555-1001", guestEmail: "" } }, res4);
+  assert.equal(res4.statusCode, 200, "friend POST -> 200, got " + res4.statusCode + " " + JSON.stringify(res4.body));
+  assert.ok(res4.body.url, "friend booking returns a checkout URL");
+  assert.equal(res4.body.payMode, "full", "friend booking payMode is full");
+  assert.equal(res4.body.depositCents, 8500, "friend depositCents is the full $85");
+  assert.equal(res4.body.amountCents, 8500, "friend booking total is $85");
+  assert.equal(lastCheckoutArgs.line_items[0].price_data.unit_amount, 8500, "friend checkout charges the full $85");
+
+  // 18. Deposit is capped at what is owed: a $65 gift certificate on a
+  //     $85 Classic leaves $20 — the checkout charges $20, not $30.
+  await kvSet("gift:IN2SKIN-TEST01", { code: "IN2SKIN-TEST01", balanceCents: 6500, originalCents: 6500, status: "active", createdAt: new Date().toISOString() });
+  const res5 = mockRes();
+  await book({ method: "POST", headers: {}, body: { service: "classic-facial", date: futureDate(23), time: "10:00 AM", type: "regular", name: "Gift User", phone: "(905) 555-1100", email: "giftuser@test.example", first: "yes", giftCode: "IN2SKIN-TEST01" } }, res5);
+  assert.equal(res5.statusCode, 200, "gift-capped POST -> 200, got " + res5.statusCode + " " + JSON.stringify(res5.body));
+  assert.equal(res5.body.amountCents, 2000, "gift leaves $20 owed");
+  assert.equal(res5.body.depositCents, 2000, "deposit capped at the $20 owed");
+  assert.equal(lastCheckoutArgs.line_items[0].price_data.unit_amount, 2000, "checkout charges the capped $20");
+
+  // 19. Settling a deposit payment flips the booking to "deposit-paid"
+  //     (never "paid"), keeps the $55 balance, and does NOT issue the
+  //     referral credit or mark the client paid — those wait for the
+  //     balance (Tony Nov 20, 2026).
+  const dep = await buildBooking(base({ date: futureDate(25), email: "dep@test.example", phone: "(905) 555-1200" }), { bufferMins: 60, blocks: [], via: "web" });
+  assert.equal(dep.payMode, "deposit", "web booking is deposit mode");
+  assert.equal(dep.depositCents, 3000, "deposit is $30");
+  await saveBooking(dep);
+  const settled = await settleBookingPayment(dep, { id: "cs_test_dep1", amount_total: 3000, payment_status: "paid", payment_intent: "pi_test_dep1" });
+  assert.equal(settled.status, "deposit-paid", "deposit payment status is deposit-paid, got " + settled.status);
+  assert.equal(settled.amountPaidCents, 3000, "amount paid is the $30 deposit");
+  assert.equal(settled.amountCents - settled.amountPaidCents, 5500, "balance due at the visit is $55");
+  assert.equal(settled.studioDepositNotified, true, "studio was notified of the deposit");
+  const depRef = await kvGet(`ref:${dep.myReferralCode}`);
+  assert.ok(depRef, "referral record exists for the deposit booking");
+  assert.equal(depRef.creditCents || 0, 0, "no referral credit issued on a deposit alone");
+  // Idempotent: settling the same session again changes nothing.
+  const settled2 = await settleBookingPayment(settled, { id: "cs_test_dep1", amount_total: 3000, payment_status: "paid", payment_intent: "pi_test_dep1" });
+  assert.equal(settled2.status, "deposit-paid", "re-settling the same deposit session is a no-op");
 
   // 16. Needling is one treatment (Tony Nov 19, 2026): microneedling and
   //     NANO needling are the same thing, just the needle size — a booking
