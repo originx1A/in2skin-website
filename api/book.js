@@ -14,7 +14,7 @@ const {
   SITE_URL, newId, saveBooking, listBookingsForDate,
   getBooking, finalizePaidBooking, sendHoldEmail, notifyStudioBooking,
   buildBooking, createBookingCheckout, createConsultRequest, CONSULT_ID,
-  CONSULT_FORMATS, consultFormatOf, consultName,
+  CONSULT_FORMATS, consultFormatOf, consultName, meetLinkFor,
 } = require("../lib/bookings");
 const { getReferralByEmailOrPhone } = require("../lib/referrals");
 const { getOrCreateReferral } = require("../lib/referrals");
@@ -67,15 +67,15 @@ async function handleAgentHold(req, res, b) {
     // a returning client anyway.
     if (svc.id === CONSULT_ID) {
       const prior = await getReferralByEmailOrPhone(b.email, b.phone);
-      if (prior) return bad(res, "You've already had your consultation with Sarah — book your treatment directly.");
+      if (prior) return bad(res, "You've already had your consultation with the studio — book your treatment directly.");
     }
     const totalMins = durationForBooking(svc.id, addons);
     const addonNames = addons.map((id) => findService(id).name);
     const serviceLabel = svc.id === CONSULT_ID ? consultName(format) : (addonNames.length ? `${svc.name} + ${addonNames.join(" + ")}` : svc.name);
     const type = b.type === "after" ? "after" : "regular";
-    // Early mornings and evenings are by request through Sarah — the voice
+    // Early mornings and evenings are by request through the studio — the voice
     // agent never books them; it takes a message instead (Tony Nov 19).
-    if (type === "after") return bad(res, "Early mornings and evenings are by request — please take the caller's message and Sarah will call them back.");
+    if (type === "after") return bad(res, "Early mornings and evenings are by request — please take the caller's message and the studio will call them back.");
     const d = parseDateLocal(b.date);
     if (!d) return bad(res, "Please choose a day.");
     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -94,9 +94,9 @@ async function handleAgentHold(req, res, b) {
       return res.status(409).json({ error: "That time was just taken — please choose another time." });
     }
     // Four appointments a day, whatever they are (Tony Nov 19, 2026).
-    // Consultations never count toward the cap.
+    // Consultations share the cap (A4).
     if (countsTowardCap(svc.id) && dayIsFull(bookings)) {
-      return res.status(409).json({ error: "That day is fully booked — Sarah takes four appointments a day. Please choose another day." });
+      return res.status(409).json({ error: "That day is fully booked — the studio takes four appointments a day. Please choose another day." });
     }
 
     const baseCents = baseCentsFor(svc.id, addons, type);
@@ -148,7 +148,7 @@ async function handleAgentHold(req, res, b) {
     const holdUntil = new Date(Date.now() + PENDING_HOLD_MS).toISOString();
 
     // Consultation (or a booking fully covered): no payment due — hold
-    // the time and let Sarah confirm it. A consultation earns no
+    // the time and let the studio confirm it. A consultation earns no
     // referral credit and marks no client paid, so the hold email is the
     // only email on this path.
     if (amountCents === 0) {
@@ -251,6 +251,11 @@ module.exports = async (req, res) => {
           giftAppliedCents: booking.giftAppliedCents,
           giftKind: booking.giftKind || null,
           myReferralCode: booking.myReferralCode || null,
+          // A paid video consultation carries its own fresh Meet link
+          // (minted at payment); one that never got a link yet still
+          // says it is coming — the confirmation page shows either.
+          meetLink: await meetLinkFor(booking),
+          meetLinkFailed: !!booking.meetLinkFailed,
         },
       });
     } catch (err) {
@@ -265,7 +270,7 @@ module.exports = async (req, res) => {
   try {
     const b = req.body || {};
     // Consultation request (after hours) — no payment, no slot
-    // hold; Sarah answers it on the dashboard. The voice agent may
+    // hold; the studio answers it on the dashboard. The voice agent may
     // submit one too (same key as holds); the web form uses the honeypot.
     if (b.consultRequest === true) {
       if (b.via === "agent") {

@@ -46,9 +46,12 @@ function mockRes() {
   return res;
 }
 // A date safely in the future (bookings start tomorrow, open 60 days).
+// Sundays roll forward — the studio is closed, so a Sunday target can
+// never be booked.
 function futureDate(daysAhead) {
   const d = new Date();
   d.setDate(d.getDate() + daysAhead);
+  while (d.getDay() === 0) d.setDate(d.getDate() + 1);
   return d.toISOString().slice(0, 10);
 }
 const base = (over) => Object.assign({
@@ -93,9 +96,9 @@ async function run() {
   assert.deepEqual(b.addons, ["light-therapy"]);
   assert.equal(b.amountCents, 14000, "duplicated add-on charged once");
 
-  // 6. The gap wraps the whole appointment: a 75-min booking at 10:00
-  //    blocks the 11:00 slot for the next client (ends 11:15 + 25-min
-  //    overrun + 60-min gap); 1:00 PM is the next free start.
+  // 6. The reset wraps the whole appointment: a 75-min booking at
+  //    10:00 blocks to 12:15 (75 + 60-min reset), so 11:00 is taken
+  //    and 12:30 is the next free start; 1:00 PM is clear too.
   const day = futureDate(8);
   const first = await buildBooking(base({ date: day, time: "10:00 AM", addons: ["light-therapy"] }), { bufferMins: 60, blocks: [], via: "web" });
   await saveBooking(first);

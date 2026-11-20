@@ -160,7 +160,7 @@ async function run() {
   assert.ok(svc, "consultation is in the pricing core");
   assert.equal(svc.mins, 20, "consult is 20 minutes");
   assert.equal(svc.priceNum, 30, "consult is $30");
-  assert.equal(sched.countsTowardCap("consultation"), false, "consult never counts toward the 4-a-day cap");
+  assert.equal(sched.countsTowardCap("consultation"), true, "consult shares the 4-a-day cap with treatments (A4)");
   assert.equal(sched.countsTowardCap("classic-facial"), true, "treatments still count toward the cap");
   assert.equal(sched.baseCentsFor("consultation", [], "after"), 3000, "after-hours consult is $30 flat — no $15 premium");
   assert.equal(sched.baseCentsFor("classic-facial", [], "after"), 10000, "after-hours facial still carries the premium");
@@ -204,33 +204,36 @@ async function run() {
   assert.equal(b.minsLabel, "20 minutes", "consult is 20 minutes");
   assert.equal(b.firstVisitDiscountCents, 0, "no first-visit discount recorded");
 
-  // ---------- 5. the cap: 4 treatments on a day, consults still fit ----------
-  // Four 20-minute reflexology visits, hourly — each blocks 20 + 25
-  // overrun, so hourly fits even with the buffer at 0 for the check.
+  // ---------- 5. the cap: 4 treatments on a day, consults share it (A4) ----------
+  // Four 20-minute reflexology visits on the 30-min grid — each blocks
+  // 20 + the 60-min reset, so 9:00, 10:30, 12:00 and 1:30 all fit.
   const dCap = futureWeekday(14);
-  for (const [i, t] of ["10:00 AM", "11:00 AM", "12:00 PM", "1:00 PM"].entries()) {
+  for (const [i, t] of ["9:00 AM", "10:30 AM", "12:00 PM", "1:30 PM"].entries()) {
     const tb = await B.buildBooking({
       service: "reflexology", date: dCap, time: t, type: "regular",
       name: "Cap Client " + i, phone: "(905) 555-04" + i + "0", email: "cap" + i + "@test.example", first: "no",
-    }, { bufferMins: 0, blocks: [], via: "web" });
+    }, { bufferMins: 60, blocks: [], via: "web" });
     await B.saveBooking(tb);
   }
   const dayBookings = await B.listBookingsForDate(dCap);
   assert.equal(sched.dayIsFull(dayBookings), true, "4 treatments fills the day");
-  b = await B.buildBooking({
-    service: "consultation", date: dCap, time: "2:00 PM", type: "regular",
-    name: "Gap Client", phone: "(905) 555-0450", email: "gapclient@test.example", first: "yes",
-  }, { bufferMins: 0, blocks: [], via: "web" });
-  assert.equal(b.amountCents, 3000, "consult books on a treatment-full day");
+  await assert.rejects(
+    B.buildBooking({
+      service: "consultation", date: dCap, time: "3:00 PM", type: "regular",
+      name: "Gap Client", phone: "(905) 555-0450", email: "gapclient@test.example", first: "yes",
+    }, { bufferMins: 60, blocks: [], via: "web" }),
+    /fully booked/,
+    "a consult on a treatment-full day is refused — consults share the cap (A4)",
+  );
   res = mockRes();
   await availability(mockReq({ query: { date: dCap, service: "classic-facial", type: "regular" } }), res);
   assert.deepEqual(res.body.times, [], "treatments see no times on a full day");
   res = mockRes();
   await availability(mockReq({ query: { date: dCap, service: "consultation", type: "regular" } }), res);
-  assert.ok(res.body.times.includes("3:00 PM"), "consults still see the gaps, got " + JSON.stringify(res.body.times));
+  assert.deepEqual(res.body.times, [], "consults see no times on a full day either (A4)");
   res = mockRes();
   await availability(mockReq({ query: { from: dCap, to: dCap, service: "consultation" } }), res);
-  assert.ok(res.body.dates[dCap].regular.free > 0, "range shows free consult slots on a full treatment day");
+  assert.equal(res.body.dates[dCap].regular.free, 0, "range shows no free consult slots on a full day");
   res = mockRes();
   await availability(mockReq({ query: { from: dCap, to: dCap, service: "classic-facial" } }), res);
   assert.equal(res.body.dates[dCap].regular.free, 0, "range shows no free treatment slots on a full day");
@@ -293,7 +296,7 @@ async function run() {
   assert.equal(res.body.booking.serviceName, "Video Consultation", "accepted booking names the format");
   assert.ok(res.body.payUrl.includes("/pay?id=pl_"), "accept emails a card pay link, got " + res.body.payUrl);
   const acceptEmail = lastEmailTo(reqClient.email);
-  assert.ok(acceptEmail.includes("Sarah said yes"), "accept email says yes");
+  assert.ok(acceptEmail.includes("The studio said yes"), "accept email says yes");
   assert.ok(acceptEmail.includes("video link arrives by email"), "video accept email says the link comes after payment");
   assert.ok(!acceptEmail.includes("meet.google.com"), "video accept email has no link yet — it comes with the confirmation after payment");
   res = await callAdmin({ view: "consult-requests", action: "accept", id: reqId });
@@ -383,7 +386,7 @@ async function run() {
   c2b.time = fmtMins(transfer.torontoNow().mins + 120);
   await B.saveBooking(c2b);
   await B.cancelBooking(c2b, "something came up");
-  assert.ok(lastEmailTo(c2.email).includes("call Sarah"), "cancel under 24h: client is told to call Sarah about the $30");
+  assert.ok(lastEmailTo(c2.email).includes("call the studio"), "cancel under 24h: client is told to call the studio about the $30");
   // the treatment that uses the credit SHOWS it — confirmation + dashboard
   let treat = await B.buildBooking({
     service: "classic-facial", date: futureWeekday(47), time: "10:00 AM", type: "regular",
@@ -493,7 +496,7 @@ async function run() {
   assert.ok(ipEmails[0].body.includes("See you at the studio"), "in-person reminder says where to go");
 
   // ---------- 12. walk-in no-charge: Tony's free VIDEO test pass ----------
-  res = await callAdmin({ view: "bookings", action: "walk-in", service: "consultation", format: "video", date: futureWeekday(58), time: "2:00 PM", type: "regular", name: "Tony", phone: "(416) 902-6122", email: "tony@test.example", first: "no", payment: "no-charge" });
+  res = await callAdmin({ view: "bookings", action: "walk-in", service: "consultation", format: "video", date: futureWeekday(57), time: "2:00 PM", type: "regular", name: "Tony", phone: "(416) 902-6122", email: "tony@test.example", first: "no", payment: "no-charge" });
   assert.equal(res.statusCode, 200, "Tony's free test consult books -> 200, got " + JSON.stringify(res.body));
   assert.equal(res.body.booking.status, "paid", "no-charge consult is paid in full");
   assert.equal(res.body.booking.amountCents, 0, "no-charge consult is $0");

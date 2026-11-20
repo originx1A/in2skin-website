@@ -148,9 +148,12 @@ async function run() {
   mem.set("studio:buffer", 30);
   check("legacy 30-min gap reads as 60", await studio.getBufferMins(), 60);
   const classic9 = [{ time: "9:00 AM", service: "classic-facial", status: "paid", createdAt: new Date().toISOString() }];
-  check("60-min buffer blocks 11:00 add-on", sched.slotTaken(classic9, sched.parseTime("11:00 AM"), 15, { bufferMins: 60 }), true);
-  check("30-min buffer frees 11:00 add-on", sched.slotTaken(classic9, sched.parseTime("11:00 AM"), 15, { bufferMins: 30 }), false);
-  check("slotTaken defaults to 60 when no opts", sched.slotTaken(classic9, sched.parseTime("11:00 AM"), 15), true);
+  // A3: a 9:00 Classic blocks to 10:55 (55 + 60 reset), so 10:30 is
+  // blocked and 11:00 is the next free start.
+  check("60-min reset blocks 10:30 add-on", sched.slotTaken(classic9, sched.parseTime("10:30 AM"), 15, { bufferMins: 60 }), true);
+  check("11:00 add-on free after 9:00 Classic (reset ends 10:55)", sched.slotTaken(classic9, sched.parseTime("11:00 AM"), 15, { bufferMins: 60 }), false);
+  check("30-min buffer is clamped to the 60-min floor", sched.slotTaken(classic9, sched.parseTime("10:30 AM"), 15, { bufferMins: 30 }), true);
+  check("slotTaken defaults to 60 when no opts", sched.slotTaken(classic9, sched.parseTime("10:30 AM"), 15), true);
   await studio.setBufferMins(60);
 
   // ---------- 2. blocks ----------
@@ -188,18 +191,18 @@ async function run() {
   await availability(mockReq({ query: { from: d5, to: d7, service: "classic-facial" } }), res);
   check("range -> 200", res.statusCode, 200);
   check("range covers 3 days", Object.keys(res.body.dates || {}).length, 3);
-  check("range d5 regular total 7", res.body.dates[d5].regular.total, 7);
-  check("range d5 regular free 7 (empty)", res.body.dates[d5].regular.free, 7);
+  check("range d5 regular total 15", res.body.dates[d5].regular.total, 15);
+  check("range d5 regular free 15 (empty)", res.body.dates[d5].regular.free, 15);
   check("range d5 after total matches schedule", res.body.dates[d5].after.total, sched.timesFor(d5, "after").length);
   check("range d5 after free 0 (never bookable online)", res.body.dates[d5].after.free, 0);
-  check("range d7 regular free 7 (empty)", res.body.dates[d7].regular.free, 7);
+  check("range d7 regular free 15 (empty)", res.body.dates[d7].regular.free, 15);
   const block2 = await studio.addBlock({ date: d6, start: "12:00", end: "13:00", reason: "Range test" });
   res = mockRes();
   await availability(mockReq({ query: { from: d5, to: d7, service: "classic-facial" } }), res);
-  check("range d6 regular free 5 with block", res.body.dates[d6].regular.free, 5);
-  check("range d6 regular total still 7", res.body.dates[d6].regular.total, 7);
+  check("range d6 regular free 10 with block", res.body.dates[d6].regular.free, 10);
+  check("range d6 regular total still 15", res.body.dates[d6].regular.total, 15);
   check("range d6 after free 0 (never bookable online)", res.body.dates[d6].after.free, 0);
-  check("range d5 still free 7 with d6 blocked", res.body.dates[d5].regular.free, 7);
+  check("range d5 still free 15 with d6 blocked", res.body.dates[d5].regular.free, 15);
   check("range block removed", await studio.removeBlock(block2.id), true);
   res = mockRes();
   await availability(mockReq({ query: { from: d5, to: d7, service: "nope" } }), res);
@@ -297,12 +300,16 @@ async function run() {
 
   // ---------- 5. move ----------
   // d1 now: walk-in Classic 10:00 (paid), later Classic 1:00 PM (unpaid), Anti 4:00 PM (pending).
-  res = await callAdmin({ view: "bookings", action: "move", bookingId: walkIn.id, date: d1, time: "11:00 AM", type: "regular" });
+  // A3: a Classic at 12:00 blocks into the 1:00 PM booking (12:00 + 55 + 60 reset runs to 1:55).
+  res = await callAdmin({ view: "bookings", action: "move", bookingId: walkIn.id, date: d1, time: "12:00 PM", type: "regular" });
   check("move into a blocked slot -> 409", res.statusCode, 409);
-  res = await callAdmin({ view: "bookings", action: "move", bookingId: walkIn.id, date: d2, time: "10:00 AM", type: "regular" });
+  // d2 is a Sunday when the suite runs on a Friday — move to the next
+  // weekday instead so the target day is always open.
+  const moveDay = new Date(d2 + "T00:00:00").getDay() === 0 ? d3 : d2;
+  res = await callAdmin({ view: "bookings", action: "move", bookingId: walkIn.id, date: moveDay, time: "10:00 AM", type: "regular" });
   check("move to a free slot -> 200", res.statusCode, 200);
   check("moved time", res.body.booking.time, "10:00 AM");
-  const day2 = await bookingsLib.listBookingsForDate(d2);
+  const day2 = await bookingsLib.listBookingsForDate(moveDay);
   check("moved booking shows at new time", day2.some((b) => b.id === walkIn.id && b.time === "10:00 AM"), true);
   const day1 = await bookingsLib.listBookingsForDate(d1);
   check("old slot free after move", sched.slotTaken(day1, sched.parseTime("10:00 AM"), 55), false);
@@ -462,10 +469,11 @@ async function run() {
   check("webhook flips to paid", afterPay.status, "paid");
 
   // ---------- 12. public booking still works through the shared path ----------
+  // (moveDay, not d2: d2 is a Sunday when the suite runs on a Friday.)
   res = mockRes();
   await book(mockReq({
     method: "POST", headers: {},
-    body: { service: "classic-facial", type: "regular", date: d2, time: "1:00 PM", name: "Public Booker", phone: "(905) 555-0200", email: "public@example.com", first: "no" },
+    body: { service: "classic-facial", type: "regular", date: moveDay, time: "1:00 PM", name: "Public Booker", phone: "(905) 555-0200", email: "public@example.com", first: "no" },
   }), res);
   check("public booking -> 200", res.statusCode, 200);
   check("public booking returns checkout url", res.body.url, "https://checkout.stripe.test/pay/cs_test_1");

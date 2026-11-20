@@ -54,7 +54,12 @@
               + '<dt>Paid</dt><dd>' + money(b.amountPaidCents) + (b.giftAppliedCents ? ' (includes ' + money(b.giftAppliedCents) + (b.giftKind === "consult-credit" ? ' consultation credit)' : ' from your gift certificate)') : '') + ' — shows as IN2SKIN on your statement</dd>'
               + '</dl></div>'
               + ((b.giftAppliedCents && b.giftKind === "consult-credit")
-                ? '<p style="margin-top:12px;"><strong>' + money(b.giftAppliedCents) + ' consultation credit applied</strong> — your consultation with Sarah covered ' + money(b.giftAppliedCents) + ' of this treatment.</p>' : '')
+                ? '<p style="margin-top:12px;"><strong>' + money(b.giftAppliedCents) + ' consultation credit applied</strong> — your consultation covered ' + money(b.giftAppliedCents) + ' of this treatment.</p>' : '')
+              + ((/Consultation/.test(b.serviceName || "") && b.format === "video")
+                ? (b.meetLink
+                  ? '<div class="summary-box" style="margin-top:16px;"><dl><dt>Your video call</dt><dd><a href="' + b.meetLink + '">' + b.meetLink + '</a></dd></dl><p style="color:var(--ink-soft);">Tap the link at your appointment time — it opens in your browser, no app needed.</p></div>'
+                  : '<p style="margin-top:16px;"><strong>Your video link is coming</strong> — the studio will email it to you before your consultation.</p>')
+                : '')
               + (b.myReferralCode
                 ? '<div class="summary-box" style="margin-top:16px;"><dl>'
                   + '<dt>Your referral code</dt><dd><strong>' + b.myReferralCode + '</strong></dd>'
