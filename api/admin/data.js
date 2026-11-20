@@ -118,6 +118,17 @@ const {
   configured: pushConfigured, publicKey: pushPublicKey, detail: pushDetail, addSub, removeSub,
   listEvents, listEventsSince, badgeCount, sendPush,
 } = require("../../lib/push");
+const {
+  googleConfigured,
+  redirectUriFor: googleRedirectUriFor,
+  buildAuthUrl: googleBuildAuthUrl,
+  createState: googleCreateState,
+  consumeState: googleConsumeState,
+  exchangeCode: googleExchangeCode,
+  storeTokens: googleStoreTokens,
+  getStatus: googleStatus,
+  disconnect: googleDisconnect,
+} = require("../../lib/google");
 const { sendEmail } = require("../../lib/email");
 
 function publicBooking(b) {
@@ -340,6 +351,31 @@ module.exports = async (req, res) => {
       return res.status(err.status || 500).json({ error: err.message });
     }
   }
+  // Google OAuth callback — GET /api/google-callback (rewritten here by
+  // vercel.json). Runs BEFORE requireAdmin: Google redirects the browser
+  // here after Sarah taps Allow, and the admin cookie may not be present
+  // in that navigation. The `state` token (single-use, 15 minutes,
+  // stored in KV when the connect was started) is the authentication —
+  // a request without a live state token is bounced to the dashboard
+  // with ?google=error. Never renders the tokens; on success it stores
+  // the refresh token in KV and sends the browser back to the dashboard.
+  if (req.method === "GET" && (req.query || {}).view === "google-callback") {
+    const q = req.query || {};
+    const dash = (flag) => `/admin/dashboard.html?google=${flag}#sec-settings`;
+    try {
+      if (q.error) return res.redirect(302, dash("denied"));
+      const state = String(q.state || "");
+      const code = String(q.code || "");
+      if (!state || !code) return res.redirect(302, dash("error"));
+      if (!(await googleConsumeState(state))) return res.redirect(302, dash("error"));
+      const tokens = await googleExchangeCode({ code, redirectUri: googleRedirectUriFor(req) });
+      await googleStoreTokens(tokens);
+      await logAudit(null, "google.connect", "Google account connected — video consults get a fresh Meet link each");
+      return res.redirect(302, dash("connected"));
+    } catch (err) {
+      return res.redirect(302, dash("error"));
+    }
+  }
   const session = await requireAdmin(req, res);
   if (!session) return;
   try {
@@ -414,6 +450,27 @@ module.exports = async (req, res) => {
         const link = await setMeetLink(b.link || "");
         await logAudit(session, "settings.meet-link", link ? "video call link saved" : "video call link cleared");
         return res.status(200).json({ meetLink: link });
+      }
+      // Google connect (Tony Nov 20, 2026): start the one-time sign-in —
+      // returns the Google authorization URL, and the dashboard sends
+      // Sarah's browser there. The callback (above) finishes it.
+      if (b.view === "google-connect" && b.action === "start") {
+        if (!googleConfigured()) {
+          return res.status(503).json({ error: "Google sign-in isn't set up yet — the studio keys are missing. Ask Cooper to finish the setup, then try again." });
+        }
+        const redirectUri = googleRedirectUriFor(req);
+        const state = await googleCreateState();
+        const authUrl = googleBuildAuthUrl({ redirectUri, state });
+        await logAudit(session, "google.connect-start", "Google connect started — Sarah to tap Allow on Google's screen");
+        return res.status(200).json({ authUrl, redirectUri });
+      }
+      // Google disconnect: revoke the tokens at Google (best-effort) and
+      // forget them here. Video consults go back to needing a Meet link
+      // pasted in until Google is connected again.
+      if (b.view === "google-connect" && b.action === "disconnect") {
+        await googleDisconnect();
+        await logAudit(session, "google.disconnect", "Google account disconnected — video consults need a Meet link pasted in again");
+        return res.status(200).json({ connected: false });
       }
       if (b.view === "consult-requests" && (b.action === "accept" || b.action === "decline")) {
         try {
@@ -739,7 +796,12 @@ module.exports = async (req, res) => {
       const bufferMins = await getBufferMins();
       const blocks = await listBlocks();
       const meetLink = await getMeetLink();
-      return res.status(200).json({ bufferMins, blocks, meetLink });
+      return res.status(200).json({ bufferMins, blocks, meetLink, google: await googleStatus() });
+    }
+    // Google connection status for the dashboard settings card — connected
+    // or not, and when. Never carries any token.
+    if ((req.query || {}).view === "google-connect") {
+      return res.status(200).json(await googleStatus());
     }
     if ((req.query || {}).view === "consult-requests") {
       const requests = await listConsultRequests();
