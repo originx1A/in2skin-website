@@ -27,6 +27,8 @@ const SERVICES = extractArray("SERVICES");
 const SERVICE_VIDEOS = extract("SERVICE_VIDEOS");
 const SEO_TITLES = extract("SEO_TITLES");
 const SEO_DESCS = extract("SEO_DESCS");
+const NAV = extractArray("NAV");
+const DEPOSIT_SENTENCE = "A $30 deposit holds your spot when you book online — it comes off your treatment, and the rest is paid at your visit by cash, e-transfer or card.";
 
 const SITE = "https://boltonfacials.com";
 const PHONE_DISPLAY = "(289) 212-4124";
@@ -34,6 +36,14 @@ const PHONE_TEL = "tel:+12892124124";
 // Static SEO pages built by scripts/build-seo-pages.mjs — kept in the
 // sitemap so a rebuild never drops them.
 const EXTRA_PAGES = [
+  "/services/",
+  "/book/",
+  "/how-to-choose/",
+  "/consultation/",
+  "/occasions/",
+  "/faq/",
+  "/contact/",
+  "/gift/",
   "/facials-caledon/",
   "/facials-kleinburg/",
   "/facials-vaughan/",
@@ -104,13 +114,11 @@ function page(s) {
         priceRange: "$35 - $475",
         address: {
           "@type": "PostalAddress",
-          streetAddress: "92 Willow Street",
           addressLocality: "Bolton",
           addressRegion: "ON",
           postalCode: "L7E 3G3",
           addressCountry: "CA",
         },
-        geo: { "@type": "GeoCoordinates", latitude: 43.88088, longitude: -79.73492 },
         areaServed: ["Bolton", "Caledon", "Kleinburg", "Vaughan", "Brampton", "Nobleton", "King City", "Orangeville", "Georgetown", "Toronto"],
       },
       offers: JSON.parse(priceOffer),
@@ -177,11 +185,9 @@ ${JSON.stringify(ld.faq, null, 2)}
       <div class="wrap header-in">
         <a class="brand" href="/" aria-label="In2Skin — home"><span class="brand-text"><span class="wordmark">In2Skin</span><span class="tagline">Aesthetics · Bolton</span></span></a>
         <nav class="main" aria-label="Main">
-          <a href="/">Home</a>
-          <a href="/#book">Book Online</a>
-          <a href="/#visit">Visit Us</a>
+          ${NAV.map((n) => `<a href="${n.url}">${esc(n.nav || n.label)}</a>`).join("\n          ")}
         </nav>
-        <a class="btn btn-book btn-book-sm header-book" href="/#book" style="white-space:nowrap;">Book Online</a>
+        <a class="btn btn-book btn-book-sm header-book" href="/book/" style="white-space:nowrap;">Book Online</a>
         <a class="btn btn-ghost header-call" href="${PHONE_TEL}" aria-label="Call In2Skin to book">Call<span class="btn-label-num">&nbsp;· ${PHONE_DISPLAY}</span></a>
       </div>
     </header>
@@ -206,9 +212,9 @@ ${JSON.stringify(ld.faq, null, 2)}
         <aside class="price-panel">
           <div class="pp-price">${esc(s.price)}</div>
           <div class="pp-mins">${esc(s.minsLabel)} · Bolton, Ontario</div>
-          <a class="btn btn-book btn-big" href="/#book" style="width:100%;">${s.price === "Custom" ? "Book a Consultation" : "Book Online — " + esc(s.price)}</a>
+          <a class="btn btn-book btn-big" href="/book/" style="width:100%;">${s.price === "Custom" ? "Book a Consultation" : "Book Online — " + esc(s.price)}</a>
           <a class="btn btn-ghost" href="${PHONE_TEL}" style="width:100%;">Call ${PHONE_DISPLAY}</a>
-          <p class="fine">Pay in full securely by card when you book.<br />Cash or e-transfer also welcome at your visit.</p>
+          <p class="fine">${DEPOSIT_SENTENCE}</p>
         </aside>
       </div></div>
       <div style="height:64px;"></div>
@@ -225,7 +231,9 @@ ${JSON.stringify(ld.faq, null, 2)}
           <div>
             <h4>Treatments</h4>
             <ul class="foot-links">
-              ${SERVICES.map((x) => `<li><a href="/${x.id}/">${esc(x.name)} — ${esc(x.price)}</a></li>`).join("\n              ")}
+              ${SERVICES.map((x) => `<li><a href="/${x.id}/">${esc(x.name)}</a></li>`).join("\n              ")}
+              <li><a href="/the-works/">The Works</a></li>
+              <li><a href="/consultation/">Consultation</a></li>
             </ul>
           </div>
           <div>
