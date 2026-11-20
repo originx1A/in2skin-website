@@ -49,7 +49,7 @@ eq(talkParseName("pay link 65 dollars for alex taylor"), "Alex Taylor", "name fo
 eq(talkParseName("book alex at 10"), "Alex", "name book alex");
 eq(talkParseName("book a walk-in"), null, "name book a walk-in is null");
 eq(talkFindService("pay 125 for classic facial"), "Classic Facial", "service classic");
-eq(talkFindService("book microneedling tomorrow"), "Microneedling", "service microneedling");
+eq(talkFindService("book microneedling tomorrow"), "Microneedling / NANO Needling", "service microneedling");
 
 // --- full commands ---
 let r = parseTalk("pay link 65 dollars for alex taylor", TODAY);

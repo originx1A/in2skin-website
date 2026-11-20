@@ -46,10 +46,23 @@ function mockRes() {
   return res;
 }
 // A date safely in the future (bookings start tomorrow, open 60 days).
+// A future weekday, never a Sunday, never a date already used by an
+// earlier step — the Sunday bump alone can collide two offsets on the
+// same Monday, which is exactly how this suite went flaky (a hardcoded
+// offset landing on a Sunday reads as "that time is not available").
+// Stable per offset: the same offset always returns the same date, so
+// two attempts at one slot really are two attempts at one slot.
+const usedDates = new Set();
+const dateByOffset = new Map();
 function futureDate(daysAhead) {
+  if (dateByOffset.has(daysAhead)) return dateByOffset.get(daysAhead);
   const d = new Date();
   d.setDate(d.getDate() + daysAhead);
-  return d.toISOString().slice(0, 10);
+  while (d.getDay() === 0 || usedDates.has(d.toISOString().slice(0, 10))) d.setDate(d.getDate() + 1);
+  const s = d.toISOString().slice(0, 10);
+  usedDates.add(s);
+  dateByOffset.set(daysAhead, s);
+  return s;
 }
 const base = (over) => Object.assign({
   service: "classic-facial", date: futureDate(5), time: "10:00 AM", type: "regular",
@@ -189,17 +202,24 @@ async function run() {
     delete process.env.RESEND_API_KEY;
   }
 
-  // 16. Needling is one treatment (Tony Nov 19, 2026): microneedling and
-  //     NANO needling are the same thing, just the needle size — a booking
-  //     picks one or the other, never both.
-  await assert.rejects(
-    buildBooking(base({ service: "microneedling", addons: ["nano-needling"], date: futureDate(20) }), { bufferMins: 60, blocks: [], via: "web" }),
-    /one treatment/,
-  );
-  //     ...and microneedling on its own is now a plain $65 / 20-minute booking.
+  // 16. Needling is one treatment (Tony Nov 19, 2026): microneedling
+  //     and NANO needling are the same thing, just the needle size.
+  //     The picker is a calculator now — no hard blocks — so a booking
+  //     picks needling freely and the combination is flagged for
+  //     Sarah's review instead of refused.
+  //     Classic + needling books fine: $150, needling charged once.
+  b = await buildBooking(base({ addons: ["needling"], date: futureDate(20) }), { bufferMins: 60, blocks: [], via: "web" });
+  assert.equal(b.amountCents, 15000, "Classic + needling is $150, got " + b.amountCents);
+  assert.deepEqual(b.addons, ["needling"], "needling appears once");
+  assert.equal(b.needsReview, true, "Classic + needling is flagged for Sarah's review");
+  assert.ok(b.reviewNote, "review note is set");
+  //     ...and the legacy ids still resolve to the one treatment.
   b = await buildBooking(base({ service: "microneedling", date: futureDate(21) }), { bufferMins: 60, blocks: [], via: "web" });
-  assert.equal(b.amountCents, 6500, "Microneedling alone is $65, got " + b.amountCents);
-  assert.equal(b.minsLabel, "20 minutes", "microneedling alone is 20 minutes");
+  assert.equal(b.amountCents, 6500, "legacy microneedling id is $65, got " + b.amountCents);
+  assert.equal(b.minsLabel, "20 minutes", "legacy microneedling id is 20 minutes");
+  b = await buildBooking(base({ addons: ["nano-needling"], date: futureDate(22) }), { bufferMins: 60, blocks: [], via: "web" });
+  assert.equal(b.amountCents, 15000, "legacy nano-needling add-on is $150 total");
+  assert.deepEqual(b.addons, ["needling"], "legacy nano id normalizes to needling");
 
   console.log("booking-addons tests: passed");
 }

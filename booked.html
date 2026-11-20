@@ -47,12 +47,15 @@
             var b = res.j.booking;
             title.textContent = "You are booked in" + (b.name ? ", " + b.name.split(" ")[0] : "") + ".";
             msg.textContent = "Your confirmation email is on its way to " + b.email + ".";
+            var isVideo = b.format === "video";
+            var isDeposit = b.status === "deposit-paid";
             detail.innerHTML = '<div class="summary-box"><dl>'
               + '<dt>Treatment</dt><dd>' + b.serviceName + '</dd>'
               + '<dt>When</dt><dd>' + fmtDate(b.date) + ' at ' + b.time + (b.type === "after" ? ' (Private Hours)' : '') + '</dd>'
-              + '<dt>Where</dt><dd>In2Skin · Bolton, Ontario</dd>'
-              + '<dt>Paid</dt><dd>' + money(b.amountPaidCents) + (b.giftAppliedCents ? ' (includes ' + money(b.giftAppliedCents) + (b.giftKind === "consult-credit" ? ' consultation credit)' : ' from your gift certificate)') : '') + ' — shows as IN2SKIN on your statement</dd>'
+              + '<dt>Where</dt><dd>' + (isVideo ? 'On video — your link arrives by email' : 'In2Skin · 92 Willow Street, Bolton, ON L7E 3G3 — <a href="https://www.google.com/maps/search/?api=1&query=92+Willow+Street,+Bolton,+ON+L7E+3G3" target="_blank" rel="noopener">Get directions ↗</a> (opens in your maps app)') + '</dd>'
+              + '<dt>' + (isDeposit ? 'Deposit paid' : 'Paid') + '</dt><dd>' + money(b.amountPaidCents) + (isDeposit ? ' · balance due at your visit: ' + money(b.balanceDueCents) : '') + (b.giftAppliedCents ? ' (includes ' + money(b.giftAppliedCents) + (b.giftKind === "consult-credit" ? ' consultation credit)' : ' from your gift certificate)') : '') + ' — shows as IN2SKIN on your statement</dd>'
               + '</dl></div>'
+              + (isDeposit ? '<p style="margin-top:12px;">A $30 deposit holds your spot — it comes off your treatment, and the rest is paid at your visit by cash, e-transfer or card.</p>' : '')
               + ((b.giftAppliedCents && b.giftKind === "consult-credit")
                 ? '<p style="margin-top:12px;"><strong>' + money(b.giftAppliedCents) + ' consultation credit applied</strong> — your consultation with Sarah covered ' + money(b.giftAppliedCents) + ' of this treatment.</p>' : '')
               + (b.myReferralCode
