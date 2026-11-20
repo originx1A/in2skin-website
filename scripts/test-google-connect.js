@@ -26,10 +26,34 @@ require.cache[authPath] = {
     adminEmails: () => ["sarah@test.example", "tony@test.example"],
   },
 };
+// --- email stub: capture every email instead of sending one ---
+const sentEmails = [];
+const emailPath = require.resolve("../lib/email");
+require.cache[emailPath] = {
+  exports: {
+    sendEmail: async (msg) => { sentEmails.push(JSON.parse(JSON.stringify(msg))); return true; },
+    FROM: "In2Skin <test@example>",
+  },
+};
+// --- push stub: no real push, just a count ---
+const pushPath = require.resolve("../lib/push");
+require.cache[pushPath] = {
+  exports: {
+    SUBS_KEY: "push:subs", EVENTS_KEY: "push:events",
+    configured: () => false, publicKey: () => null, detail: async () => ({}),
+    listSubs: async () => [], addSub: async () => false, removeSub: async () => false,
+    listEvents: async () => [], recordEvent: async () => null,
+    listEventsSince: async () => [], badgeCount: async () => 0,
+    sendPush: async () => ({ sent: 0 }), notifyPush: async () => ({ sent: 0 }),
+  },
+};
 
 // --- Google endpoint stubs (token / revoke / calendar) ---
 const fetchCalls = [];
 let tokenHandler = null;
+let calendarShouldFail = false;
+let calendarNext = null; // one-shot override for the next Calendar POST
+const goneEventIds = new Set();
 global.fetch = async (url, opts) => {
   const u = String(url);
   fetchCalls.push({ url: u, opts: opts || {} });
@@ -47,6 +71,15 @@ global.fetch = async (url, opts) => {
     return { ok: true, status: 200, json: async () => ({}) };
   }
   if (u.startsWith("https://www.googleapis.com/calendar/v3/calendars/primary/events")) {
+    const method = (opts && opts.method) || "GET";
+    if (method === "DELETE") {
+      const id = decodeURIComponent(u.split("/").pop() || "");
+      if (id === "evt_boom") return { ok: false, status: 500, json: async () => ({ error: { message: "boom" } }) };
+      if (goneEventIds.has(id)) return { ok: false, status: 404, json: async () => ({ error: { message: "Not Found" } }) };
+      return { ok: true, status: 204, text: async () => "", json: async () => ({}) };
+    }
+    if (calendarShouldFail) return { ok: false, status: 500, json: async () => ({ error: { message: "boom" } }) };
+    if (calendarNext) { const out = calendarNext; calendarNext = null; return { ok: true, status: 200, json: async () => out }; }
     return {
       ok: true, status: 200,
       json: async () => ({
@@ -64,6 +97,7 @@ process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret";
 
 const G = require("../lib/google");
 const dataHandler = require("../api/admin/data");
+const B = require("../lib/bookings");
 
 function mockRes() {
   const res = { statusCode: 200, body: null, headers: {} };
@@ -82,6 +116,33 @@ async function callAdmin(body, query = {}, headers = {}) {
   return res;
 }
 const HOST = { host: "in2skin-website-git-cooper-google-connect-20261120-tony-demilios-projects.vercel.app" };
+
+// A paid video consultation booking, as the booking flow builds one.
+function fakeConsult(overrides) {
+  return {
+    id: "bk_test_1",
+    service: "consultation",
+    serviceName: "Video Consultation",
+    serviceLabel: "Video Consultation",
+    format: "video",
+    date: "2026-11-23",
+    time: "2:00 PM",
+    type: "regular",
+    forWhom: "me",
+    name: "Test Client",
+    phone: "4165550100",
+    email: "client@test.example",
+    guestName: null, guestPhone: null, guestEmail: null,
+    addons: [],
+    minsLabel: "20 minutes",
+    amountCents: 3000,
+    amountPaidCents: 3000,
+    status: "paid",
+    emailSent: false,
+    createdAt: new Date().toISOString(),
+    ...overrides,
+  };
+}
 
 async function run() {
   // ---------- 1. scope: calendar events only, nothing else ----------
@@ -301,6 +362,140 @@ async function run() {
   assert.ok(auditIds.length >= 1, "admin actions were audited");
   const auditEntry = mem.get(`audit:${auditIds[0]}`);
   assert.ok(auditEntry && /google/.test(auditEntry.action), "the Google connect is in the audit log");
+
+  // ---------- 19. meet-test without a connection -> 409, nothing minted ----------
+  const callsBeforeMeetTest = fetchCalls.length;
+  res = await callAdmin({ view: "google-connect", action: "meet-test" }, {}, HOST);
+  assert.equal(res.statusCode, 409, "meet-test without a connection -> 409");
+  assert.match(res.body.error, /not connected/, "meet-test without a connection says so plainly");
+  assert.equal(
+    fetchCalls.slice(callsBeforeMeetTest).filter((c) => c.url.includes("/calendar/v3/")).length,
+    0,
+    "meet-test without a connection calls no Calendar endpoint"
+  );
+
+  // ---------- 20. meet-test mints a real event, meet-test-delete removes it ----------
+  await G.storeTokens({ access_token: "tok-test", refresh_token: "1//test-refresh", expires_in: 3600, scope: G.CALENDAR_EVENTS_SCOPE });
+  res = await callAdmin({ view: "google-connect", action: "meet-test" }, {}, HOST);
+  assert.equal(res.statusCode, 200, "meet-test connected -> 200");
+  assert.match(res.body.meetLink, /^https:\/\/meet\.google\.com\/[a-z]{3}-[a-z]{4}-[a-z]{3}$/, "meet-test returns a Meet link in xxx-yyyy-zzz form");
+  assert.ok(res.body.eventId, "meet-test returns the event id");
+  const testEventId = res.body.eventId;
+  res = await callAdmin({ view: "google-connect", action: "meet-test-delete", eventId: testEventId }, {}, HOST);
+  assert.equal(res.statusCode, 200, "meet-test-delete -> 200");
+  assert.equal(res.body.deleted, true, "meet-test-delete reports deleted");
+  assert.ok(
+    fetchCalls.some((c) => c.url === `https://www.googleapis.com/calendar/v3/calendars/primary/events/${testEventId}` && c.opts.method === "DELETE"),
+    "meet-test-delete calls the Calendar DELETE endpoint for that event"
+  );
+  res = await callAdmin({ view: "google-connect", action: "meet-test-delete" }, {}, HOST);
+  assert.equal(res.statusCode, 400, "meet-test-delete without an event id -> 400");
+
+  // ---------- 21. deleteMeetEvent: gone already counts as deleted, other failures throw ----------
+  const del = await G.deleteMeetEvent({ accessToken: "tok-test", eventId: "evt_test_1" });
+  assert.deepEqual(del, { deleted: true }, "delete returns deleted:true");
+  goneEventIds.add("evt_gone");
+  const delGone = await G.deleteMeetEvent({ accessToken: "tok-test", eventId: "evt_gone" });
+  assert.deepEqual(delGone, { deleted: true }, "deleting an already-gone event still counts as deleted");
+  await assert.rejects(
+    G.deleteMeetEvent({ accessToken: "tok-test", eventId: "evt_boom" }),
+    /could not delete/,
+    "a real delete failure throws instead of pretending it worked"
+  );
+  await assert.rejects(
+    G.deleteMeetEvent({ accessToken: "tok-test", eventId: "" }),
+    /event id is needed/,
+    "delete without an event id fails plainly"
+  );
+
+  // ---------- 22. mintConsultMeetLink: one link per video consultation ----------
+  const consult = fakeConsult();
+  const mintCallsBefore = fetchCalls.length;
+  const minted = await B.mintConsultMeetLink(consult);
+  assert.equal(minted, "https://meet.google.com/aaa-bbbb-ccc", "minting stores the link on the booking");
+  assert.equal(consult.meetLink, "https://meet.google.com/aaa-bbbb-ccc", "minted link is on the booking record");
+  assert.equal(consult.meetEventId, "evt_test_1", "minted event id is on the booking record");
+  const savedConsult = mem.get(`booking:${consult.id}`);
+  assert.equal(savedConsult && savedConsult.meetLink, "https://meet.google.com/aaa-bbbb-ccc", "minted link is saved to KV");
+  const mintCall = fetchCalls.slice(mintCallsBefore).find((c) => c.url.includes("/calendar/v3/") && c.opts.method === "POST");
+  assert.ok(mintCall, "minting calls the Calendar API");
+  const mintBody = JSON.parse(String(mintCall.opts.body || "{}"));
+  assert.equal(mintBody.start.dateTime, "2026-11-23T14:00:00", "minting uses the booking day + time (Toronto wall clock)");
+  assert.equal(mintBody.end.dateTime, "2026-11-23T14:20:00", "minting ends 20 minutes later");
+  assert.deepEqual(mintBody.attendees, [{ email: "client@test.example" }], "minting invites the client");
+  // Idempotent: a second mint keeps the first link and calls nothing.
+  const secondCallsBefore = fetchCalls.length;
+  const mintedAgain = await B.mintConsultMeetLink(consult);
+  assert.equal(mintedAgain, "https://meet.google.com/aaa-bbbb-ccc", "a second mint returns the same link");
+  assert.equal(fetchCalls.length, secondCallsBefore, "a second mint calls no endpoint");
+  // Not a video consultation, no link.
+  assert.equal(await B.mintConsultMeetLink(fakeConsult({ id: "bk_test_2", format: "in-person" })), null, "an in-person consultation mints no link");
+  assert.equal(await B.mintConsultMeetLink(fakeConsult({ id: "bk_test_3", service: "classic-facial", serviceName: "Classic Facial", format: null })), null, "a treatment mints no link");
+  // Google down: no throw, no link, flagged for the studio.
+  calendarShouldFail = true;
+  const failing = fakeConsult({ id: "bk_test_4" });
+  assert.equal(await B.mintConsultMeetLink(failing), null, "a failed mint returns null instead of throwing");
+  assert.equal(failing.meetLinkFailed, true, "a failed mint flags the booking for the studio");
+  assert.equal(failing.meetLink, undefined, "a failed mint leaves no link on the booking");
+  calendarShouldFail = false;
+
+  // ---------- 23. meetLinkFor: the booking's own link wins, standing link is the fallback ----------
+  assert.equal(await B.meetLinkFor(fakeConsult({ meetLink: "https://meet.google.com/aaa-bbbb-ccc" })), "https://meet.google.com/aaa-bbbb-ccc", "a booking with its own link uses it");
+  mem.set("studio:meetLink", "https://meet.google.com/xxx-yyyy-zzz");
+  assert.equal(await B.meetLinkFor(fakeConsult()), "https://meet.google.com/xxx-yyyy-zzz", "a booking without a link falls back to the pasted standing link");
+  mem.delete("studio:meetLink");
+  assert.equal(await B.meetLinkFor(fakeConsult()), "", "no link anywhere means an empty link, never a fake one");
+  assert.equal(await B.meetLinkFor(fakeConsult({ format: "in-person" })), "", "an in-person consultation never gets a link");
+
+  // ---------- 24. finalizePaidBooking mints the link before the confirmation goes out ----------
+  const paid = fakeConsult({ id: "bk_test_5" });
+  const emailsBefore = sentEmails.length;
+  await B.finalizePaidBooking(paid);
+  assert.equal(paid.meetLink, "https://meet.google.com/aaa-bbbb-ccc", "finalizing a paid video consultation mints its link");
+  assert.equal(paid.emailSent, true, "finalizing sends the confirmation");
+  const confirmation = sentEmails.slice(emailsBefore).find((e) => /confirmed/.test(e.subject || ""));
+  assert.ok(confirmation, "a confirmation email went out");
+  assert.ok(String(confirmation.html || "").includes("https://meet.google.com/aaa-bbbb-ccc"), "the confirmation email carries the fresh link");
+  assert.equal(paid.meetLinkFailed, false, "a good mint leaves no failure flag");
+
+  // ---------- 25. cancelBooking takes the Meet event with it ----------
+  const doomed = fakeConsult({ id: "bk_test_6", meetLink: "https://meet.google.com/aaa-bbbb-ccc", meetEventId: "evt_test_1" });
+  await B.saveBooking(doomed);
+  const cancelCallsBefore = fetchCalls.length;
+  const cancelled = await B.cancelBooking(doomed, "client asked to cancel");
+  assert.equal(cancelled.booking.status, "cancelled", "cancel flips the status");
+  assert.ok(
+    fetchCalls.slice(cancelCallsBefore).some((c) => c.url === "https://www.googleapis.com/calendar/v3/calendars/primary/events/evt_test_1" && c.opts.method === "DELETE"),
+    "cancel deletes the booking's Meet event"
+  );
+
+  // ---------- 26. moveBooking re-mints the event for the new time ----------
+  const mover = fakeConsult({ id: "bk_test_7", meetLink: "https://meet.google.com/aaa-bbbb-ccc", meetEventId: "evt_test_1" });
+  await B.saveBooking(mover);
+  calendarNext = {
+    id: "evt_test_2", hangoutLink: "https://meet.google.com/ddd-eeee-fff",
+    htmlLink: "https://calendar.google.com/event?eid=evt_test_2",
+    conferenceData: { entryPoints: [{ entryPointType: "video", uri: "https://meet.google.com/ddd-eeee-fff" }] },
+  };
+  const moveCallsBefore = fetchCalls.length;
+  const emailsBeforeMove = sentEmails.length;
+  const moved = await B.moveBooking(mover, { date: "2026-11-24", time: "3:00 PM", type: "regular", bufferMins: 60, blocks: [] });
+  assert.equal(moved.booking.date, "2026-11-24", "move changes the day");
+  assert.equal(moved.booking.time, "3:00 PM", "move changes the time");
+  assert.equal(moved.booking.meetLink, "https://meet.google.com/ddd-eeee-fff", "move mints a fresh link for the new time");
+  assert.equal(moved.booking.meetEventId, "evt_test_2", "move stores the new event id");
+  const moveCalls = fetchCalls.slice(moveCallsBefore);
+  assert.ok(
+    moveCalls.some((c) => c.url.includes("/calendar/v3/") && c.opts.method === "POST" && JSON.parse(String(c.opts.body || "{}")).start.dateTime === "2026-11-24T15:00:00"),
+    "move mints the new event at the new day + time"
+  );
+  assert.ok(
+    moveCalls.some((c) => c.url === "https://www.googleapis.com/calendar/v3/calendars/primary/events/evt_test_1" && c.opts.method === "DELETE"),
+    "move deletes the old event after minting the new one"
+  );
+  const moveEmail = sentEmails.slice(emailsBeforeMove).find((e) => /moved/.test(e.subject || ""));
+  assert.ok(moveEmail, "a move email went out");
+  assert.ok(String(moveEmail.html || "").includes("https://meet.google.com/ddd-eeee-fff"), "the move email carries the new link");
 
   console.log("google-connect: all tests passed");
 }

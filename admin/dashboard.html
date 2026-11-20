@@ -1181,7 +1181,7 @@
                   + ((b.balanceDueCents || 0) > 0 ? ' · <strong style="color:#7A3B2E;">owes ' + money(b.balanceDueCents) + '</strong>' : '')
                   + (b.paymentMethod ? ' · paid by ' + b.paymentMethod : '')
                   + (b.status === "pending" && b.checkoutUrl ? ' · <a href="' + b.checkoutUrl + '" target="_blank" rel="noopener">card link sent</a>' : '')
-                  + (b.service === "consultation" && b.format === "video" && res.j.meetLink ? ' · <a href="' + res.j.meetLink + '" target="_blank" rel="noopener">Join video call</a>' : '')
+                  + (b.service === "consultation" && b.format === "video" && upcoming && (b.meetLink || res.j.meetLink) ? ' · <a href="' + (b.meetLink || res.j.meetLink) + '" target="_blank" rel="noopener">Join video call</a>' : '')
                   + (b.giftAppliedCents > 0 && b.giftKind === "consult-credit" ? ' · <strong>' + money(b.giftAppliedCents) + ' consultation credit applied</strong>' : '')
                   + (b.consultCreditCode ? ' · consult credit <strong>' + b.consultCreditCode + '</strong> (' + money(b.consultCreditCents || 0) + ')' : '')
                   + (needsOutcome ? ' · <strong style="color:#7A3B2E;">Needs outcome — did they show up?</strong>' : '')
