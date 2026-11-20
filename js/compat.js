@@ -51,7 +51,7 @@ window.IN2_COMPAT = {
   learn: {
     "light-therapy": "You lie back under warm red light for 20 minutes. It's non-invasive and painless, with no recovery time.",
     "reflexology": "Points on your feet map to your back, neck and shoulders. Gentle pressure helps your whole body unwind.",
-    "needling": "Ultra-fine nano tips open shallow channels so professional serums absorb more deeply. Plumper, smoother, more radiant skin.",
+    "needling": "Microneedling / NANO Needling is one treatment — only the needle size differs, and the studio picks the size at your visit. Ultra-fine tips open shallow channels so professional serums absorb more deeply. Plumper, smoother, more radiant skin.",
     "microdermabrasion": "A polishing wand sweeps away dull surface skin in 20 minutes: refined texture and a fresh glow, with no downtime."
   },
 

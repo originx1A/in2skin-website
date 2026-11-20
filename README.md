@@ -60,7 +60,7 @@ Private one-on-one aesthetics studio in Bolton, Ontario. Public brand is
 ## Prices (exact — never change without Tony)
 
 Classic Facial 55 min $85 · Anti-Aging Facial 80 min $125 ·
-NANO Needling add-on 20 min $65 · Microdermabrasion add-on 20 min $55 ·
+Microneedling / NANO Needling add-on 20 min $65 · Microdermabrasion add-on 20 min $55 ·
 Light Therapy add-on 20 min $55 · Reflexology add-on 20 min $35 ·
 Chemical Peels 55 min $125–$475 (booked at the $125 starting price; exact price
 confirmed at consultation, balance settled at the visit) ·

@@ -23,8 +23,8 @@ window.IN2 = {
         ]}
     ]},
     { id: "addons", title: "Add to your visit", exclusive: false, items: [
-      { id: "needling", clip: "assets/clips/microneedling.mp4", poster: "assets/clips/microneedling.webp", name: "NANO Needling", mins: 20, price: 65, img: "assets/microneedling.webp",
-        desc: "Ultra-fine nano tips help serums absorb more deeply." },
+      { id: "needling", clip: "assets/clips/microneedling.mp4", poster: "assets/clips/microneedling.webp", name: "Microneedling / NANO Needling", mins: 20, price: 65, img: "assets/microneedling.webp",
+        desc: "Ultra-fine tips help serums absorb more deeply. The studio picks the needle size that's best for your face at the visit." },
       { id: "microdermabrasion", clip: "assets/clips/microdermabrasion.mp4", poster: "assets/clips/microdermabrasion.webp", name: "Microdermabrasion", mins: 20, price: 55, img: "assets/microdermabrasion.webp",
         desc: "A gentle polish. Smoother, brighter skin." },
       { id: "light-therapy", clip: "assets/clips/red-light.mp4", poster: "assets/clips/red-light.webp", name: "Light Therapy", mins: 20, price: 55, img: "assets/red-light.webp", pairs: true,
@@ -39,6 +39,6 @@ window.IN2 = {
   ],
   treatments: [
     ["Classic Facial", "/classic-facial/"], ["Anti-Aging Facial", "/anti-aging-facial/"], ["The Works", "/the-works/"], ["Chemical Peels", "/chemical-peels/"],
-    ["NANO Needling", "/nano-needling/"], ["Microdermabrasion", "/microdermabrasion/"], ["Light Therapy", "/light-therapy/"], ["Reflexology", "/reflexology/"]
+    ["Microneedling / NANO Needling", "/nano-needling/"], ["Microdermabrasion", "/microdermabrasion/"], ["Light Therapy", "/light-therapy/"], ["Reflexology", "/reflexology/"]
   ]
 };

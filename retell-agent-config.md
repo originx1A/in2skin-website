@@ -31,8 +31,8 @@ plain words. Prices, hours, and booking rules come from there.
   treatment for fine lines and uneven tone, rich finishing hydration.
   Good for fine lines looking softer, skin looking firmer, brighter and
   more youthful.
-- **Add-ons (NANO Needling, Light Therapy, Microdermabrasion and Reflexology
-  — 20 min each; with any facial):** NANO Needling $65 — ultra-fine
+- **Add-ons (Microneedling / NANO Needling, Light Therapy, Microdermabrasion and Reflexology
+  — 20 min each; with any facial):** Microneedling / NANO Needling $65 — microneedling and NANO needling are the same treatment, only the needle size differs; the studio picks the size at the visit. Ultra-fine
   nano tips help serums absorb deeply, a soft gliding sensation, for
   plumper, smoother, more radiant skin. Microdermabrasion $55 — a polishing
   wand sweeps away dull surface skin, skin feels smoother right away, a

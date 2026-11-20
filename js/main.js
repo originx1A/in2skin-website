@@ -211,7 +211,10 @@
        load when the day is picked). */
     if (AVAIL.selKey === availSelKey() && AVAIL.dates[k]) {
       var free = AVAIL.dates[k].regular.free;
-      return { off: !free, starts: [], few: free > 0 && free <= 2, api: true };
+      /* The range count is for the whole day — it still counts starts that
+         have already passed. Today is off once the last start is gone. */
+      var todayDone = cur && d === NOW.d && NOW.min >= SL.RULES.lastStart;
+      return { off: !free || todayDone, starts: [], few: free > 0 && free <= 2, api: true };
     }
     var r = SL.slotsForDay(loadB()[k] || [], mins), starts = r.starts;
     if (cur && d === NOW.d) starts = starts.filter(function (x) { return x.min > NOW.min; });
@@ -339,7 +342,7 @@
       });
       h += '</div>';
       var bl = blocked(); if (bl.length) h += '<div class="ao-blocked">' + bl.map(function (id) { return '<div class="ao-off" aria-disabled="true"><span class="ao-dname">' + esc(I[id].name) + '</span><span class="ao-reason">' + esc(statusOf(id).why) + '</span></div>'; }).join("") + "</div>";
-      h += '<button type="button" class="btn btn-gold" id="addonsDone">Continue — pick a day ↓</button>';
+      h += '<button type="button" class="btn btn-gold" id="addonsDone">Continue — pick a day ↓' + (T.items.length ? ' · ' + hm(T.mins) + ' · ' + pr(T, T.total) : '') + '</button>';
       f.innerHTML = h;
       if (window.IN2_WATCH_VIDEOS) window.IN2_WATCH_VIDEOS(f);
     }
@@ -362,7 +365,7 @@
       $("#step-details").hidden = fr;
       var gm = $("#gcodeMsg"); if (S.code) { var cr = creditAmt(T), left = Math.max(0, S.code.balance - cr); gm.hidden = false; gm.className = "gcode-msg ok"; gm.textContent = "Code " + S.code.code + " applied, −" + money(cr) + (left > 0 ? " · " + money(left) + " left on the code." : " · Code fully used."); } else if (!gm.classList.contains("bad")) gm.hidden = true;
       $$(".opt-card").forEach(function (c) { c.setAttribute("aria-checked", String(c.getAttribute("data-option") === S.option)); });
-      var parts = [(S.who === "friend" && S.F.name ? "For " + S.F.name + ": " : "") + T.items.map(function (i) { return i.name; }).join(" + ")]; if (S.date) parts.push(dateLabel()); if (S.time) parts.push(S.time);
+      var parts = [(S.who === "friend" && S.F.name ? "For " + S.F.name + ": " : "") + T.items.map(function (i) { return i.name; }).join(" + ")]; parts.push(hm(T.mins) + " · " + pr(T, T.total)); if (S.date) parts.push(dateLabel()); if (S.time) parts.push(S.time);
       $("#reserveSum").textContent = parts.join(" · ");
       $("#reserveBtn").textContent = S.option === "G" ? "Pay " + pr(T, Math.max(0, T.total - creditAmt(T))) + " and book it for " + (S.F.name || "my friend") : S.option === "A" ? "Pay $" + D.depositDollars + " deposit to hold this time" : "Reserve my time";
     }

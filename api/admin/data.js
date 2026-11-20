@@ -469,7 +469,7 @@ module.exports = async (req, res) => {
         const redirectUri = googleRedirectUriFor(req);
         const state = await googleCreateState();
         const authUrl = googleBuildAuthUrl({ redirectUri, state });
-        await logAudit(session, "google.connect-start", "Google connect started — Sarah to tap Allow on Google's screen");
+        await logAudit(session, "google.connect-start", "Google connect started — waiting for the studio to tap Allow on Google's screen");
         return res.status(200).json({ authUrl, redirectUri });
       }
       // Google disconnect: revoke the tokens at Google (best-effort) and

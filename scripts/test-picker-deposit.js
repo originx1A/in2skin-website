@@ -27,6 +27,7 @@ const index = read("index.html");
 const mainJs = read("js/main.js");
 const chatJs = read("js/chat.js");
 const compatJs = read("js/compat.js");
+const consultJs = read("js/consult.js");
 
 let n = 0;
 function ok(cond, msg) { n++; assert.ok(cond, msg); }
@@ -58,12 +59,15 @@ ok(works.priceMax === 195, "data.js The Works tops at $195");
 ok(flat["chemical-peels"].priceMax === 475, "data.js peels top at $475");
 ok(IN2.depositDollars === 30, "data.js deposit is $30");
 ok(IN2.consultDollars === 30, "data.js consultation is $30");
-// No Microneedling anywhere public in the picker data (asset filenames
-// excepted — assets/microneedling.* are files, not a service name).
-ok(!Object.values(flat).some((it) => /microneedling/i.test(it.name)), "data.js has no Microneedling service name");
-ok(!IN2.treatments.some(([name]) => /microneedling/i.test(name)), "data.js treatments list has no Microneedling");
-// Server table agrees (microneedling stays server-side ONLY, $65/20, for
-// old booking records — never offered in the picker).
+// One needling item (Tony Nov 20, 2026): microneedling and NANO needling
+// are the same treatment — the picker shows one combined name, and the
+// treatments list carries it too. Asset filenames excepted.
+ok(flat["needling"].name === "Microneedling / NANO Needling", "data.js needling is named Microneedling / NANO Needling");
+ok(IN2.treatments.some(([name]) => name === "Microneedling / NANO Needling"), "data.js treatments list has Microneedling / NANO Needling");
+ok(!Object.values(flat).some((it) => it.name === "Microneedling" || it.name === "NANO Needling"), "data.js has no standalone Microneedling or NANO Needling service name");
+// Server table agrees: both needling ids share the one combined display
+// name (microneedling stays as an id for old booking records — never
+// offered in the picker).
 for (const [id, [price, mins]] of Object.entries(EXPECT)) {
   const s = SERVICES.find((x) => x.id === id);
   ok(s, `schedule.js SERVICES has ${id}`);
@@ -72,6 +76,9 @@ for (const [id, [price, mins]] of Object.entries(EXPECT)) {
 }
 const serverMicro = SERVICES.find((x) => x.id === "microneedling");
 ok(serverMicro && serverMicro.priceNum === 65 && serverMicro.mins === 20, "schedule.js keeps microneedling $65/20 for old records only");
+ok(serverMicro && serverMicro.name === "Microneedling / NANO Needling", "schedule.js microneedling shares the combined name");
+const serverNano = SERVICES.find((x) => x.id === "nano-needling");
+ok(serverNano && serverNano.name === "Microneedling / NANO Needling", "schedule.js nano-needling is named Microneedling / NANO Needling");
 const comboClassic = COMBOS.find((x) => x.id === "combo-classic");
 ok(comboClassic.priceNum === 160 && comboClassic.mins === 55, "schedule.js combo-classic $160/55");
 const comboAnti = COMBOS.find((x) => x.id === "combo-anti");
@@ -82,12 +89,19 @@ for (const s of [
   "Anti-Aging Facial</b> $125 · 80 min",
   "The Works</b> $160 with a Classic (55 min) or $195 with an Anti-Aging (80 min)",
   "Chemical Peels</b> $125–$475 · 55 min",
-  "NANO Needling $65, Microdermabrasion $55, Light Therapy $55, Reflexology $35",
+  "Microneedling / NANO Needling $65, Microdermabrasion $55, Light Therapy $55, Reflexology $35",
 ]) {
   ok(chatJs.includes(s), `chat.js prices include: ${s}`);
 }
-ok(!/microneedling/i.test(chatJs), "chat.js never says microneedling");
-ok(!/microneedling/i.test(compatJs), "compat.js never says microneedling");
+// Chat + compat use the combined name only. (The explanatory sentence
+// "Microneedling and NANO needling are the same treatment" is prose, not
+// a second service name — strip it too before the sweep.)
+for (const [src, js] of [["chat.js", chatJs], ["compat.js", compatJs]]) {
+  ok(js.includes("Microneedling / NANO Needling"), `${src} uses the combined needling name`);
+  const rest = js.split("Microneedling / NANO Needling").join("").replace(/microneedling and nano needling/gi, "");
+  ok(!/microneedling/i.test(rest), `${src} has no standalone Microneedling service name`);
+  ok(!/NANO Needling/.test(rest), `${src} has no standalone NANO Needling service name`);
+}
 ok(!/from \$150/i.test(chatJs), "chat.js never quotes $150 as our price");
 
 // --- (2) Guided add-on lighting: compat.js rules decide lit vs unlit. ---
@@ -131,7 +145,7 @@ ok(index.includes('class="cal-help"'), "calendar step has its own explainer line
 // --- (4) ?service= preselection: deep links land on the picker with the
 // service already chosen. ---
 ok(mainJs.includes('get("service")'), "picker reads ?service=");
-ok(mainJs.includes('"microneedling": "needling"'), "microneedling deep link maps to NANO Needling");
+ok(mainJs.includes('"microneedling": "needling"'), "microneedling deep link maps to the combined needling add-on");
 ok(mainJs.includes('"nano-needling": "needling"'), "nano-needling deep link maps to the picker add-on");
 ok(mainJs.includes("combo-classic") && mainJs.includes("combo-anti"), "picker preselects Works variants from a deep link");
 for (const dir of ["classic-facial", "anti-aging-facial", "the-works", "chemical-peels", "nano-needling", "microdermabrasion", "light-therapy", "reflexology"]) {
@@ -143,5 +157,37 @@ ok(vercel.redirects && vercel.redirects.some((r) => r.source === "/microneedling
 const sitemap = read("sitemap.xml");
 ok(!sitemap.includes("/microneedling/"), "sitemap no longer lists /microneedling/");
 ok(sitemap.includes("/nano-needling/"), "sitemap lists /nano-needling/");
+
+// --- (5) One needling item in public copy: sweep every served page, the
+// llms files and the docs for a standalone needling service name. Ids,
+// URLs and asset filenames are not service names and are not swept.
+function walkPub(dir, out) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (["node_modules", ".git", "scripts", "tests"].includes(e.name)) continue;
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) walkPub(p, out);
+    else if (/\.(html|txt|md|json)$/.test(e.name)) out.push(p);
+  }
+}
+const pubFiles = []; walkPub(ROOT, pubFiles);
+ok(pubFiles.length > 30, `sweep covers ${pubFiles.length} public files`);
+for (const f of pubFiles) {
+  const t = fs.readFileSync(f, "utf8");
+  const rest = t.split("Microneedling / NANO Needling").join("").replace(/microneedling and nano needling/gi, "");
+  const rel = path.relative(ROOT, f);
+  ok(!/NANO Needling/.test(rest), `${rel}: no standalone NANO Needling`);
+  ok(!/"Microneedling"/.test(rest) && !/>Microneedling</.test(rest), `${rel}: no standalone Microneedling service name`);
+}
+
+// --- (6) Continue-bar totals (Tony Nov 20 17:55): the sticky bars show the
+// running calculation — picks + accumulated minutes + total price.
+ok(mainJs.includes("Continue — pick a day ↓' + (T.items.length ? ' · ' + hm(T.mins) + ' · ' + pr(T, T.total)"), "Continue button shows minutes + total");
+ok(mainJs.includes('parts.push(hm(T.mins) + " · " + pr(T, T.total))'), "Reserve bar shows minutes + total");
+
+// --- (7) Calendar greying: a day with no times left is greyed out, even
+// when the range free count still says the day has slots (the count is for
+// the whole day — it still counts starts that have already passed).
+ok(mainJs.includes("NOW.min >= SL.RULES.lastStart"), "home picker greys out today once the last start is gone");
+ok(consultJs.includes("NOW.min >= SL.RULES.lastStart"), "consult picker greys out today once the last start is gone");
 
 console.log(`picker-deposit tests: all ${n} checks passed`);

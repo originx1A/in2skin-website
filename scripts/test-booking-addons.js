@@ -239,9 +239,10 @@ async function run() {
   const settled2 = await settleBookingPayment(settled, { id: "cs_test_dep1", amount_total: 3000, payment_status: "paid", payment_intent: "pi_test_dep1" });
   assert.equal(settled2.status, "deposit-paid", "re-settling the same deposit session is a no-op");
 
-  // 16. Needling is one treatment (Tony Nov 19, 2026): microneedling and
-  //     NANO needling are the same thing, just the needle size — a booking
-  //     picks one or the other, never both.
+  // 16. Needling is one treatment (Tony Nov 20, 2026): microneedling and
+  //     NANO needling are the same thing, just the needle size — one item,
+  //     "Microneedling / NANO Needling". A booking picks the one item,
+  //     never both ids.
   await assert.rejects(
     buildBooking(base({ service: "microneedling", addons: ["nano-needling"], date: futureDate(20) }), { bufferMins: 60, blocks: [], via: "web" }),
     /one treatment/,

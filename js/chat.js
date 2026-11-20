@@ -9,7 +9,7 @@
 
   var PRICES = '<ul class="msg-list"><li><b>Classic Facial</b> $85 · 55 min</li><li><b>Anti-Aging Facial</b> $125 · 80 min</li>' +
     '<li><b>The Works</b> $160 with a Classic (55 min) or $195 with an Anti-Aging (80 min). Red light and reflexology included.</li>' +
-    '<li><b>Chemical Peels</b> $125–$475 · 55 min</li><li><b>Add-ons</b> (20 min each): NANO Needling $65, Microdermabrasion $55, Light Therapy $55, Reflexology $35</li></ul>';
+    '<li><b>Chemical Peels</b> $125–$475 · 55 min</li><li><b>Add-ons</b> (20 min each): Microneedling / NANO Needling $65, Microdermabrasion $55, Light Therapy $55, Reflexology $35</li></ul>';
 
   /* [keywords, answer html, action buttons]; first match wins, so specific topics come before general ones */
   var KB = [
@@ -35,8 +35,8 @@
       "<b>Chemical Peels</b> are $125–$475 for 55 minutes. A Circadia peel is matched to your skin, and the exact price is confirmed at your consultation.",
       [{ label: "Chemical Peels", href: "/chemical-peels/" }, BOOK]],
     [["microneedl", "nano", "needling", "needle", "collagen"],
-      "<b>NANO Needling</b> is $65 for 20 minutes, as an add-on to a facial or on its own. Ultra-fine nano tips help serums absorb more deeply, for plumper, smoother, more radiant skin.",
-      [{ label: "NANO Needling", href: "/nano-needling/" }, BOOK]],
+      "<b>Microneedling / NANO Needling</b> is $65 for 20 minutes, as an add-on to a facial or on its own. Microneedling and NANO needling are the same treatment — only the needle size differs, and the studio picks the size that's best for your face at the visit. Ultra-fine tips help serums absorb more deeply, for plumper, smoother, more radiant skin.",
+      [{ label: "Microneedling / NANO Needling", href: "/nano-needling/" }, BOOK]],
     [["microderm", "polish"],
       "<b>Microdermabrasion</b> is $55 for 20 minutes: a gentle polish for smoother, brighter skin, with no downtime.",
       [{ label: "Microdermabrasion", href: "/microdermabrasion/" }, BOOK]],
@@ -47,11 +47,11 @@
       "<b>Reflexology</b> is $35 for 20 minutes: gentle, rhythmic pressure on your feet for whole-body calm.",
       [{ label: "Reflexology", href: "/reflexology/" }, BOOK]],
     [["add on", "add-on", "addon", "extras"],
-      "Add-ons are 20 minutes each: NANO Needling $65, Microdermabrasion $55, Light Therapy $55 and Reflexology $35. Tap the ones you want while booking — the ones that go with your facial light up gold.",
+      "Add-ons are 20 minutes each: Microneedling / NANO Needling $65, Microdermabrasion $55, Light Therapy $55 and Reflexology $35. Tap the ones you want while booking — the ones that go with your facial light up gold.",
       [BOOK]],
     [["acne", "breakout", "pimple", "oily"], "For breakouts, many guests start with a Classic Facial. Your esthetician tailors it to your skin that day.", [{ label: "Acne-prone skin", href: "/acne-prone-skin/" }, BOOK]],
     [["rosacea", "sensitive", "redness", "irritat"], "Sensitive skin is welcome. Your visit starts with a consultation, and every step is adjusted to your skin.", [{ label: "Sensitive skin", href: "/rosacea-sensitive-skin/" }, BOOK]],
-    [["lines", "wrinkle", "aging", "ageing"], "For fine lines, the <b>Anti-Aging Facial</b> ($125, 80 min) adds a second mask and Circadia serums. NANO Needling can go further.", [{ label: "Fine lines", href: "/fine-lines/" }, BOOK]],
+    [["lines", "wrinkle", "aging", "ageing"], "For fine lines, the <b>Anti-Aging Facial</b> ($125, 80 min) adds a second mask and Circadia serums. Microneedling / NANO Needling can go further.", [{ label: "Fine lines", href: "/fine-lines/" }, BOOK]],
     [["dull", "tired", "glow", "bright"], "For dull or tired skin, the Classic Facial is a lovely place to begin, and Microdermabrasion or Light Therapy can be added.", [{ label: "Dull skin", href: "/dull-skin/" }, { label: "Tired skin", href: "/tired-skin/" }]],
     [["suit", "which", "recommend", "best", "first", "new", "choose", "not sure"],
       "New here? The <b>Classic Facial</b> ($85, 55 min) is the best first visit. Every visit starts with a consultation and is tailored to your skin that day. Prefer to talk it through? A 20-minute video consultation is $30 and comes off your first treatment.",

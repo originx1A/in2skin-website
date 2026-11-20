@@ -79,7 +79,10 @@
     var k = iso(y, m, d);
     if (AVAIL.dates[k]) {
       var free = AVAIL.dates[k].regular.free;
-      return { off: !free, starts: [], api: true };
+      /* The range count is for the whole day — it still counts starts that
+         have already passed. Today is off once the last start is gone. */
+      var todayDone = cur && d === NOW.d && NOW.min >= SL.RULES.lastStart;
+      return { off: !free || todayDone, starts: [], api: true };
     }
     var starts = SL.slotsForDay(loadB()[k] || [], MINS).starts;
     if (cur && d === NOW.d) starts = starts.filter(function (x) { return x.min > NOW.min; });
