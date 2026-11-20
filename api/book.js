@@ -342,6 +342,21 @@ module.exports = async (req, res) => {
       return res.status(200).json({ paid: true, bookingId: booking.id, consultation: booking.status === "consultation", myReferralCode: booking.myReferralCode });
     }
 
+    // Option C — book now, pay at the studio (Tony Nov 19, 2026): the
+    // time is held for 30 minutes until Sarah confirms it. No checkout,
+    // no payment due now. Refused for consultations (paid up front).
+    if (b.payAtStudio === true && booking.service !== CONSULT_ID) {
+      booking.status = "pending";
+      booking.payAtStudio = true;
+      const holdUntil = new Date(Date.now() + PENDING_HOLD_MS).toISOString();
+      await saveBooking(booking);
+      if (booking.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(booking.email))) {
+        try { await sendHoldEmail(booking, null); } catch (e) { console.error("[book:hold-email]", e); }
+      }
+      await notifyStudioBooking(booking, "new");
+      return res.status(200).json({ hold: true, payAtStudio: true, bookingId: booking.id, holdUntil });
+    }
+
     // Deposit fully covered by carried deposit credit (a past no-show):
     // no checkout — the spot is held by the credit, and the booking is
     // confirmed straight away. finalizePaidBooking deducts the credit.

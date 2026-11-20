@@ -1,8 +1,20 @@
-// Build the SEO pages: 8 location pages, 5 skin-concern pages, 1 questions
-// page — all static HTML in the service-page style (same header, hero,
-// layout, price panel and footer). Run: node scripts/build-seo-pages.mjs
+// Build the SEO pages: 10 location pages, 5 skin-concern pages, 1 questions
+// page, plus 10 new pages from scripts/page-content.json (2 concerns,
+// 4 occasions, 4 info) — all static HTML in the service-page style
+// (same C4/C5 header, hero, layout, C3 price panel and footer).
+// Run: node scripts/build-seo-pages.mjs
 // Pages are static; sitemap entries live in scripts/build-service-pages.mjs
 // (EXTRA_PAGES) so `npm run build:pages` keeps the sitemap complete.
+//
+// TOWN PAGES STAY EXACTLY AS WRITTEN (Tony's direct scope cut): the
+// "towns" key in scripts/page-content.json is IGNORED — only the
+// competitor price FIGURES are removed from facials-toronto /
+// facials-mississauga, and every $-containing body element is wrapped
+// in [data-price-teaser] (a markup annotation only; no words changed).
+// Price rule: NO $ figure in any generated page's body except inside
+// a [data-price-teaser] element (or the questions price list,
+// [data-price-list]). The street address never appears in a generated
+// page (body or JSON-LD).
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,7 +23,6 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SITE = "https://boltonfacials.com";
 const PHONE_DISPLAY = "(289) 212-4124";
 const PHONE_TEL = "tel:+12892124124";
-const GEO = { lat: 43.88088, lon: -79.73492 };
 
 function esc(s) {
   return String(s)
@@ -21,77 +32,204 @@ function esc(s) {
     .replace(/"/g, "&quot;");
 }
 
-const TREATMENT_LINKS = [
-  ["classic-facial", "Classic Facial", "$85"],
-  ["anti-aging-facial", "Anti-Aging Facial", "$125"],
-  ["nano-needling", "NANO Needling", "$65"],
-  ["microdermabrasion", "Microdermabrasion", "$55"],
-  ["light-therapy", "Light Therapy", "$55"],
-  ["reflexology", "Reflexology", "$35"],
-  ["chemical-peels", "Chemical Peels", "$125–$475"],
-  ["microneedling", "Microneedling", "$65"],
-];
+const indexHtml = readFileSync(join(ROOT, "index.html"), "utf-8");
+function extractString(varName) {
+  const re = new RegExp(`var ${varName} = "((?:[^"\\\\]|\\\\.)*)";`);
+  const m = indexHtml.match(re);
+  if (!m) throw new Error(`could not find ${varName} in index.html`);
+  return JSON.parse(`"${m[1]}"`);
+}
+// Header/footer: copied EXACT from the rebuilt index.html (C4/C5) —
+// the comment markers delimit them, so a rebuild always tracks the
+// live header/footer.
+function extractBlock(startMarker, endTag) {
+  const i = indexHtml.indexOf(startMarker);
+  if (i < 0) throw new Error(`could not find ${startMarker} in index.html`);
+  const j = indexHtml.indexOf(endTag, i);
+  if (j < 0) throw new Error(`could not find ${endTag} after ${startMarker} in index.html`);
+  return indexHtml.slice(i, j + endTag.length);
+}
+const HEADER_HTML = extractBlock("<!-- ================= HEADER ================= -->", "</header>");
+const FOOTER_HTML = extractBlock("<!-- ================= FOOTER ================= -->", "</footer>");
+const DEPOSIT_SENTENCE = extractString("DEPOSIT_SENTENCE");
 
-const FOOT_TREATMENTS = TREATMENT_LINKS.map(
-  ([id, name, price]) => `<li><a href="/${id}/">${esc(name)} — ${esc(price)}</a></li>`
-).join("\n              ");
+// Small inline script for static pages only: dropdown toggles +
+// burger (same behaviour as the SPA's initNav) + back-to-top. The
+// SPA script is NOT loaded on static pages.
+const NAV_SCRIPT = `<script>
+(function(){
+  var burger=document.getElementById("burger"), nav=document.getElementById("mainNav");
+  function wireDrop(toggleId, menuId){
+    var toggle=document.getElementById(toggleId), menu=document.getElementById(menuId);
+    if(!toggle||!menu) return;
+    toggle.addEventListener("click", function(ev){
+      ev.stopPropagation();
+      var otherId = toggleId==="concernToggle" ? "occMenu" : "concernMenu";
+      var otherToggleId = toggleId==="concernToggle" ? "occToggle" : "concernToggle";
+      var other=document.getElementById(otherId), otherToggle=document.getElementById(otherToggleId);
+      if(other) other.classList.remove("open");
+      if(otherToggle) otherToggle.setAttribute("aria-expanded","false");
+      var open=menu.classList.toggle("open");
+      toggle.setAttribute("aria-expanded", open?"true":"false");
+    });
+  }
+  wireDrop("concernToggle","concernMenu");
+  wireDrop("occToggle","occMenu");
+  document.addEventListener("click", function(ev){
+    if(!ev.target.closest(".nav-drop")){
+      var cm=document.getElementById("concernMenu"); if(cm) cm.classList.remove("open");
+      var om=document.getElementById("occMenu"); if(om) om.classList.remove("open");
+      var ct=document.getElementById("concernToggle"); if(ct) ct.setAttribute("aria-expanded","false");
+      var ot=document.getElementById("occToggle"); if(ot) ot.setAttribute("aria-expanded","false");
+    }
+    if(!ev.target.closest("header.site")){
+      if(nav) nav.classList.remove("open");
+      document.body.classList.remove("nav-open");
+      if(burger) burger.setAttribute("aria-expanded","false");
+    }
+  });
+  if(burger&&nav) burger.addEventListener("click", function(){
+    var open=nav.classList.toggle("open");
+    burger.setAttribute("aria-expanded", open?"true":"false");
+    document.body.classList.toggle("nav-open", open);
+  });
+  if(nav) nav.addEventListener("click", function(ev){
+    if(ev.target.closest("a")){
+      var cm=document.getElementById("concernMenu"); if(cm) cm.classList.remove("open");
+      var om=document.getElementById("occMenu"); if(om) om.classList.remove("open");
+      var ct=document.getElementById("concernToggle"); if(ct) ct.setAttribute("aria-expanded","false");
+      var ot=document.getElementById("occToggle"); if(ot) ot.setAttribute("aria-expanded","false");
+      nav.classList.remove("open");
+      document.body.classList.remove("nav-open");
+      if(burger) burger.setAttribute("aria-expanded","false");
+    }
+  });
+  var toTop=document.getElementById("toTop");
+  function toTopShow(){ if(toTop) toTop.classList.toggle("show", window.scrollY>500); }
+  window.addEventListener("scroll", toTopShow, {passive:true}); toTopShow();
+  if(toTop) toTop.addEventListener("click", function(){ window.scrollTo({top:0, behavior:"smooth"}); });
+})();
+</script>`;
 
 function footer() {
-  return `<footer class="site">
-      <div class="wrap">
-        <div class="foot-in">
-          <div>
-            <p style="font-family:'Cormorant Garamond',serif; font-size:1.5rem; font-weight:600; margin-bottom:8px;">In2Skin</p>
-            <p>Facials &amp; skin treatments by appointment in Bolton, Ontario.</p>
-            <a class="btn btn-call" href="${PHONE_TEL}" style="margin-top:8px;">Call to Book · ${PHONE_DISPLAY}</a>
-            <p style="margin-top:10px;"><a href="https://www.facebook.com/profile.php?id=61596402642954" target="_blank" rel="noopener">Follow us on Facebook</a></p>
-          </div>
-          <div>
-            <h4>Treatments</h4>
-            <ul class="foot-links">
-              ${FOOT_TREATMENTS}
-            </ul>
-          </div>
-          <div>
-            <h4>Good to Know</h4>
-            <ul class="foot-links">
-              <li>Directions shared when you book</li>
-              <li>Booking: by phone, or online anytime</li>
-              <li>New to In2Skin? A $30 consultation is credited in full toward your first treatment</li>
-              <li><a href="/questions/">Questions about facials? See our answers</a></li>
-              <li><a href="/privacy.html">Privacy — how we handle your information</a></li>
-            </ul>
-          </div>
-        </div>
-        <div class="foot-bottom">
-          <span>© 2026 In2Skin · Bolton, Ontario</span>
-          <span>Website by <a href="mailto:hello.funderwood@gmail.com">Funderwood</a></span>
-        </div>
-      </div>
-    </footer>`;
+  return FOOTER_HTML;
 }
 
 function header() {
-  return `<header class="site">
-      <div class="wrap header-in">
-        <a class="brand" href="/" aria-label="In2Skin — home"><span class="brand-text"><span class="wordmark">In2Skin</span><span class="tagline">Aesthetics · Bolton</span></span></a>
-        <nav class="main" aria-label="Main">
-          <a href="/">Home</a>
-          <a href="/#book">Book Online</a>
-          <a href="/#visit">Visit Us</a>
-        </nav>
-        <a class="btn btn-book btn-book-sm header-book" href="/#book" style="white-space:nowrap;">Book Online</a>
-        <a class="btn btn-ghost header-call" href="${PHONE_TEL}" aria-label="Call In2Skin to book">Call<span class="btn-label-num">&nbsp;· ${PHONE_DISPLAY}</span></a>
-      </div>
-    </header>`;
+  return HEADER_HTML;
 }
 
-// p = { slug, title, desc, cat, h1, img, imgAlt, crumbs, intro[], sections: [{h, body[] | ticks[]}], leadPrice, leadPriceLabel, leadMins, panelExtra, faq: [[q,a]], crossTitle, cross: [[href, label]], serviceName, serviceDesc, areaServedExtra }
+// "What we recommend" — service NAMES linking to their service pages,
+// no prices. PICK_MAP turns a recommend id into the picker id
+// ("the-works" is picked as "combo-classic"; everything else passes
+// through).
+const RECOMMEND = {
+  "classic-facial": ["Classic Facial", "/classic-facial/"],
+  "anti-aging-facial": ["Anti-Aging Facial", "/anti-aging-facial/"],
+  "the-works": ["The Works", "/the-works/"],
+  "light-therapy": ["Light Therapy", "/light-therapy/"],
+  "microdermabrasion": ["Microdermabrasion", "/microdermabrasion/"],
+  "needling": ["Microneedling / NANO Needling", "/microneedling/"],
+  "microneedling": ["Microneedling", "/microneedling/"],
+  "nano-needling": ["NANO Needling", "/nano-needling/"],
+  "reflexology": ["Reflexology", "/reflexology/"],
+  "chemical-peels": ["Chemical Peels", "/chemical-peels/"],
+};
+const PICK_MAP = { "the-works": "combo-classic" };
+const LEAD_MINS = {
+  "classic-facial": "Classic Facial · 55 minutes",
+  "anti-aging-facial": "Anti-Aging Facial · 80 minutes",
+  "combo-classic": "The Works · 55 minutes",
+  "combo-anti": "The Works · 80 minutes",
+  "microdermabrasion": "Microdermabrasion · 20 minutes",
+  "light-therapy": "Light Therapy · 20 minutes",
+  "consultation": "Consultation · 20 minutes",
+};
+// Which treatment the gold button pre-picks, per existing page.
+const LEAD_PICK = {
+  "facials-caledon": "classic-facial",
+  "facials-kleinburg": "classic-facial",
+  "facials-vaughan": "classic-facial",
+  "facials-brampton": "classic-facial",
+  "facials-nobleton": "classic-facial",
+  "facials-king-city": "classic-facial",
+  "facials-orangeville": "classic-facial",
+  "facials-georgetown": "classic-facial",
+  "facials-toronto": "classic-facial",
+  "facials-mississauga": "classic-facial",
+  "acne-prone-skin": "classic-facial",
+  "rosacea-sensitive-skin": "classic-facial",
+  "dull-skin": "microdermabrasion",
+  "fine-lines": "anti-aging-facial",
+  "tired-skin": "combo-classic",
+  "questions": "classic-facial",
+};
+const PANEL_RECOMMEND = {
+  "acne-prone-skin": ["classic-facial", "microdermabrasion"],
+  "rosacea-sensitive-skin": ["classic-facial", "light-therapy"],
+  "dull-skin": ["microdermabrasion", "classic-facial"],
+  "fine-lines": ["anti-aging-facial", "microneedling"],
+  "tired-skin": ["the-works", "classic-facial"],
+  "questions": ["classic-facial", "anti-aging-facial"],
+};
+const TOWN_RECOMMEND = ["classic-facial", "anti-aging-facial"];
+
+// Competitor price figures — removed ONLY from the Toronto and
+// Mississauga pages (nothing else in those pages changes: same text,
+// same order, same cross-links). The figure strings are deleted and
+// the leftover spacing/punctuation is tidied mechanically. The
+// sentences they sat in were repaired in the LOCATIONS source above
+// (dangling verbs completed with "more"); the strip below remains as
+// a net for any figure left in a meta description.
+const COMPETITOR_FIGURES = [
+  "$150 to $300",
+  "$190 to $400",
+  "$150 to $400",
+  "$150–$300",
+  "about $130",
+  "About $130",
+  "$105 to $350",
+  "$160 to $350",
+];
+function stripCompetitorFigures(s) {
+  let out = String(s);
+  for (const f of COMPETITOR_FIGURES) out = out.split(f).join("");
+  return out
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/ ,/g, ",")
+    .replace(/ \./g, ".")
+    .replace(/, ,/g, ",")
+    .trim();
+}
+function stripPageStrings(v) {
+  if (typeof v === "string") return stripCompetitorFigures(v);
+  if (Array.isArray(v)) return v.map(stripPageStrings);
+  if (v && typeof v === "object") {
+    const o = {};
+    for (const k of Object.keys(v)) o[k] = stripPageStrings(v[k]);
+    return o;
+  }
+  return v;
+}
+const STRIP_SLUGS = new Set(["facials-toronto", "facials-mississauga"]);
+
+// p = { slug, title, desc, cat, h1, img, imgAlt, crumbs, intro[],
+//   sections: [{h, body[] | ticks[], priceList?}], faq: [[q,a]],
+//   crossTitle, cross: [[href, label]], serviceName, areaServedExtra,
+//   leadPick, recommend[], leadMins, buttonHref, buttonLabel, fine, fineTeaser }
 function page(p) {
+  if (STRIP_SLUGS.has(p.slug)) p = stripPageStrings(p);
+  const leadPick = p.leadPick || LEAD_PICK[p.slug] || null;
+  const recommend = p.recommend || PANEL_RECOMMEND[p.slug] || TOWN_RECOMMEND;
+  const leadMins = p.leadMins || (leadPick ? LEAD_MINS[leadPick] : null);
+  const buttonHref = p.buttonHref || (leadPick ? `/?pick=${leadPick}#services` : "/#services");
+  const buttonLabel = p.buttonLabel || "See price and book";
+  const fine = p.fine !== undefined ? p.fine : DEPOSIT_SENTENCE;
+  const fineTeaser = p.fineTeaser !== undefined ? p.fineTeaser : true;
   const serviceLd = {
     "@context": "https://schema.org",
     "@type": "Service",
-    name: p.serviceName,
+    name: p.serviceName || (recommend.length ? RECOMMEND[recommend[0]][0] : undefined),
     description: p.desc,
     url: `${SITE}/${p.slug}/`,
     provider: {
@@ -100,15 +238,6 @@ function page(p) {
       url: `${SITE}/`,
       telephone: "+1-289-212-4124",
       priceRange: "$35 - $475",
-      address: {
-        "@type": "PostalAddress",
-        streetAddress: "92 Willow Street",
-        addressLocality: "Bolton",
-        addressRegion: "ON",
-        postalCode: "L7E 3G3",
-        addressCountry: "CA",
-      },
-      geo: { "@type": "GeoCoordinates", latitude: GEO.lat, longitude: GEO.lon },
       areaServed: ["Bolton", "Caledon", "Kleinburg", "Vaughan", "Brampton", "Nobleton", "King City", "Orangeville", "Georgetown", "Toronto", "Mississauga"],
     },
     areaServed: p.areaServedExtra || "Bolton",
@@ -125,24 +254,39 @@ function page(p) {
   const sections = p.sections
     .map((s) => {
       const body = s.ticks
-        ? `<ul class="tick-list">` +
+        ? `<ul class="tick-list"${s.priceList ? ' data-price-list' : ""}>` +
           s.ticks
-            .map(
-              (t) =>
-                `<li><span class="tk"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5" stroke="#2F4A2C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>${esc(t)}</span></li>`
-            )
+            .map((t) => {
+              const teaser = /\$\s?\d/.test(t) ? ' data-price-teaser' : "";
+              return `\n            <li${teaser}><span class="tk"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5" stroke="#2F4A2C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>${esc(t)}</span></li>`;
+            })
             .join("") +
-          `</ul>`
-        : s.body.map((para) => `<p>${esc(para)}</p>`).join("\n          ");
+          `\n          </ul>`
+        : s.body
+            .map((para) => {
+              const teaser = /\$\s?\d/.test(para) ? ' data-price-teaser' : "";
+              return `<p${teaser}>${esc(para)}</p>`;
+            })
+            .join("\n          ");
       return `<h2>${esc(s.h)}</h2>${body}`;
     })
     .join("\n          ");
   const faqHtml = p.faq
-    .map(([q, a]) => `<details><summary>${esc(q)}<span class="plus">+</span></summary><p>${esc(a)}</p></details>`)
+    .map(([q, a]) => {
+      const teaser = /\$\s?\d/.test(a) ? ' data-price-teaser' : "";
+      return `<details><summary>${esc(q)}<span class="plus">+</span></summary><p${teaser}>${esc(a)}</p></details>`;
+    })
     .join("");
   const cross = p.cross
     .map(([href, label]) => `<a class="pair-chip" href="${href}">${esc(label)}</a>`)
     .join("");
+  const recItems = recommend
+    .map((id) => {
+      const r = RECOMMEND[id];
+      if (!r) throw new Error(`unknown recommend id ${id} for ${p.slug}`);
+      return `<li><a href="${r[1]}">${esc(r[0])}</a></li>`;
+    })
+    .join("\n              ");
   return `<!doctype html>
 <html lang="en-CA">
   <head>
@@ -200,7 +344,12 @@ ${JSON.stringify(faqLd, null, 2)}
       <div class="wrap"><div class="crumbs">${p.crumbs}</div>
       <div class="svc-layout">
         <div class="svc-main">
-          ${p.intro.map((para) => `<p>${esc(para)}</p>`).join("\n          ")}
+          ${p.intro
+            .map((para) => {
+              const teaser = /\$\s?\d/.test(para) ? ' data-price-teaser' : "";
+              return `<p${teaser}>${esc(para)}</p>`;
+            })
+            .join("\n          ")}
           ${sections}
           <h2>Questions</h2>
           <div class="faq">${faqHtml}</div>
@@ -208,21 +357,21 @@ ${JSON.stringify(faqLd, null, 2)}
           <div class="pair-row">${cross}</div>
         </div>
         <aside class="price-panel">
-          <div class="pp-price">${esc(p.leadPrice)}</div>
-          <div class="pp-mins">${esc(p.leadMins)} · Bolton, Ontario</div>
-          ${p.panelExtra ? `<p style="font-size:.93rem; color:var(--ink-soft); margin-bottom:16px;">${p.panelExtra}</p>` : ""}
-          <a class="btn btn-book btn-big" href="/#book" style="width:100%;">Book Online — ${esc(p.leadPrice)}</a>
+          ${leadMins ? `<div class="pp-mins">${esc(leadMins)} · Bolton, Ontario</div>` : ""}
+          ${recommend.length ? `<p style="font-weight:600; margin:0 0 8px;">What we recommend</p>
+          <ul class="foot-links" style="margin-bottom:18px;">
+              ${recItems}
+          </ul>` : ""}
+          <a class="btn btn-book btn-big" href="${buttonHref}" style="width:100%;">${esc(buttonLabel)}</a>
           <a class="btn btn-ghost" href="${PHONE_TEL}" style="width:100%;">Call ${PHONE_DISPLAY}</a>
-          <p class="fine">Pay in full securely by card when you book.<br />Cash or e-transfer also welcome at your visit.</p>
+          <p class="fine"${fineTeaser ? ' data-price-teaser' : ""}>${esc(fine)}</p>
         </aside>
       </div></div>
       <div style="height:64px;"></div>
     </main>
     ${footer()}
     <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
-    <script>
-    var toTop=document.getElementById("toTop"); function toTopShow(){ if(toTop) toTop.classList.toggle("show", window.scrollY>500); } window.addEventListener("scroll", toTopShow, {passive:true}); toTopShow(); if(toTop) toTop.addEventListener("click", function(){ window.scrollTo({top:0, behavior:"smooth"}); });
-    </script>
+${NAV_SCRIPT}
   </body>
 </html>
 `;
@@ -615,7 +764,7 @@ const LOCATIONS = [
     img: "facial-massage.jpg",
     imgAlt: "A client resting with eyes closed while an esthetician massages her face during a facial",
     intro: [
-      "Toronto has no shortage of spas — but downtown prices have climbed past what a facial should cost. A custom facial downtown runs $150 to $300, a HydraFacial $190 to $400, and peels $150 to $400. In2Skin is the same quality of care — professional Circadia products, one-on-one attention, decades of experience — for $85 and $125.",
+      "Toronto has no shortage of spas — but downtown prices have climbed past what a facial should cost. A custom facial downtown, a HydraFacial, and peels all cost more. In2Skin is the same quality of care — professional Circadia products, one-on-one attention, decades of experience — for $85 and $125.",
       "Clients drive up from downtown, Etobicoke, North York and Scarborough for the quiet as much as the price: a private studio in Bolton where one guest is treated at a time, with no waiting room, no rush, and no one else's appointment running over into yours.",
     ],
     sections: [
@@ -636,7 +785,7 @@ const LOCATIONS = [
       {
         h: "The price gap, honestly",
         body: [
-          "A quality facial downtown costs $150 to $300 — and that is before the add-ons. At In2Skin the Classic Facial is $85 for 55 minutes and the Anti-Aging Facial is $125 for 80 minutes. The difference is not the care: it is a small private studio in Bolton instead of a downtown medspa paying downtown rent.",
+          "A quality facial downtown costs more — and that is before the add-ons. At In2Skin the Classic Facial is $85 for 55 minutes and the Anti-Aging Facial is $125 for 80 minutes. The difference is not the care: it is a small private studio in Bolton instead of a downtown medspa paying downtown rent.",
           "That is the whole point — premium quality at about half the Toronto price. Not a cheap facial. The same professional products, the same unhurried hour, the same glow — for less.",
         ],
       },
@@ -660,8 +809,8 @@ const LOCATIONS = [
     leadMins: "Classic Facial · 55 minutes",
     faq: [
       ["How far is In2Skin from downtown Toronto?", "About 45 minutes to an hour by Highway 400 or Highway 427. From Etobicoke and North York it is often under 45 minutes. Directions are shared when you book."],
-      ["Why drive to Bolton for a facial?", "For the same quality at about half the downtown price — a Classic Facial is $85 and an Anti-Aging Facial is $125, where a custom facial downtown runs $150 to $300 — in a private, one-on-one studio with no waiting room and no rush."],
-      ["What does a facial cost in Toronto?", "Downtown, a custom facial runs $150 to $300, a HydraFacial $190 to $400, and peels $150 to $400. At In2Skin the same kind of care is $85 for a Classic Facial and $125 for an Anti-Aging Facial."],
+      ["Why drive to Bolton for a facial?", "For the same quality at about half the downtown price — a Classic Facial is $85 and an Anti-Aging Facial is $125, where a custom facial downtown costs more — in a private, one-on-one studio with no waiting room and no rush."],
+      ["What does a facial cost in Toronto?", "Downtown, a custom facial, a HydraFacial, and peels all cost more. At In2Skin the same kind of care is $85 for a Classic Facial and $125 for an Anti-Aging Facial."],
       ["Do you have appointments after work?", "Yes — Private Hours are available early mornings and evenings, by request, for the regular price plus $15 per visit. Sundays the studio is closed."],
     ],
     areaServedExtra: "Toronto",
@@ -676,7 +825,7 @@ const LOCATIONS = [
     img: "quiet-candles.webp",
     imgAlt: "A calm, candlelit treatment room with a facial bed, warm light and soft towels",
     intro: [
-      "Mississauga has plenty of spas — most of them busy, and most of them charging about $130 for a facial, with medspas running $105 to $350. In2Skin is a private studio in Bolton, about 35 to 45 minutes away, where one guest is treated at a time and a Classic Facial is $85.",
+      "Mississauga has plenty of spas — most of them busy, and most of them charging more for a facial, with medspas costing more. In2Skin is a private studio in Bolton, about 35 to 45 minutes away, where one guest is treated at a time and a Classic Facial is $85.",
       "Clients come up from Port Credit, Streetsville, Erin Mills, Cooksville and Meadowvale for the quiet as much as the price: a proper facial, a real break, and no one rushing you out the door.",
     ],
     sections: [
@@ -690,7 +839,7 @@ const LOCATIONS = [
       {
         h: "The price gap, honestly",
         body: [
-          "A facial in Mississauga averages about $130, and a signature facial at a medspa can run $160 to $350. At In2Skin the Classic Facial is $85 for 55 minutes and the Anti-Aging Facial is $125 for 80 minutes. The difference is not the care: it is a small private studio in Bolton instead of a city spa paying city rent.",
+          "A facial in Mississauga costs more on average, and a signature facial at a medspa can cost more. At In2Skin the Classic Facial is $85 for 55 minutes and the Anti-Aging Facial is $125 for 80 minutes. The difference is not the care: it is a small private studio in Bolton instead of a city spa paying city rent.",
           "Premium quality at about half the price — not a cheap facial. The same professional products, the same unhurried hour, the same glow — for less.",
         ],
       },
@@ -714,7 +863,7 @@ const LOCATIONS = [
     leadMins: "Classic Facial · 55 minutes",
     faq: [
       ["How far is In2Skin from Mississauga?", "About 35 to 45 minutes by Highway 407 or Highway 401 to Highway 50. Directions are shared when you book."],
-      ["What does a facial cost in Mississauga?", "About $130 on average, with medspas running $105 to $350. At In2Skin the Classic Facial is $85 for 55 minutes and the Anti-Aging Facial is $125 for 80 minutes."],
+      ["What does a facial cost in Mississauga?", "On average, a facial costs more, with medspas costing more. At In2Skin the Classic Facial is $85 for 55 minutes and the Anti-Aging Facial is $125 for 80 minutes."],
       ["Why drive to Bolton for a facial?", "For the same quality at about half the price, in a private, one-on-one studio — one guest at a time, no waiting room, no rush."],
       ["Do you have appointments after work?", "Yes — Private Hours are available early mornings and evenings, by request, for the regular price plus $15 per visit. Sundays the studio is closed."],
     ],
@@ -853,7 +1002,6 @@ const CONDITIONS = [
     ],
     leadPrice: "$55",
     leadMins: "Microdermabrasion · 20 minutes",
-    panelExtra: "Classic Facial: <strong style=\"color:var(--sage-deep);\">$85 · 55 min</strong>",
     faq: [
       ["What makes skin look dull?", "Usually surface build-up: dead cells and dryness sitting on top, blocking light and stopping moisture from absorbing."],
       ["What gives the fastest glow?", "Microdermabrasion, $55 for 20 minutes — skin looks brighter and feels smoother right away, with no downtime."],
@@ -898,7 +1046,6 @@ const CONDITIONS = [
     ],
     leadPrice: "$125",
     leadMins: "Anti-Aging Facial · 80 minutes",
-    panelExtra: "Classic Facial: <strong style=\"color:var(--sage-deep);\">$85 · 55 min</strong>",
     faq: [
       ["What is the best facial for fine lines?", "The Anti-Aging Facial, $125 for 80 minutes — firming massage, targeted serums and rich hydration, for firmer, smoother, brighter skin."],
       ["What is microneedling?", "Collagen induction therapy: fine needles create controlled micro-channels, prompting the skin's natural repair and new collagen. It's $65 for 20 minutes, and Sarah picks the needle size (micro or nano) that's best for your face at the visit."],
@@ -945,7 +1092,6 @@ const CONDITIONS = [
     ],
     leadPrice: "$160",
     leadMins: "The Works · 55 minutes",
-    panelExtra: "Classic Facial: <strong style=\"color:var(--sage-deep);\">$85 · 55 min</strong>",
     faq: [
       ["What is The Works?", "A facial, red light therapy and reflexology, all at the same time while the mask works. $160 with a Classic Facial, $195 with an Anti-Aging Facial."],
       ["Will I fall asleep?", "Many clients do — it is that relaxing. And you wake up glowing."],
@@ -970,6 +1116,7 @@ const QUESTIONS = {
   sections: [
     {
       h: "Prices at a glance",
+      priceList: true,
       ticks: [
         "Classic Facial — $85 · 55 minutes",
         "Anti-Aging Facial — $125 · 80 minutes",
@@ -991,21 +1138,21 @@ const QUESTIONS = {
     ["What is a first visit like?", "A consultation first, then the treatment — with every step explained as it happens. It is tailored to your skin that day."],
     ["What are Private Hours?", "Premier appointments reserved just for you — early mornings and evenings, by request. You pay the regular price of the services you pick, plus $15 per visit. Sundays the studio is closed."],
     ["Can I buy a gift certificate?", "Yes — gift a Classic Facial ($85), an Anti-Aging Facial ($125), The Works ($160), or any custom amount from $10. A certificate code is emailed to the recipient, ready to redeem when they book, and gift codes never expire. You can also buy a treatment voucher: a named facial, paid ahead."],
-    ["How do I book?", "Book online anytime on this website, or call (289) 212-4124. You pay in full securely by card when you book online and receive an email confirmation. Cash or Interac e-transfer are also welcome at the studio. Advance booking is recommended to get the time you want."],
+    ["How do I book?", "Book online anytime on this website, or call (289) 212-4124. Pay a $30 deposit to lock in your time; it is credited to your treatment and you pay the balance at your visit by cash, e-transfer or card. You receive an email confirmation. Cash or Interac e-transfer are also welcome at the studio. Advance booking is recommended to get the time you want."],
     ["Where is the studio?", "In2Skin is a private, one-on-one aesthetics studio in Bolton, Ontario. Appointments are by booking, and directions are shared when you book. Clients visit from Caledon, Kleinburg, Vaughan, Brampton, Nobleton, King City, Orangeville, Georgetown, Mississauga and across Toronto and the GTA."],
     ["Can I book an appointment for a friend?", "Yes — in the online booking wizard, choose 'For a Friend' and add your friend's name, phone and email. The confirmation goes straight to them, and they just show up."],
-    ["What payment methods do you take?", "Card online at booking (Visa, Mastercard, American Express, Apple Pay), or cash or Interac e-transfer at the studio. Card charges show as IN2SKIN on the statement. Plain Interac-only debit cards cannot be charged by card — those clients pay by e-transfer."],
+    ["What payment methods do you take?", "Pay a $30 deposit to lock in your time; it is credited to your treatment and you pay the balance at your visit by cash, e-transfer or card. Card charges show as IN2SKIN on the statement. Plain Interac-only debit cards cannot be charged by card — those clients pay by e-transfer."],
     ["What if I need to change my booking?", "Call (289) 212-4124 and the studio will move it for you."],
     ["What are the benefits of a facial?", "A facial deep-cleanses, exfoliates and hydrates your skin, boosts circulation and leaves skin brighter, softer and glowing. Regular facials keep pores clear, help breakouts settle and slow the look of ageing — and the hour itself is deeply relaxing."],
     ["What should I expect during a facial?", "A consultation first, then a deep cleanse, steam, extractions if needed, gentle exfoliation, a relaxing face, neck and décolletage massage, a hydration mask matched to your skin, and serum and moisturizer to finish. Every step is explained as it happens, and you can ask for anything to be gentler or skipped."],
-    ["Why are your facials less expensive than other Bolton spas?", "In2Skin is a small private studio — one room, one guest at a time — so a Classic Facial is $85 for 55 minutes. For comparison, a medi-spa in Bolton lists its 60-minute facials at $120."],
+    ["Why are your facials less expensive than other Bolton spas?", "In2Skin is a small private studio — one room, one guest at a time — so a Classic Facial is $85 for 55 minutes."],
     ["Is red light therapy safe?", "Yes — red light therapy is non-invasive and painless, with no recovery time. You lie back under warm red light for 20 restful minutes. It supports collagen and a calmer, more even complexion."],
     ["What is reflexology?", "Reflexology is gentle, rhythmic pressure on points on your feet that map to the rest of your body — the arch to your back, the toes to your head and neck. It helps the whole body unwind, and many clients sleep beautifully that night. It is $35 for 20 minutes, on its own or added to a facial."],
     ["How much downtime is there after a chemical peel?", "It depends on the strength of the peel. Gentle peels have little to no downtime — skin looks fresh right away. Deeper peels can mean a few days of flaking or peeling as fresh skin emerges. Your consultation matches the peel to your skin and confirms exactly what to expect, before anything begins."],
     ["What is the best facial in Bolton?", "There is no single best facial — the best first facial at In2Skin is the Classic Facial, $85 for 55 minutes, tailored to your skin that day. If fine lines are your main concern, the Anti-Aging Facial, $125 for 80 minutes, adds firming massage and targeted serums."],
     ["Where can I get microneedling near Bolton?", "At In2Skin, a private, one-on-one aesthetics studio in Bolton, Ontario — call (289) 212-4124 to book. Microneedling is collagen induction therapy that prompts the skin’s natural repair and new collagen, improving the look of fine lines, acne scarring, uneven texture and enlarged pores over a series of treatments. It's $65 for 20 minutes, and Sarah picks the needle size (micro or nano) that's best for your face at the visit."],
     ["What is the difference between a facial and a chemical peel?", "A facial deep-cleanses, exfoliates, steams, massages and hydrates your skin, finished with a hydration mask — the Classic Facial is $85 for 55 minutes. A chemical peel is a professional Circadia peel solution that lifts away dull surface layers so fresher, brighter skin emerges; peels are $125–$475 for 55 minutes, including the consultation that matches the peel to your skin, with the exact price confirmed up front."],
-    ["Do I need to book a facial in advance in Bolton?", "Yes — advance booking is recommended at In2Skin to get the time you want. You can book online anytime on the website or call (289) 212-4124, and you pay in full securely by card when you book online."],
+    ["Do I need to book a facial in advance in Bolton?", "Yes — advance booking is recommended at In2Skin to get the time you want. You can book online anytime on the website or call (289) 212-4124. Pay a $30 deposit to lock in your time; it is credited to your treatment and you pay the balance at your visit by cash, e-transfer or card."],
     ["How much does The Works facial cost in Bolton?", "The Works is $160 with a Classic Facial (55 minutes) or $195 with an Anti-Aging Facial (80 minutes) at In2Skin in Bolton. It is a facial, red light therapy and reflexology all at the same time, while the mask works."],
     ["Can I book a facial early in the morning or on a Sunday in Bolton?", "Early mornings and evenings are available as Private Hours, by request — call (289) 212-4124 or email bookings@boltonfacials.com and Sarah will set it up. You pay the regular price of the services you pick, plus $15 per visit. Sundays the studio is closed."],
     ["Is there a facial for teenagers with acne in Bolton?", "Yes — the Classic Facial, $85 for 55 minutes, is the recommended affordable first step for teen acne at In2Skin in Bolton. It focuses on a thorough deep cleanse, gentle exfoliation and calming, hydrating care, with every step explained as it happens."],
@@ -1039,6 +1186,90 @@ pages.push({
   crossTitle: "Facials near Bolton",
   cross: LOCATIONS.map((x) => [`/${x.slug}/`, `Facials in ${x.town}`]),
 });
+
+// NEW pages from scripts/page-content.json — concerns, occasions and
+// info ONLY. The "towns" key is IGNORED entirely (Tony's scope cut).
+const PAGE_CONTENT = JSON.parse(readFileSync(join(ROOT, "scripts", "page-content.json"), "utf-8"));
+const NEW_HERO = {
+  "dry-skin": ["cond-cream.webp", "A jar of gentle professional skincare cream beside soft white towels"],
+  "teen-acne": ["facial-close.jpg", "Close-up of clear, dewy, glowing skin in soft candlelight after a facial"],
+  "before-your-wedding": ["ready-bride.webp", "A bride with fresh, glowing skin in soft natural light"],
+  "business-workday-prep": ["ready-business.webp", "A professional looking rested and ready before the workday"],
+  "before-your-vacation": ["ready-beach.jpg", "Bright, rested skin in warm sunlight before a vacation"],
+  "after-hours-appointments": ["private-hours.jpg", "A calm treatment room in warm evening light"],
+  "how-to-choose": ["spa-room-new.jpg", "A calm, private treatment room with a facial bed, warm light and soft towels"],
+  "consultation": ["visit-tea.webp", "A warm cup of tea on a wooden table in soft light, after a treatment"],
+  "contact": ["area-village.webp", "A quiet village street in Bolton, Ontario, in soft evening light"],
+  "gift": ["gift-box.jpg", "A gift box with a ribbon, ready to give"],
+};
+const INFO_RELATED = {
+  "how-to-choose": [["/consultation/", "Book a consultation"], ["/classic-facial/", "Classic Facial"], ["/the-works/", "The Works"]],
+  "consultation": [["/how-to-choose/", "How to choose"], ["/classic-facial/", "Classic Facial"], ["/contact/", "Contact In2Skin"]],
+  "contact": [["/how-to-choose/", "How to choose"], ["/questions/", "Questions about facials"], ["/gift/", "Gift certificates"]],
+  "gift": [["/classic-facial/", "Classic Facial"], ["/the-works/", "The Works"], ["/contact/", "Contact In2Skin"]],
+};
+// Per-page panel config for the info pages (no recommend list).
+const INFO_PANEL = {
+  "how-to-choose": { buttonLabel: "See prices and book", buttonHref: "/#services", fine: DEPOSIT_SENTENCE, fineTeaser: true },
+  "consultation": {
+    leadPick: "consultation",
+    buttonLabel: "See price and book",
+    fine: "Consultation — $30, paid up front by card, credited in full toward your first treatment.",
+    fineTeaser: true,
+  },
+  "contact": { buttonLabel: "Book online", buttonHref: "/book/", fine: DEPOSIT_SENTENCE, fineTeaser: true },
+  "gift": { buttonLabel: "Buy a gift certificate", buttonHref: "/#/gift", fine: "Gift codes never expire.", fineTeaser: false },
+};
+function newPage(entry, group) {
+  const hero = NEW_HERO[entry.slug];
+  if (!hero) throw new Error(`no hero image mapped for /${entry.slug}/`);
+  const short = entry.h1.replace(/^Facials for /, "").replace(/^Facials /, "");
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const cat =
+    group === "concerns"
+      ? `Skin Concerns · ${cap(short)}`
+      : group === "occasions"
+        ? `Occasions · ${cap(short)}`
+        : `In2Skin · ${cap(short)}`;
+  const crumbs =
+    group === "concerns"
+      ? `<a href="/">Home</a> · <a href="/">Skin Concerns</a> · ${esc(entry.h1)}`
+      : group === "occasions"
+        ? `<a href="/">Home</a> · <a href="/">Occasions</a> · ${esc(entry.h1)}`
+        : `<a href="/">Home</a> · ${esc(entry.h1)}`;
+  const recommend = entry.recommend || [];
+  const leadPick =
+    INFO_PANEL[entry.slug] && INFO_PANEL[entry.slug].leadPick
+      ? INFO_PANEL[entry.slug].leadPick
+      : recommend.length
+        ? PICK_MAP[recommend[0]] || recommend[0]
+        : null;
+  const p = {
+    slug: entry.slug,
+    title: entry.title,
+    desc: `${entry.h1} at In2Skin — a private, one-on-one aesthetics studio in Bolton, Ontario. Book online or call (289) 212-4124.`,
+    cat,
+    h1: entry.h1,
+    img: hero[0],
+    imgAlt: hero[1],
+    crumbs,
+    intro: entry.intro,
+    sections: entry.sections,
+    faq: entry.faq,
+    crossTitle: group === "concerns" ? "Other skin concerns" : group === "occasions" ? "More occasions" : "More from In2Skin",
+    cross: entry.related || INFO_RELATED[entry.slug] || [],
+    serviceName: entry.slug === "consultation" ? "Consultation" : undefined,
+    areaServedExtra: "Bolton",
+    recommend,
+    leadPick,
+    leadMins: leadPick ? LEAD_MINS[leadPick] : null,
+    ...(INFO_PANEL[entry.slug] || {}),
+  };
+  return p;
+}
+for (const entry of PAGE_CONTENT.concerns) pages.push(newPage(entry, "concerns"));
+for (const entry of PAGE_CONTENT.occasions) pages.push(newPage(entry, "occasions"));
+for (const entry of PAGE_CONTENT.info) pages.push(newPage(entry, "info"));
 
 for (const p of pages) {
   const dir = join(ROOT, p.slug);

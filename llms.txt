@@ -17,118 +17,61 @@
 ## Booking
 
 - Book online anytime on the website, or call (289) 212-4124
-- Booking is paid in full securely by card at booking (Stripe checkout); you receive an email confirmation and the studio is notified instantly
-- Payment: card online at booking; cash or Interac e-transfer also welcome at the studio. Plain Interac-only debit cards cannot be charged by card — those clients pay by e-transfer
-- First visit offer: $10 toward any service (mention it when booking)
+- Pay a $30 deposit to lock in your time; it is credited to your treatment and you pay the balance at your visit by cash, e-transfer or card.
+- Book without a deposit and your slot is held for 30 minutes, then it opens back up.
 - Advance booking is recommended to get the time you want
+- First visit: a $30 consultation (20 minutes, video or in person), credited in full toward your first treatment. That is the one first-visit offer.
 - Gift certificates: gift a Classic Facial ($85), an Anti-Aging Facial ($125),
   The Works ($160), or any custom amount. Paid securely by card online; a certificate
   code is emailed to the recipient, ready to redeem when they book. Gift codes never expire
 - Book for a friend: the booking wizard has a "For a Friend" option — enter the
   friend's name, phone and email; the confirmation goes straight to them and they
   just show up
-- The website has a rule-based assistant chat (no AI service) that answers questions,
-  recommends the right service for a visitor's skin concern, and guides them to booking
+- Regular hours: Monday to Saturday, appointments starting 10:00 AM–4:00 PM. Sundays the studio is closed.
+- Early mornings and evenings can be arranged by contacting the studio; the regular price plus $15 per visit.
 
-## Hours
+## Services (prices in Canadian dollars, CAD)
 
-- Regular hours: daytime appointments, by booking
-- Private Hours (premier appointments, reserved just for you, +$15 per visit):
-  weekday mornings 7:00–9:00 AM, weekday evenings after 7:00 PM, and Sundays
+- Classic Facial: $85 for 55 minutes
+- Anti-Aging Facial: $125 for 80 minutes
+- Microneedling / NANO Needling: $65 for 20 minutes
+- Microdermabrasion: $55 for 20 minutes
+- Light Therapy: $55 for 20 minutes
+- Reflexology: $35 for 20 minutes
+- Chemical Peels: $125–$475 for 55 minutes
 
-## Services and Prices (CAD)
+## The Works (facial + red light therapy + reflexology, all at once)
 
-- Classic Facial — 55 minutes — $85. Deep cleanse, exfoliation, steam, face/neck/shoulder
-  massage, custom mask, hydration. Also the recommended affordable option for teen acne.
-- Anti-Aging Facial — 80 minutes — $125. Circadia anti-aging serums, firming massage,
-  targeted care for fine lines and uneven tone.
-- NANO Needling — 15 minutes (add-on) — $65. Nano infusion of professional serum for
-  plumper, smoother, more radiant skin.
-- Microdermabrasion — 15 minutes (add-on) — $55. Gentle polish for smoother, brighter skin.
-- Light Therapy (red light therapy) — 15 minutes (add-on) — $55. Warm red light;
-  supports collagen, calms skin, evens tone.
-- Reflexology — 15 minutes (add-on) — $35. Gentle pressure on reflex points of the feet
-  for whole-body relaxation.
-- Chemical Peels — 25 minutes — $125–$475. Professional Circadia peels matched to the
-  client's skin at consultation; exact price confirmed up front before anything begins.
-- The Works (signature combo) — facial + red light therapy + reflexology, all at the
-  same time while the mask works: with Classic Facial (55 min) $160; with Anti-Aging
-  Facial (80 min) $195.
+- The Works — with Classic Facial: $160 for 55 minutes
+- The Works — with Anti-Aging Facial: $195 for 80 minutes
 
-- Microneedling — collagen induction treatment (see Treatment facts below).
-  From $150 — exact price confirmed at consultation.
+## Consultation
 
-Private Hours price = regular price + $15 per visit (e.g., Classic Facial $100,
-Anti-Aging Facial $140, Reflexology $50, The Works $175 / $210).
+- Consultation: $30 for 20 minutes, video (Google Meet) or in person, paid up front by card, credited in full toward your first treatment. First-time clients only.
 
-## Treatment facts (general — what each treatment does)
+## Gift certificates
 
-- What a chemical peel does: a professional peel solution lifts away dull, built-up
-  surface layers of skin. As those layers shed over the following days, fresher,
-  brighter, smoother skin emerges — tone looks more even, texture feels refined, and
-  fine lines and sun spots appear softened. Strength ranges from gentle to advanced.
-- What reflexology does: gentle pressure is applied to specific points on the feet.
-  Each area of the foot corresponds to a part of the body — the arch to the back, the
-  toes to the head and neck. Working these points helps the whole body unwind; clients
-  feel calmer, lighter and more balanced, and often sleep well afterwards.
-- What red light therapy does: warm red light rests over the skin and supports the
-  skin's natural collagen production and renewal, encouraging firmer-looking skin and
-  a calmer, more even complexion. Sessions are deeply restful.
-- How a facial helps dry skin: a gentle deep cleanse, soft exfoliation, warm steam
-  and rich hydration with a custom mask. Clearing dull surface build-up lets moisture
-  absorb properly, so skin leaves soft, supple and comfortably hydrated.
-- How a facial helps acne-prone skin: a thorough deep cleanse, gentle exfoliation and
-  calming, hydrating care. Regular treatments help keep pores clear and skin balanced —
-  an affordable, gentle first step for breakout-prone skin, especially teenagers.
-- What helps rosacea and redness: calm, soothing care — gentle products, soft touch,
-  and calming treatments such as red light therapy, which encourages a more
-  even-looking complexion. Custom one-on-one treatments let products be chosen for
-  sensitive, redness-prone skin on the day.
-- What NANO needling does: ultra-fine nano tips open shallow channels on the skin's
-  surface so professional serums absorb more deeply. Skin looks plumper, smoother and
-  more radiant, and fine lines appear softer. Helps dull, dehydrated skin and early
-  fine lines; often added to a facial.
-- What microdermabrasion does: a precision polishing wand sweeps away the dull, rough
-  outer layer of dead skin cells. Skin feels smoother right away, looks brighter and
-  more even, makeup sits better, and skincare products absorb more effectively. A
-  favourite before weddings, events and photos.
-- What an anti-aging facial does: deep cleansing, exfoliation, firming massage
-  techniques, targeted anti-aging serums and rich hydration. Helps skin look firmer
-  and smoother, softens the appearance of fine lines, and restores a brighter, more
-  even, youthful-looking glow. Results build with regular visits every 4–6 weeks.
-- What microneedling does: also called collagen induction therapy — fine needles
-  create controlled micro-channels in the skin, prompting the skin's natural repair
-  process and new collagen production. Improves the look of fine lines, acne scarring,
-  uneven texture and enlarged pores over a series of treatments.
-  Suits anyone noticing looseness or sagging.
+- Classic Facial Gift Certificate: $85
+- Anti-Aging Facial Gift Certificate: $125
+- The Works Gift Certificate: $160
 
-## Good to know
+- Gift codes never expire. Any leftover value stays on the code for a future visit.
 
-- Specialties: skin rejuvenation, anti-aging, chemical peels, teen acne care
-- Every treatment is one-on-one and custom
-- FAQs use positive framing; the Classic Facial feels warm, gentle and deeply relaxing
+## Facials near Bolton
 
-## Facials near Bolton (one page per town)
+- Caledon: https://boltonfacials.com/facials-caledon/
+- Kleinburg: https://boltonfacials.com/facials-kleinburg/
+- Vaughan: https://boltonfacials.com/facials-vaughan/
+- Brampton: https://boltonfacials.com/facials-brampton/
+- Nobleton: https://boltonfacials.com/facials-nobleton/
+- King City: https://boltonfacials.com/facials-king-city/
+- Orangeville: https://boltonfacials.com/facials-orangeville/
+- Georgetown: https://boltonfacials.com/facials-georgetown/
+- Toronto: https://boltonfacials.com/facials-toronto/
+- Mississauga: https://boltonfacials.com/facials-mississauga/
 
-- Facials in Caledon — https://boltonfacials.com/facials-caledon/ (the studio is in Bolton, in the Town of Caledon; a short drive on local roads from anywhere in Caledon)
-- Facials near Kleinburg — https://boltonfacials.com/facials-kleinburg/ (about 15 minutes up Highway 50)
-- Facials near Vaughan — https://boltonfacials.com/facials-vaughan/ (about 20 minutes north of Woodbridge on Highway 50)
-- Facials near Brampton — https://boltonfacials.com/facials-brampton/ (about 25 minutes north on Highway 50, by way of Mayfield Road)
-- Facials near Nobleton — https://boltonfacials.com/facials-nobleton/ (about 10 minutes away on King Road)
-- Facials near King City — https://boltonfacials.com/facials-king-city/ (about 20 minutes west on King Road)
-- Facials near Orangeville — https://boltonfacials.com/facials-orangeville/ (about 30 minutes east on Highway 9)
-- Facials near Georgetown — https://boltonfacials.com/facials-georgetown/ (about 30 minutes east on Highway 7)
-- Facials for Toronto — https://boltonfacials.com/facials-toronto/ (about 45 minutes to an hour from downtown; Classic Facial $85, Anti-Aging $125 — about half the downtown price)
-- Facials near Mississauga — https://boltonfacials.com/facials-mississauga/ (about 35 to 45 minutes away; Classic Facial $85, Anti-Aging $125)
+## Payment
 
-## Skin concerns (one page per concern)
-
-- Facials for acne-prone skin — https://boltonfacials.com/acne-prone-skin/ (Classic Facial $85; Microdermabrasion $55; Light Therapy $55; gentle chemical peels $125–$475; affordable first step, especially for teenagers)
-- Facials for rosacea and sensitive skin — https://boltonfacials.com/rosacea-sensitive-skin/ (calm, soothing care; Classic Facial $85; Light Therapy $55)
-- Facials for dull skin — https://boltonfacials.com/dull-skin/ (Microdermabrasion $55 for an instant radiant glow; Classic Facial $85; NANO Needling $65)
-- Facials for fine lines — https://boltonfacials.com/fine-lines/ (Anti-Aging Facial $125; NANO Needling $65; microneedling from $150)
-- Facials for tired skin — https://boltonfacials.com/tired-skin/ (The Works $160 with a Classic Facial / $195 with an Anti-Aging Facial — facial, red light and reflexology all at once)
-
-## Questions about facials in Bolton
-
-- https://boltonfacials.com/questions/ — prices, what a facial does, how long it takes, how often to book, first visits, Private Hours, gift certificates, booking, where the studio is, booking for a friend, payment methods, changing a booking.
+- Pay a $30 deposit to lock in your time; it is credited to your treatment and you pay the balance at your visit by cash, e-transfer or card.
+- Plain Interac-only debit cards cannot be charged by card — those clients pay by e-transfer.
+- The charge shows as IN2SKIN on card statements.

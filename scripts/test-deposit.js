@@ -40,6 +40,18 @@ require.cache[stripePath] = {
 delete process.env.RESEND_API_KEY;
 process.env.AGENT_API_KEY = "test-agent-key";
 
+// Capture emails instead of sending: the real sendEmail returns false
+// with no key (skipped, never throws) — the stub does the same while
+// keeping the last message for wording assertions.
+const emailPath = require.resolve("../lib/email");
+let lastEmail = null;
+require.cache[emailPath] = {
+  exports: {
+    sendEmail: async (args) => { lastEmail = args; return false; },
+    FROM: "In2Skin <bookings@boltonfacials.com>",
+  },
+};
+
 const { depositCentsFor, needsReview, DEPOSIT_CENTS, DEPOSIT_SENTENCE } = require("../lib/schedule");
 const B = require("../lib/bookings");
 const { buildBooking, saveBooking, markBookingCheckoutPaid, bankDepositCredit, deductDepositCredit, getDepositCredit, cancelBooking, markBookingOutcome } = B;
@@ -80,7 +92,7 @@ async function run() {
   assert.equal(depositCentsFor(2000, false), 2000, "$20 treatment -> deposit capped at $20");
   assert.equal(depositCentsFor(0, false), 0, "$0 -> no deposit");
   assert.equal(depositCentsFor(3000, true), 3000, "consult pays the full $30");
-  assert.ok(DEPOSIT_SENTENCE.startsWith("A $30 deposit holds your spot"), "deposit sentence is the locked wording");
+  assert.ok(DEPOSIT_SENTENCE.startsWith("Pay a $30 deposit to lock in your time"), "deposit sentence is the locked wording");
 
   // 2. Review flags (no hard blocks): peels + needling and Classic +
   //    needling are flagged for Sarah; ordinary pairs are not.
@@ -202,6 +214,33 @@ async function run() {
   paid = await markBookingCheckoutPaid(paid, { payment_intent: "pi_dep_6", amount_total: 8500 });
   paid = await markBookingOutcome(paid, "no-show");
   assert.equal(await getDepositCredit(paid.email, paid.phone), 0, "no deposit to bank on a fully-paid walk-in");
+
+  // 15. Option C — book now, pay at the studio (Tony Nov 19, 2026): the
+  //     time is held for 30 minutes until Sarah confirms it. No checkout,
+  //     no payment due now, status stays pending, and the hold email says
+  //     pay-at-visit — never "consultation booking".
+  const res3 = mockRes();
+  await book({ method: "POST", headers: {}, body: uniq({ service: "classic-facial", payAtStudio: true }) }, res3);
+  assert.equal(res3.statusCode, 200, "pay-at-studio booking -> 200, got " + res3.statusCode + " " + JSON.stringify(res3.body));
+  assert.equal(res3.body.hold, true, "pay-at-studio returns a hold");
+  assert.equal(res3.body.payAtStudio, true, "response names pay-at-studio");
+  assert.ok(res3.body.holdUntil, "hold has an expiry");
+  assert.ok(!res3.body.url, "no Stripe checkout for pay-at-studio");
+  const held = await B.getBooking(res3.body.bookingId);
+  assert.equal(held.status, "pending", "pay-at-studio booking stays pending until Sarah confirms");
+  assert.equal(held.payAtStudio, true, "pay-at-studio flag is stored");
+  assert.equal(held.depositPaidCents || 0, 0, "nothing paid yet");
+  assert.ok(lastEmail && lastEmail.subject.includes("held"), "hold email was sent");
+  assert.ok(!/consultation booking/i.test(lastEmail.html), "hold email never says 'consultation booking' for a treatment");
+  assert.ok(/pay the full amount at your visit/i.test(lastEmail.html), "hold email says pay at the visit");
+  assert.ok(/30 minutes/i.test(lastEmail.html), "hold email names the 30-minute hold");
+
+  // 16. Option C is refused for consultations — they pay $30 up front.
+  const res4 = mockRes();
+  await book({ method: "POST", headers: {}, body: uniq({ service: "consultation", format: "video", first: "yes", payAtStudio: true }) }, res4);
+  assert.equal(res4.statusCode, 200, "consult + payAtStudio -> 200");
+  assert.ok(res4.body.url, "consultation still goes to Stripe checkout");
+  assert.ok(!res4.body.payAtStudio, "consultation is not a pay-at-studio hold");
 
   console.log("deposit tests: passed");
 }

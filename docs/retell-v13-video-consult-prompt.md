@@ -94,9 +94,9 @@ bookings are held.
 
 > ### How booking and payment work — the $30 deposit
 >
-> **One sentence, use it everywhere:** "A $30 deposit holds your spot
-> when you book online — it comes off your treatment, and the rest is
-> paid at your visit by cash, e-transfer or card."
+> **One sentence, use it everywhere:** "Pay a $30 deposit to lock in your
+> time; it is credited to your treatment and you pay the balance at your
+> visit by cash, e-transfer or card."
 >
 > - Online bookings pay a **$30 deposit** to hold the spot, credited
 >   toward the treatment. The **balance is paid at the visit** — cash,

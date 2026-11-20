@@ -1,0 +1,354 @@
+{
+  "site": "https://boltonfacials.com",
+  "name": "In2Skin",
+  "phone": "(289) 212-4124",
+  "email": "bookings@boltonfacials.com",
+  "services": [
+    {
+      "id": "classic-facial",
+      "name": "Classic Facial",
+      "category": "Signature Facial",
+      "minutes": 55,
+      "price": "$85",
+      "priceCents": 8500
+    },
+    {
+      "id": "anti-aging-facial",
+      "name": "Anti-Aging Facial",
+      "category": "Signature Facial",
+      "minutes": 80,
+      "price": "$125",
+      "priceCents": 12500
+    },
+    {
+      "id": "needling",
+      "name": "Microneedling / NANO Needling",
+      "category": "Enhancement · Add-On",
+      "minutes": 20,
+      "price": "$65",
+      "priceCents": 6500
+    },
+    {
+      "id": "microdermabrasion",
+      "name": "Microdermabrasion",
+      "category": "Enhancement · Add-On",
+      "minutes": 20,
+      "price": "$55",
+      "priceCents": 5500
+    },
+    {
+      "id": "light-therapy",
+      "name": "Light Therapy",
+      "category": "Enhancement · Add-On",
+      "minutes": 20,
+      "price": "$55",
+      "priceCents": 5500
+    },
+    {
+      "id": "reflexology",
+      "name": "Reflexology",
+      "category": "Enhancement · Add-On",
+      "minutes": 20,
+      "price": "$35",
+      "priceCents": 3500
+    },
+    {
+      "id": "chemical-peels",
+      "name": "Chemical Peels",
+      "category": "Advanced Treatment",
+      "minutes": 55,
+      "price": "$125–$475",
+      "priceCents": 12500
+    },
+    {
+      "id": "consultation",
+      "name": "Consultation",
+      "category": "Consultation",
+      "minutes": 20,
+      "price": "$30",
+      "priceCents": 3000
+    }
+  ],
+  "combos": [
+    {
+      "id": "combo-classic",
+      "name": "The Works — with Classic Facial",
+      "category": "Signature Combo",
+      "minutes": 55,
+      "price": "$160",
+      "priceCents": 16000
+    },
+    {
+      "id": "combo-anti",
+      "name": "The Works — with Anti-Aging Facial",
+      "category": "Signature Combo",
+      "minutes": 80,
+      "price": "$195",
+      "priceCents": 19500
+    }
+  ],
+  "durations": {
+    "classic-facial": 55,
+    "anti-aging-facial": 80,
+    "needling": 20,
+    "microdermabrasion": 20,
+    "light-therapy": 20,
+    "reflexology": 20,
+    "chemical-peels": 55,
+    "consultation": 20,
+    "combo-classic": 55,
+    "combo-anti": 80
+  },
+  "prices": {
+    "classic-facial": "$85",
+    "anti-aging-facial": "$125",
+    "needling": "$65",
+    "microdermabrasion": "$55",
+    "light-therapy": "$55",
+    "reflexology": "$35",
+    "chemical-peels": "$125–$475",
+    "consultation": "$30",
+    "combo-classic": "$160",
+    "combo-anti": "$195"
+  },
+  "deposit": {
+    "cents": 3000,
+    "label": "$30",
+    "sentence": "Pay a $30 deposit to lock in your time; it is credited to your treatment and you pay the balance at your visit by cash, e-transfer or card."
+  },
+  "consult": {
+    "id": "consultation",
+    "name": "Consultation",
+    "minutes": 20,
+    "price": "$30",
+    "priceCents": 3000
+  },
+  "payment": "Pay a $30 deposit to lock in your time; it is credited to your treatment and you pay the balance at your visit by cash, e-transfer or card.",
+  "privateHoursPremiumCents": 1500,
+  "nav": {
+    "services": "/services/",
+    "howToChoose": "/how-to-choose/",
+    "concerns": [
+      {
+        "label": "Dry skin",
+        "href": "/dry-skin/"
+      },
+      {
+        "label": "Acne",
+        "href": "/acne-prone-skin/"
+      },
+      {
+        "label": "Teen acne",
+        "href": "/teen-acne/"
+      },
+      {
+        "label": "Rosacea and sensitive",
+        "href": "/rosacea-sensitive-skin/"
+      },
+      {
+        "label": "Dull",
+        "href": "/dull-skin/"
+      },
+      {
+        "label": "Fine lines",
+        "href": "/fine-lines/"
+      },
+      {
+        "label": "Tired",
+        "href": "/tired-skin/"
+      }
+    ],
+    "occasions": [
+      {
+        "label": "Before your wedding",
+        "href": "/before-your-wedding/"
+      },
+      {
+        "label": "Business and workday prep",
+        "href": "/business-workday-prep/"
+      },
+      {
+        "label": "Before a vacation",
+        "href": "/before-your-vacation/"
+      },
+      {
+        "label": "After-hours",
+        "href": "/after-hours-appointments/"
+      }
+    ],
+    "gift": "/gift/",
+    "contact": "/contact/",
+    "book": "/book/",
+    "call": "tel:+12892124124"
+  },
+  "footer": {
+    "treatments": [
+      {
+        "label": "Classic Facial",
+        "href": "/classic-facial/"
+      },
+      {
+        "label": "Anti-Aging Facial",
+        "href": "/anti-aging-facial/"
+      },
+      {
+        "label": "The Works",
+        "href": "/the-works/"
+      },
+      {
+        "label": "Chemical Peels",
+        "href": "/chemical-peels/"
+      },
+      {
+        "label": "Microneedling",
+        "href": "/microneedling/"
+      },
+      {
+        "label": "NANO Needling",
+        "href": "/nano-needling/"
+      },
+      {
+        "label": "Microdermabrasion",
+        "href": "/microdermabrasion/"
+      },
+      {
+        "label": "Light Therapy",
+        "href": "/light-therapy/"
+      },
+      {
+        "label": "Reflexology",
+        "href": "/reflexology/"
+      }
+    ],
+    "helpMeChoose": [
+      {
+        "label": "How to choose",
+        "href": "/how-to-choose/"
+      },
+      {
+        "label": "Consultation",
+        "href": "/consultation/"
+      }
+    ],
+    "concerns": [
+      {
+        "label": "Dry skin",
+        "href": "/dry-skin/"
+      },
+      {
+        "label": "Acne",
+        "href": "/acne-prone-skin/"
+      },
+      {
+        "label": "Teen acne",
+        "href": "/teen-acne/"
+      },
+      {
+        "label": "Rosacea and sensitive",
+        "href": "/rosacea-sensitive-skin/"
+      },
+      {
+        "label": "Dull",
+        "href": "/dull-skin/"
+      },
+      {
+        "label": "Fine lines",
+        "href": "/fine-lines/"
+      },
+      {
+        "label": "Tired",
+        "href": "/tired-skin/"
+      }
+    ],
+    "occasions": [
+      {
+        "label": "Before your wedding",
+        "href": "/before-your-wedding/"
+      },
+      {
+        "label": "Business and workday prep",
+        "href": "/business-workday-prep/"
+      },
+      {
+        "label": "Before a vacation",
+        "href": "/before-your-vacation/"
+      },
+      {
+        "label": "After-hours",
+        "href": "/after-hours-appointments/"
+      }
+    ],
+    "visit": [
+      {
+        "label": "Contact and hours",
+        "href": "/contact/"
+      },
+      {
+        "label": "Questions about facials? See our answers",
+        "href": "/questions/"
+      },
+      {
+        "label": "Gift certificates",
+        "href": "/gift/"
+      },
+      {
+        "label": "Privacy — how we handle your information",
+        "href": "/privacy.html"
+      }
+    ],
+    "towns": [
+      {
+        "label": "Caledon",
+        "href": "/facials-caledon/"
+      },
+      {
+        "label": "Kleinburg",
+        "href": "/facials-kleinburg/"
+      },
+      {
+        "label": "Vaughan",
+        "href": "/facials-vaughan/"
+      },
+      {
+        "label": "Brampton",
+        "href": "/facials-brampton/"
+      },
+      {
+        "label": "Nobleton",
+        "href": "/facials-nobleton/"
+      },
+      {
+        "label": "King City",
+        "href": "/facials-king-city/"
+      },
+      {
+        "label": "Orangeville",
+        "href": "/facials-orangeville/"
+      },
+      {
+        "label": "Georgetown",
+        "href": "/facials-georgetown/"
+      },
+      {
+        "label": "Toronto",
+        "href": "/facials-toronto/"
+      },
+      {
+        "label": "Mississauga",
+        "href": "/facials-mississauga/"
+      }
+    ]
+  },
+  "towns": [
+    "Caledon",
+    "Kleinburg",
+    "Vaughan",
+    "Brampton",
+    "Nobleton",
+    "King City",
+    "Orangeville",
+    "Georgetown",
+    "Toronto",
+    "Mississauga"
+  ]
+}

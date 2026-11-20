@@ -29,6 +29,7 @@
 {
   "@context": "https://schema.org",
   "@type": "Service",
+  "name": "Classic Facial",
   "description": "Facials near Mississauga at In2Skin — a private, one-on-one aesthetics studio in Bolton, about 35 to 45 minutes away. Classic Facial $85, Anti-Aging $125 — about half what a facial costs in Mississauga. Book online or call (289) 212-4124.",
   "url": "https://boltonfacials.com/facials-mississauga/",
   "provider": {
@@ -37,19 +38,6 @@
     "url": "https://boltonfacials.com/",
     "telephone": "+1-289-212-4124",
     "priceRange": "$35 - $475",
-    "address": {
-      "@type": "PostalAddress",
-      "streetAddress": "92 Willow Street",
-      "addressLocality": "Bolton",
-      "addressRegion": "ON",
-      "postalCode": "L7E 3G3",
-      "addressCountry": "CA"
-    },
-    "geo": {
-      "@type": "GeoCoordinates",
-      "latitude": 43.88088,
-      "longitude": -79.73492
-    },
     "areaServed": [
       "Bolton",
       "Caledon",
@@ -85,7 +73,7 @@
       "name": "What does a facial cost in Mississauga?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "About $130 on average, with medspas running $105 to $350. At In2Skin the Classic Facial is $85 for 55 minutes and the Anti-Aging Facial is $125 for 80 minutes."
+        "text": "On average, a facial costs more, with medspas costing more. At In2Skin the Classic Facial is $85 for 55 minutes and the Anti-Aging Facial is $125 for 80 minutes."
       }
     },
     {
@@ -121,16 +109,42 @@
     </script>
   </head>
   <body>
+    <!-- ================= HEADER ================= -->
     <header class="site">
-      <div class="wrap header-in">
+      <div class="header-in">
         <a class="brand" href="/" aria-label="In2Skin — home"><span class="brand-text"><span class="wordmark">In2Skin</span><span class="tagline">Aesthetics · Bolton</span></span></a>
-        <nav class="main" aria-label="Main">
-          <a href="/">Home</a>
-          <a href="/#book">Book Online</a>
-          <a href="/#visit">Visit Us</a>
+        <nav class="main" id="mainNav" aria-label="Main">
+          <a href="/services/">Services</a>
+          <a href="/how-to-choose/">How to choose</a>
+          <div class="nav-drop">
+            <button class="navlink" id="concernToggle" aria-haspopup="true" aria-expanded="false">Skin concerns ▾</button>
+            <div class="nav-menu" id="concernMenu" role="menu">
+              <a href="/dry-skin/" role="menuitem">Dry skin</a>
+              <a href="/acne-prone-skin/" role="menuitem">Acne</a>
+              <a href="/teen-acne/" role="menuitem">Teen acne</a>
+              <a href="/rosacea-sensitive-skin/" role="menuitem">Rosacea and sensitive</a>
+              <a href="/dull-skin/" role="menuitem">Dull</a>
+              <a href="/fine-lines/" role="menuitem">Fine lines</a>
+              <a href="/tired-skin/" role="menuitem">Tired</a>
+            </div>
+          </div>
+          <div class="nav-drop">
+            <button class="navlink" id="occToggle" aria-haspopup="true" aria-expanded="false">Occasions ▾</button>
+            <div class="nav-menu" id="occMenu" role="menu">
+              <a href="/before-your-wedding/" role="menuitem">Before your wedding</a>
+              <a href="/business-workday-prep/" role="menuitem">Business and workday prep</a>
+              <a href="/before-your-vacation/" role="menuitem">Before a vacation</a>
+              <a href="/after-hours-appointments/" role="menuitem">After-hours</a>
+            </div>
+          </div>
+          <a href="/gift/">Gift</a>
+          <a href="/contact/">Contact</a>
         </nav>
-        <a class="btn btn-book btn-book-sm header-book" href="/#book" style="white-space:nowrap;">Book Online</a>
+        <a class="btn btn-book header-book" href="/book/">Book Online</a>
         <a class="btn btn-ghost header-call" href="tel:+12892124124" aria-label="Call In2Skin to book">Call<span class="btn-label-num">&nbsp;· (289) 212-4124</span></a>
+        <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false">
+          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
       </div>
     </header>
     <main>
@@ -142,72 +156,167 @@
       <div class="wrap"><div class="crumbs"><a href="/">Home</a> · <a href="/">Facials near Bolton</a> · Facials in Mississauga</div>
       <div class="svc-layout">
         <div class="svc-main">
-          <p>Mississauga has plenty of spas — most of them busy, and most of them charging about $130 for a facial, with medspas running $105 to $350. In2Skin is a private studio in Bolton, about 35 to 45 minutes away, where one guest is treated at a time and a Classic Facial is $85.</p>
+          <p data-price-teaser>Mississauga has plenty of spas — most of them busy, and most of them charging more for a facial, with medspas costing more. In2Skin is a private studio in Bolton, about 35 to 45 minutes away, where one guest is treated at a time and a Classic Facial is $85.</p>
           <p>Clients come up from Port Credit, Streetsville, Erin Mills, Cooksville and Meadowvale for the quiet as much as the price: a proper facial, a real break, and no one rushing you out the door.</p>
           <h2>The drive from Mississauga</h2><p>Highway 407 or Highway 401 to Highway 50 brings you to Bolton in about 35 to 45 minutes from most of Mississauga. Directions are shared when you book, and the studio is by appointment, so there is never a wait when you arrive.</p>
-          <p>Early morning and evening appointments — Private Hours — suit Mississauga clients who work all week: the regular price plus $15 per visit.</p>
-          <h2>The price gap, honestly</h2><p>A facial in Mississauga averages about $130, and a signature facial at a medspa can run $160 to $350. At In2Skin the Classic Facial is $85 for 55 minutes and the Anti-Aging Facial is $125 for 80 minutes. The difference is not the care: it is a small private studio in Bolton instead of a city spa paying city rent.</p>
+          <p data-price-teaser>Early morning and evening appointments — Private Hours — suit Mississauga clients who work all week: the regular price plus $15 per visit.</p>
+          <h2>The price gap, honestly</h2><p data-price-teaser>A facial in Mississauga costs more on average, and a signature facial at a medspa can cost more. At In2Skin the Classic Facial is $85 for 55 minutes and the Anti-Aging Facial is $125 for 80 minutes. The difference is not the care: it is a small private studio in Bolton instead of a city spa paying city rent.</p>
           <p>Premium quality at about half the price — not a cheap facial. The same professional products, the same unhurried hour, the same glow — for less.</p>
-          <h2>Treatments that fit</h2><ul class="tick-list"><li><span class="tk"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5" stroke="#2F4A2C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a hydration mask, with no downtime.</span></li><li><span class="tk"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5" stroke="#2F4A2C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Anti-Aging Facial — $125 · 80 minutes. Firming massage, targeted serums and rich hydration, for firm, youthful skin.</span></li><li><span class="tk"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5" stroke="#2F4A2C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>The Works — $160 with a Classic Facial, $195 with an Anti-Aging Facial. Facial, red light therapy and reflexology, all at once.</span></li><li><span class="tk"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5" stroke="#2F4A2C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Add-ons from $35: NANO Needling $65, Microdermabrasion $55, Light Therapy $55, Reflexology $35.</span></li></ul>
-          <h2>Good to know</h2><p>Gift certificates start at $10 and never expire, and a treatment voucher — a named facial, paid ahead — makes an easy gift for someone in Mississauga who would never book for themselves.</p>
+          <h2>Treatments that fit</h2><ul class="tick-list">
+            <li data-price-teaser><span class="tk"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5" stroke="#2F4A2C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Classic Facial — $85 · 55 minutes. Deep cleanse, steam, massage and a hydration mask, with no downtime.</span></li>
+            <li data-price-teaser><span class="tk"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5" stroke="#2F4A2C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Anti-Aging Facial — $125 · 80 minutes. Firming massage, targeted serums and rich hydration, for firm, youthful skin.</span></li>
+            <li data-price-teaser><span class="tk"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5" stroke="#2F4A2C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>The Works — $160 with a Classic Facial, $195 with an Anti-Aging Facial. Facial, red light therapy and reflexology, all at once.</span></li>
+            <li data-price-teaser><span class="tk"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5" stroke="#2F4A2C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Add-ons from $35: NANO Needling $65, Microdermabrasion $55, Light Therapy $55, Reflexology $35.</span></li>
+          </ul>
+          <h2>Good to know</h2><p data-price-teaser>Gift certificates start at $10 and never expire, and a treatment voucher — a named facial, paid ahead — makes an easy gift for someone in Mississauga who would never book for themselves.</p>
           <h2>Questions</h2>
-          <div class="faq"><details><summary>How far is In2Skin from Mississauga?<span class="plus">+</span></summary><p>About 35 to 45 minutes by Highway 407 or Highway 401 to Highway 50. Directions are shared when you book.</p></details><details><summary>What does a facial cost in Mississauga?<span class="plus">+</span></summary><p>About $130 on average, with medspas running $105 to $350. At In2Skin the Classic Facial is $85 for 55 minutes and the Anti-Aging Facial is $125 for 80 minutes.</p></details><details><summary>Why drive to Bolton for a facial?<span class="plus">+</span></summary><p>For the same quality at about half the price, in a private, one-on-one studio — one guest at a time, no waiting room, no rush.</p></details><details><summary>Do you have appointments after work?<span class="plus">+</span></summary><p>Yes — Private Hours are available early mornings and evenings, by request, for the regular price plus $15 per visit. Sundays the studio is closed.</p></details></div>
+          <div class="faq"><details><summary>How far is In2Skin from Mississauga?<span class="plus">+</span></summary><p>About 35 to 45 minutes by Highway 407 or Highway 401 to Highway 50. Directions are shared when you book.</p></details><details><summary>What does a facial cost in Mississauga?<span class="plus">+</span></summary><p data-price-teaser>On average, a facial costs more, with medspas costing more. At In2Skin the Classic Facial is $85 for 55 minutes and the Anti-Aging Facial is $125 for 80 minutes.</p></details><details><summary>Why drive to Bolton for a facial?<span class="plus">+</span></summary><p>For the same quality at about half the price, in a private, one-on-one studio — one guest at a time, no waiting room, no rush.</p></details><details><summary>Do you have appointments after work?<span class="plus">+</span></summary><p data-price-teaser>Yes — Private Hours are available early mornings and evenings, by request, for the regular price plus $15 per visit. Sundays the studio is closed.</p></details></div>
           <h2>Also serving nearby</h2>
           <div class="pair-row"><a class="pair-chip" href="/facials-caledon/">Facials in Caledon</a><a class="pair-chip" href="/facials-kleinburg/">Facials in Kleinburg</a><a class="pair-chip" href="/facials-vaughan/">Facials in Vaughan</a><a class="pair-chip" href="/facials-brampton/">Facials in Brampton</a><a class="pair-chip" href="/facials-nobleton/">Facials in Nobleton</a><a class="pair-chip" href="/facials-king-city/">Facials in King City</a><a class="pair-chip" href="/facials-orangeville/">Facials in Orangeville</a><a class="pair-chip" href="/facials-georgetown/">Facials in Georgetown</a><a class="pair-chip" href="/facials-toronto/">Facials in Toronto</a></div>
         </div>
         <aside class="price-panel">
-          <div class="pp-price">$85</div>
           <div class="pp-mins">Classic Facial · 55 minutes · Bolton, Ontario</div>
-          
-          <a class="btn btn-book btn-big" href="/#book" style="width:100%;">Book Online — $85</a>
+          <p style="font-weight:600; margin:0 0 8px;">What we recommend</p>
+          <ul class="foot-links" style="margin-bottom:18px;">
+              <li><a href="/classic-facial/">Classic Facial</a></li>
+              <li><a href="/anti-aging-facial/">Anti-Aging Facial</a></li>
+          </ul>
+          <a class="btn btn-book btn-big" href="/?pick=classic-facial#services" style="width:100%;">See price and book</a>
           <a class="btn btn-ghost" href="tel:+12892124124" style="width:100%;">Call (289) 212-4124</a>
-          <p class="fine">Pay in full securely by card when you book.<br />Cash or e-transfer also welcome at your visit.</p>
+          <p class="fine" data-price-teaser>Pay a $30 deposit to lock in your time; it is credited to your treatment and you pay the balance at your visit by cash, e-transfer or card.</p>
         </aside>
       </div></div>
       <div style="height:64px;"></div>
     </main>
-    <footer class="site">
+    <!-- ================= FOOTER ================= -->
+    <footer class="site" id="visit">
       <div class="wrap">
         <div class="foot-in">
           <div>
-            <p style="font-family:'Cormorant Garamond',serif; font-size:1.5rem; font-weight:600; margin-bottom:8px;">In2Skin</p>
-            <p>Facials &amp; skin treatments by appointment in Bolton, Ontario.</p>
-            <a class="btn btn-call" href="tel:+12892124124" style="margin-top:8px;">Call to Book · (289) 212-4124</a>
+            <div style="width:170px;max-width:60vw;margin-bottom:12px;"><svg class="logo-svg" viewBox="0 0 220 124" role="img" aria-label="In2Skin logo — three stacked stones with In2Skin engraved in white" xmlns="http://www.w3.org/2000/svg"><path d="M110 27 C107 15, 116 4, 132 2 C133 16, 124 25, 110 27 Z" fill="#4C7A2E"/><ellipse cx="110" cy="104" rx="97" ry="16" fill="#463E33"/><ellipse cx="84" cy="98" rx="52" ry="7" fill="#FFFFFF" opacity=".10"/><ellipse cx="110" cy="76" rx="80" ry="15" fill="#574E40"/><ellipse cx="88" cy="70" rx="42" ry="6" fill="#FFFFFF" opacity=".12"/><ellipse cx="110" cy="50" rx="60" ry="13" fill="#6E6353"/><ellipse cx="92" cy="45" rx="30" ry="5" fill="#FFFFFF" opacity=".14"/><text x="110" y="82.5" text-anchor="middle" fill="rgba(0,0,0,.38)" font-family="Jost, sans-serif" font-size="26" font-weight="600" letter-spacing="1.5">In2Skin</text><text x="110" y="81" text-anchor="middle" fill="#FFFFFF" font-family="Jost, sans-serif" font-size="26" font-weight="600" letter-spacing="1.5">In2Skin</text></svg></div>
+            <p>Facials and skin treatments by appointment in Bolton, Ontario.</p>
+            <a class="btn btn-book" href="/book/" style="margin-top:8px;">Book Online</a>
+            <a class="btn btn-light" href="tel:+12892124124" style="margin-top:8px;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a12 12 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" fill="currentColor"/></svg>
+              Call (289) 212-4124
+            </a>
             <p style="margin-top:10px;"><a href="https://www.facebook.com/profile.php?id=61596402642954" target="_blank" rel="noopener">Follow us on Facebook</a></p>
           </div>
           <div>
             <h4>Treatments</h4>
             <ul class="foot-links">
-              <li><a href="/classic-facial/">Classic Facial — $85</a></li>
-              <li><a href="/anti-aging-facial/">Anti-Aging Facial — $125</a></li>
-              <li><a href="/nano-needling/">NANO Needling — $65</a></li>
-              <li><a href="/microdermabrasion/">Microdermabrasion — $55</a></li>
-              <li><a href="/light-therapy/">Light Therapy — $55</a></li>
-              <li><a href="/reflexology/">Reflexology — $35</a></li>
-              <li><a href="/chemical-peels/">Chemical Peels — $125–$475</a></li>
-              <li><a href="/microneedling/">Microneedling — $65</a></li>
+              <li><a href="/classic-facial/">Classic Facial</a></li>
+              <li><a href="/anti-aging-facial/">Anti-Aging Facial</a></li>
+              <li><a href="/the-works/">The Works</a></li>
+              <li><a href="/chemical-peels/">Chemical Peels</a></li>
+              <li><a href="/microneedling/">Microneedling</a></li>
+              <li><a href="/nano-needling/">NANO Needling</a></li>
+              <li><a href="/microdermabrasion/">Microdermabrasion</a></li>
+              <li><a href="/light-therapy/">Light Therapy</a></li>
+              <li><a href="/reflexology/">Reflexology</a></li>
             </ul>
           </div>
           <div>
-            <h4>Good to Know</h4>
+            <h4>Help me choose</h4>
             <ul class="foot-links">
+              <li><a href="/how-to-choose/">How to choose</a></li>
+              <li><a href="/consultation/">Consultation</a></li>
+            </ul>
+            <h5>Skin concerns</h5>
+            <ul class="foot-links">
+              <li><a href="/dry-skin/">Dry skin</a></li>
+              <li><a href="/acne-prone-skin/">Acne</a></li>
+              <li><a href="/teen-acne/">Teen acne</a></li>
+              <li><a href="/rosacea-sensitive-skin/">Rosacea and sensitive</a></li>
+              <li><a href="/dull-skin/">Dull</a></li>
+              <li><a href="/fine-lines/">Fine lines</a></li>
+              <li><a href="/tired-skin/">Tired</a></li>
+            </ul>
+            <h5>Occasions</h5>
+            <ul class="foot-links">
+              <li><a href="/before-your-wedding/">Before your wedding</a></li>
+              <li><a href="/business-workday-prep/">Business and workday prep</a></li>
+              <li><a href="/before-your-vacation/">Before a vacation</a></li>
+              <li><a href="/after-hours-appointments/">After-hours</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4>Visit</h4>
+            <ul class="foot-links">
+              <li><a href="/contact/">Contact and hours</a></li>
+              <li><a href="/questions/">Questions about facials? See our answers</a></li>
+              <li><a href="/gift/">Gift certificates</a></li>
+              <li><a href="/privacy.html">Privacy — how we handle your information</a></li>
               <li>Directions shared when you book</li>
               <li>Booking: by phone, or online anytime</li>
-              <li>New to In2Skin? A $30 consultation is credited in full toward your first treatment</li>
-              <li><a href="/questions/">Questions about facials? See our answers</a></li>
-              <li><a href="/privacy.html">Privacy — how we handle your information</a></li>
+            </ul>
+            <h5>Facials near</h5>
+            <ul class="foot-links">
+              <li><a href="/facials-caledon/">Caledon</a> · <a href="/facials-kleinburg/">Kleinburg</a> · <a href="/facials-vaughan/">Vaughan</a> · <a href="/facials-brampton/">Brampton</a> · <a href="/facials-nobleton/">Nobleton</a></li>
+              <li><a href="/facials-king-city/">King City</a> · <a href="/facials-orangeville/">Orangeville</a> · <a href="/facials-georgetown/">Georgetown</a> · <a href="/facials-toronto/">Toronto</a> · <a href="/facials-mississauga/">Mississauga</a></li>
             </ul>
           </div>
         </div>
         <div class="foot-bottom">
           <span>© 2026 In2Skin · Bolton, Ontario</span>
-          <span>Website by <a href="mailto:hello.funderwood@gmail.com">Funderwood</a></span>
+          <span>Website by <a href="mailto:hello.funderwood@gmail.com">Funderwood</a> · <a href="mailto:hello.funderwood@gmail.com">Want a site like this?</a></span>
         </div>
       </div>
     </footer>
     <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
-    <script>
-    var toTop=document.getElementById("toTop"); function toTopShow(){ if(toTop) toTop.classList.toggle("show", window.scrollY>500); } window.addEventListener("scroll", toTopShow, {passive:true}); toTopShow(); if(toTop) toTop.addEventListener("click", function(){ window.scrollTo({top:0, behavior:"smooth"}); });
-    </script>
+<script>
+(function(){
+  var burger=document.getElementById("burger"), nav=document.getElementById("mainNav");
+  function wireDrop(toggleId, menuId){
+    var toggle=document.getElementById(toggleId), menu=document.getElementById(menuId);
+    if(!toggle||!menu) return;
+    toggle.addEventListener("click", function(ev){
+      ev.stopPropagation();
+      var otherId = toggleId==="concernToggle" ? "occMenu" : "concernMenu";
+      var otherToggleId = toggleId==="concernToggle" ? "occToggle" : "concernToggle";
+      var other=document.getElementById(otherId), otherToggle=document.getElementById(otherToggleId);
+      if(other) other.classList.remove("open");
+      if(otherToggle) otherToggle.setAttribute("aria-expanded","false");
+      var open=menu.classList.toggle("open");
+      toggle.setAttribute("aria-expanded", open?"true":"false");
+    });
+  }
+  wireDrop("concernToggle","concernMenu");
+  wireDrop("occToggle","occMenu");
+  document.addEventListener("click", function(ev){
+    if(!ev.target.closest(".nav-drop")){
+      var cm=document.getElementById("concernMenu"); if(cm) cm.classList.remove("open");
+      var om=document.getElementById("occMenu"); if(om) om.classList.remove("open");
+      var ct=document.getElementById("concernToggle"); if(ct) ct.setAttribute("aria-expanded","false");
+      var ot=document.getElementById("occToggle"); if(ot) ot.setAttribute("aria-expanded","false");
+    }
+    if(!ev.target.closest("header.site")){
+      if(nav) nav.classList.remove("open");
+      document.body.classList.remove("nav-open");
+      if(burger) burger.setAttribute("aria-expanded","false");
+    }
+  });
+  if(burger&&nav) burger.addEventListener("click", function(){
+    var open=nav.classList.toggle("open");
+    burger.setAttribute("aria-expanded", open?"true":"false");
+    document.body.classList.toggle("nav-open", open);
+  });
+  if(nav) nav.addEventListener("click", function(ev){
+    if(ev.target.closest("a")){
+      var cm=document.getElementById("concernMenu"); if(cm) cm.classList.remove("open");
+      var om=document.getElementById("occMenu"); if(om) om.classList.remove("open");
+      var ct=document.getElementById("concernToggle"); if(ct) ct.setAttribute("aria-expanded","false");
+      var ot=document.getElementById("occToggle"); if(ot) ot.setAttribute("aria-expanded","false");
+      nav.classList.remove("open");
+      document.body.classList.remove("nav-open");
+      if(burger) burger.setAttribute("aria-expanded","false");
+    }
+  });
+  var toTop=document.getElementById("toTop");
+  function toTopShow(){ if(toTop) toTop.classList.toggle("show", window.scrollY>500); }
+  window.addEventListener("scroll", toTopShow, {passive:true}); toTopShow();
+  if(toTop) toTop.addEventListener("click", function(){ window.scrollTo({top:0, behavior:"smooth"}); });
+})();
+</script>
   </body>
 </html>

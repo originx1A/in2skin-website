@@ -58,6 +58,25 @@ global.fetch = async (url, opts) => {
   return { ok: true, json: async () => ({}) };
 };
 
+// --- clock stub: pin Toronto "now" to 10:00 AM when it is 22:00 or later ---
+// Sections 10–11 book a consult for TODAY at "30/120 minutes from now".
+// After 22:00 Toronto that wraps past midnight, lands in the past, and
+// the reminder never fires / the late-cancel wording changes (pre-existing
+// time-of-day flake: passes at 23:12, fails at 23:30+). Pinning mins to
+// 10:00 AM keeps the scenario constructible at any hour; the date stays
+// real (today) so the reminder sweep still finds today's bookings. The
+// stub is a no-op before 22:00, when the test already passes.
+const realTransfer = require("../lib/transfer");
+const transferPath = require.resolve("../lib/transfer");
+require.cache[transferPath] = {
+  exports: Object.assign({}, realTransfer, {
+    torontoNow: (now) => {
+      const r = realTransfer.torontoNow(now);
+      return r.mins >= 1320 ? Object.assign({}, r, { mins: 600, label: "10:00 AM" }) : r;
+    },
+  }),
+};
+
 const { kvGet, kvSet } = require("../lib/kv");
 const sched = require("../lib/schedule");
 const studio = require("../lib/studio");
