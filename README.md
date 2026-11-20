@@ -27,7 +27,7 @@ Private one-on-one aesthetics studio in Bolton, Ontario. Public brand is
     Hours: early 7–9am, after 7pm, Sundays; +$15/service).
   - `POST /api/book` — booking + Stripe Checkout session; full payment at
     booking; optional gift code (balance applied, remainder stays on the
-    code); $10 first-visit offer. Custom consultations and fully
+    code). Custom consultations and fully
     gift-covered bookings confirm with no payment.
   - `POST /api/gift-buy` — Stripe Checkout for any-amount gift certificate
     ($10 minimum custom); the receipt IS the certificate. Gift codes
@@ -66,7 +66,7 @@ Chemical Peels 25 min $95–$475 (booked at the $95 starting price; exact price
 confirmed at consultation, balance settled at the visit) ·
 Microneedling: Custom — ask for a quote / priced per
 consultation · The Works $135 / $165 · Private Hours +$15/service ·
-First visit $10 toward any service · Payment: card online at booking
+Payment: card online at booking
 (Stripe), cash or e-transfer also welcome at the studio. Plain Interac-only
 debit does NOT work by card — those clients pay by e-transfer. Every charge
 shows as **IN2SKIN** on the card statement.

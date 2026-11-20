@@ -85,4 +85,61 @@ has(works, "Book The Works — $160", "Works page books the Classic option");
 const sitemap = read("sitemap.xml");
 has(sitemap, "https://boltonfacials.com/the-works/", "Works page is in the sitemap");
 
+// (8) Prices first, never a pay button first (Tony Nov 19, 2026): the
+// home screen's first view offers "See prices" — no Book Online in
+// the header, the hero, or the pinned bar on home. The price list
+// books through ONE Book button (the package bar, Nov 19) — no
+// per-row Book buttons — and booking from it still works.
+lacks(index, "header-book", "no gold Book Online button in the header");
+has(index, '>Prices</a>', "header nav offers Prices, not Book Online");
+has(index, 'class="btn btn-hero" href="#/book" data-nav="book">See prices</a>', "hero offers See prices into the price list");
+has(index, 'id="mobileBarCta"', "pinned bar CTA is view-aware");
+has(index, 'barCta.textContent = current === "home" ? "See prices" : "Book Online"', "bar says See prices on home, Book Online elsewhere");
+const css = read("assets/site.css");
+has(css, ".btn-hero", "hero prices button has its own style");
+lacks(css, ".header-book", "dead header-book CSS is gone");
+has(index, 'data-book="classic-facial"', "first-visit CTA still books Classic");
+has(index, 'data-book="combo-classic"', "Works screen still books The Works");
+
+// (9) Picker redesign + defects + $10 drop (Tony Nov 19, 2026).
+// One Book button for the whole price list (the package bar); rows
+// select with a compact checkmark and never open a big panel on tap;
+// a single Works row carries the facial choice inside it; the quick
+// visits are "Add to your facial", never "Add-ons"; needling sits
+// together; peels + NANO is blocked with a plain note; the wizard's
+// step 1 is a prompt back to the list, not a second pick-list; and
+// the booking summary shows on every step. No $10 first-visit offer.
+has(index, 'id="pkgContinue">Book →</button>', "single Book button is the package bar");
+has(index, 'return !!(v && v.classList.contains("active"));', "Book button stays up whenever the book screen is — never vanishes mid-pick");
+const bookFn = index.slice(index.indexOf("function bookHTML(){"), index.indexOf("function giftHTML(){"));
+lacks(bookFn, "data-book=", "no per-row Book buttons inside the price-list picker");
+has(index, 'data-tx-id="the-works"', "one Works row");
+has(index, 'data-tx-works="combo-classic"', "Works row offers the Classic option inside it");
+has(index, 'data-tx-works="combo-anti"', "Works row offers the Anti-Aging option inside it");
+lacks(index, "function txCombo(", "no two-row Works picker any more");
+has(index, '"Add to your facial"', "quick visits are framed as Add to your facial");
+lacks(index, '"Quick visits"', "no Quick visits label left");
+lacks(index, '"Add-ons"', "never labelled Add-ons");
+has(index, '[svcById("nano-needling"), svcById("microneedling")]', "NANO and Microneedling sit next to each other");
+has(index, 's.cat.indexOf("Advanced")===0 && s.id !== "microneedling"', "Microneedling lives with NANO, not in Advanced");
+has(index, 'id="txPeelNote"', "peels + NANO note exists");
+has(index, 'id="txNeedleNote"', "needling one-choice note exists");
+has(index, 'id="toServices"', "wizard step 1 points back to the price list");
+lacks(index, "data-pick-service", "wizard has no duplicate pick-list");
+lacks(index, "data-pick-addon", "wizard has no duplicate add-on list");
+has(index, 'id="bookTreatSummary"', "step 3 Treatment line has an id for in-place updates");
+has(index, "<strong>Your visit — </strong>", "step 2 summary leads with Your visit");
+has(css, ".tx-check", "checkmark circle styled");
+has(css, ".tx-variant", "Works variant pills styled");
+has(css, ".tx-included", "already-included note styled");
+has(css, ".hero-in{ min-height:0; padding:22px 0 28px; }", "mobile hero is compact so See prices is in the first view");
+lacks(index, "First visit? $10 toward any service", "no $10 first-visit offer in copy");
+lacks(index, "$10 first-visit offer applied", "no $10 offer in checkout text");
+lacks(index, "includes the $10 first-visit offer", "no $10 offer in emails");
+lacks(index, "First visit: $10 toward any service", "no $10 offer in the noscript");
+assert.ok(index.indexOf('id="reviews"') > index.indexOf("function visitHTML") && index.indexOf('id="reviews"') < index.indexOf("function homeHTML"), "testimonials live on the Visit screen, off the home flow");
+n++;
+assert.ok(index.indexOf('id="pay"') > index.indexOf("Book your first visit"), "payment explainer comes after the first-visit CTA");
+n++;
+
 console.log(`test-restructure: all ${n} checks passed`);

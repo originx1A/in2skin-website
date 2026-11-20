@@ -121,6 +121,10 @@
       .hero-copy h1 em{ font-style:italic; color:#CFE3BC; }
       .hero-copy p.lede{ font-family:"Cormorant Garamond", Georgia, serif; font-style:italic; font-weight:500; font-size:1.55rem; line-height:1.35; color:#F2EDDD; margin:0 auto; }
       .hero-ctas{ display:flex; flex-wrap:wrap; gap:14px; margin-top:26px; align-items:center; }
+      /* "See prices" on the hero (Tony Nov 19, 2026): a light outline
+         button on the dark video — prices first, never a pay button. */
+      .btn-hero{ background:rgba(28,32,22,.35); color:#FBF7EC; border:1.5px solid rgba(251,247,236,.9); }
+      .btn-hero:hover{ background:rgba(251,247,236,.16); }
       .hero-note{ margin-top:16px; font-size:.92rem; color:#E4DFC9; }
       .time-chip.booked{ opacity:.42; text-decoration:line-through; cursor:default; }
       .time-chip .bk{ display:block; font-size:.64rem; letter-spacing:.12em; text-transform:uppercase; text-decoration:none; font-weight:600; }
@@ -132,7 +136,6 @@
         .header-call{ padding:10px 16px; font-size:.95rem; min-height:46px; flex:0 0 auto; }
         .burger{ width:44px; height:44px; flex:0 0 auto; }
         .btn-big{ font-size:1.02rem; padding:14px 20px; }
-        .hero-in{ min-height:0; padding:34px 0 42px; }
         .hero-shade{ background:linear-gradient(180deg, rgba(28,32,22,.50), rgba(28,32,22,.40)); }
       }
 
@@ -317,7 +320,7 @@
          two across on desktop, like the wizard picker rows. Phones keep
          the single column. */
       @media (min-width:861px){ .tx-list{ display:grid; grid-template-columns:1fr 1fr; } }
-      .tx-row{ display:flex; align-items:center; flex-wrap:wrap; gap:4px 14px; background:var(--cream); border:1.5px solid var(--line); border-radius:8px; padding:12px 14px; cursor:pointer; }
+      .tx-row{ display:flex; align-items:center; flex-wrap:wrap; gap:4px 14px; background:var(--cream); border:1.5px solid var(--line); border-radius:8px; padding:10px 12px; cursor:pointer; }
       .tx-row .tx-name{ font-family:"Cormorant Garamond",serif; font-size:1.25rem; font-weight:600; line-height:1.2; }
       .tx-row .tx-mins{ font-size:.88rem; color:var(--ink-soft); }
       .tx-row .tx-link{ color:inherit; text-decoration:none; }
@@ -342,6 +345,20 @@
       .tx-row.open{ grid-column:1 / -1; }
       .tx-added{ display:none; font-size:.78rem; color:var(--sage-deep); font-weight:700; }
       .tx-row.added .tx-added{ display:block; }
+      /* Compact checkmark (Tony Nov 19, 2026): a 22px circle, empty
+         until the row is picked, sage with a white tick when it is. */
+      .tx-check{ flex:0 0 auto; width:22px; height:22px; border:1.5px solid var(--line); border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; line-height:1; color:transparent; font-weight:700; }
+      .tx-row.sel .tx-check, .tx-row.added .tx-check{ background:var(--sage-deep); border-color:var(--sage-deep); color:#fff; }
+      /* The Works — one row, the facial is the choice (Tony Nov 19,
+         2026): two small pill buttons inside it. */
+      .tx-variants{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+      .tx-variant{ background:var(--paper); border:1.5px solid var(--line); border-radius:999px; padding:8px 14px; cursor:pointer; font-family:"Jost",sans-serif; font-size:.92rem; color:var(--ink); }
+      .tx-variant.sel{ border-color:var(--sage-deep); background:var(--sage-soft); font-weight:600; }
+      /* Already included (Tony Nov 19, 2026): red light + reflexology
+         are in The Works — the row says so instead of letting the
+         visitor double-add them. */
+      .tx-included{ display:none; font-size:.78rem; color:var(--ink-soft); font-weight:600; }
+      .tx-row.included .tx-included{ display:block; }
       .tx-details{ flex-basis:100%; margin-top:10px; padding-top:12px; border-top:1px solid var(--line); }
       .tx-details h4{ font-size:1rem; margin:12px 0 6px; }
       .tx-details p{ margin:0 0 10px; }
@@ -585,12 +602,11 @@
       .teen-band{ border-radius:0; }
       .offer{ border-radius:10px; }
       @media (max-width:860px){
-        .header-book{ display:none; }
         .header-in{ flex-wrap:nowrap; }
         .brand{ margin-right:auto; }
       }
       @media (max-width:640px){
-        .hero-copy{ border-radius:10px; padding:30px 20px 26px; }
+        .hero-copy{ border-radius:10px; padding:22px 18px 20px; }
         .hero-copy h1{ font-size:2.35rem; }
         .hero-ctas{ flex-direction:column; align-items:stretch; gap:12px; }
         .hero-ctas .btn{ width:100%; }
@@ -871,8 +887,14 @@
       .quick-strip{ justify-content:flex-start; color:#DCD2B2; }
       @media (max-width:640px){
         .hero-copy{ text-shadow:none; }
-        .hero-copy .kicker{ letter-spacing:.24em; }
+        .hero-copy .kicker{ letter-spacing:.24em; margin-bottom:14px; }
         .hero-img{ animation:none; }
+        /* "See prices" must be in the first view on a phone (Tony Nov 19,
+           2026): the later .hero-in min-height rule (82vh) overrides the
+           earlier media-query one, so the compact hero has to be set
+           here, after it. */
+        .hero-in{ min-height:0; padding:22px 0 28px; }
+        .hero-ctas{ margin-top:22px; }
       }
 
       /* ---------- section rhythm & editorial heads ---------- */
@@ -1011,15 +1033,19 @@
       }
 
       /* ===== Mobile hero: stones first, centered & unobstructed — copy below, never on top ===== */
+      /* "See prices" must be in the first view on a phone (Tony Nov 19,
+         2026): the video is 4/3, not 4/5, and the copy is tight — the
+         button lands above the pinned bar, not under it. */
       @media (max-width:640px){
         .hero{ display:flex; flex-direction:column; background:#2A362A; }
         .hero-img{
           position:static; inset:auto; width:100%; height:auto;
-          aspect-ratio:4/5; object-fit:cover; object-position:50% 50%;
+          aspect-ratio:4/3; object-fit:cover; object-position:50% 50%;
         }
         .hero-shade{ display:none; }
-        .hero-in{ position:static; min-height:0; display:block; padding:30px 0 42px; }
-        .hero-copy{ margin:0 auto; }
+        .hero-in{ position:static; min-height:0; display:block; padding:18px 0 24px; }
+        .hero-copy{ margin:0 auto; padding:0 18px 4px; }
+        .hero-copy h1{ font-size:2.1rem; }
       }
 
       /* ===== Mobile fixes: round chat button, welcome spacing, hero kicker ===== */

@@ -1,14 +1,13 @@
 // POST /api/book — create a booking + Stripe Checkout session.
 // Full payment at booking. Accepts an optional gift code (its balance comes
-// off the total; anything left stays on the code) and the $10 first-visit
-// offer. Bookings fully covered by a gift code need no payment — they are
-// confirmed straight away.
+// off the total; anything left stays on the code). Bookings fully covered
+// by a gift code need no payment — they are confirmed straight away.
 const { getStripe } = require("../lib/stripe");
 const { kvGet, kvSet } = require("../lib/kv");
 const {
   findService, parseDateLocal, timesFor, parseTime, normalizeAddons,
   durationForBooking, baseCentsFor,
-  slotTaken, FIRST_VISIT_CENTS, PENDING_HOLD_MS, dayIsFull, countsTowardCap,
+  slotTaken, PENDING_HOLD_MS, dayIsFull, countsTowardCap,
 } = require("../lib/schedule");
 const { studioForDate } = require("../lib/studio");
 const {
@@ -45,7 +44,7 @@ function botCheck(b) {
 // env var (header x-agent-key). The hold is a normal pending booking, so it
 // blocks the slot for 30 minutes (PENDING_HOLD_MS) and then releases it.
 // No gift codes and no friend bookings on this path — the caller pays the
-// full price less the first-visit offer, on their own phone, via the link.
+// full price, on their own phone, via the link.
 // Add-ons ride along (b.addons): treatment first, then tick add-ons.
 async function handleAgentHold(req, res, b) {
   try {
@@ -100,11 +99,12 @@ async function handleAgentHold(req, res, b) {
       return res.status(409).json({ error: "That day is fully booked — Sarah takes four appointments a day. Please choose another day." });
     }
 
-    const first = b.first !== "no";
     const baseCents = baseCentsFor(svc.id, addons, type);
-    // The $10 first-visit offer never applies to a consultation.
-    const firstVisitDiscountCents = svc.priceNum > 0 && first && !svc.noFirstVisit ? FIRST_VISIT_CENTS : 0;
-    const amountCents = Math.max(0, baseCents - firstVisitDiscountCents);
+    // The $10 first-visit offer was dropped (Tony Nov 19, 2026) — the $30
+    // consultation credit is the one first-visit offer. The field is still
+    // recorded as 0 so old bookings keep their recorded value.
+    const firstVisitDiscountCents = 0;
+    const amountCents = Math.max(0, baseCents);
     const myRef = await getOrCreateReferral({ name: b.name, email: b.email, phone: b.phone });
     const booking = {
       id: newId("bk"),
@@ -126,7 +126,6 @@ async function handleAgentHold(req, res, b) {
       guestName: null,
       guestPhone: null,
       guestEmail: null,
-      first: first ? "yes" : "no",
       firstVisitDiscountCents,
       giftCode: null,
       giftAppliedCents: 0,
@@ -148,8 +147,8 @@ async function handleAgentHold(req, res, b) {
     };
     const holdUntil = new Date(Date.now() + PENDING_HOLD_MS).toISOString();
 
-    // Consultation (or a first-visit discount covering it all): no payment
-    // due — hold the time and let Sarah confirm it. A consultation earns no
+    // Consultation (or a booking fully covered): no payment due — hold
+    // the time and let Sarah confirm it. A consultation earns no
     // referral credit and marks no client paid, so the hold email is the
     // only email on this path.
     if (amountCents === 0) {
@@ -178,7 +177,7 @@ async function handleAgentHold(req, res, b) {
             name: isConsult ? `${consultName(format)} — In2Skin` : `${serviceLabel} — ${b.date} at ${b.time}${type === "after" ? " (Private Hours)" : ""}`,
             description: isConsult
               ? `Payment for ${consultName(format)} · In2Skin, Bolton, Ontario — ${b.date} at ${b.time}`
-              : `In2Skin · Bolton, Ontario — held by phone${firstVisitDiscountCents ? " · $10 first-visit offer applied" : ""}`,
+              : `In2Skin · Bolton, Ontario — held by phone`,
           },
         },
       }],

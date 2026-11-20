@@ -122,10 +122,10 @@ async function run() {
   check("same friend later full facial counts", smallLater.issued, true);
   check("paidCount 7 after later full facial", smallLater.paidCount, 7);
 
-  // --- $85 floor: first-visit Classic ($75 charged on an $85 value) still counts ---
-  const firstVisit = await refs.issueReferralCredit(paidBooking("bk-first", { name: "Fay First", email: "fay@example.com", phone: "(905) 555-0505" }, alex.code, { amountCents: 7500, firstVisitDiscountCents: 1000, giftAppliedCents: 0 }));
-  check("first-visit Classic counts", firstVisit.issued, true);
-  check("paidCount 8 after first-visit Classic", firstVisit.paidCount, 8);
+  // --- $85 floor: a Classic at $85 charged ($85 value) counts ---
+  const firstVisit = await refs.issueReferralCredit(paidBooking("bk-first", { name: "Fay First", email: "fay@example.com", phone: "(905) 555-0505" }, alex.code, { amountCents: 8500, firstVisitDiscountCents: 0, giftAppliedCents: 0 }));
+  check("Classic at $85 counts", firstVisit.issued, true);
+  check("paidCount 8 after Classic", firstVisit.paidCount, 8);
 
   // --- redemption: credit + free reflexology deduct once ---
   const redBooking = {

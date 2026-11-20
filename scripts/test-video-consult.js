@@ -389,7 +389,7 @@ async function run() {
     service: "classic-facial", date: futureWeekday(47), time: "10:00 AM", type: "regular",
     name: eClient.name, phone: eClient.phone, email: eClient.email, first: "yes", giftCode: eCode,
   }, { bufferMins: 60, blocks: [], via: "web" });
-  assert.equal(treat.amountCents, 4500, "Classic $85 − $10 first visit − $30 credit = $45, got " + treat.amountCents);
+  assert.equal(treat.amountCents, 5500, "Classic $85 − $30 credit = $55, got " + treat.amountCents);
   assert.equal(treat.giftKind, "consult-credit", "the booking records the credit kind");
   assert.equal(treat.giftAppliedCents, 3000, "the booking records the $30 applied");
   await B.saveBooking(treat);

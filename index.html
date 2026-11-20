@@ -138,10 +138,9 @@
             <button class="navlink" id="svcToggle" aria-haspopup="true" aria-expanded="false">Services ▾</button>
             <div class="nav-menu" id="svcMenu" role="menu"></div>
           </div>
-          <a href="#/book" data-nav="book">Book Online</a>
+          <a href="#/book" data-nav="book">Prices</a>
           <a href="#/visit" data-nav="visit">Visit Us</a>
         </nav>
-        <a class="btn btn-book btn-book-sm header-book" href="#/book" data-nav="book" style="white-space:nowrap;">Book Online</a>
         <a class="btn btn-ghost header-call" href="tel:+12892124124" aria-label="Call In2Skin to book">Call<span class="btn-label-num">&nbsp;· (289) 212-4124</span></a>
         <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false">
           <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -166,7 +165,7 @@
           <li>Reflexology &mdash; $35, 20 minutes</li>
           <li>The Works &mdash; $160 with a Classic Facial (55 minutes), $195 with an Anti-Aging Facial (80 minutes)</li>
         </ul>
-        <p>First visit: $10 toward any service. Private Hours (early mornings and evenings, by request): the regular price plus $15 per visit. Sundays the studio is closed. Advance booking is recommended. Questions? See <a href="/questions/">Questions about facials in Bolton</a>.</p>
+        <p>Private Hours (early mornings and evenings, by request): the regular price plus $15 per visit. Sundays the studio is closed. Advance booking is recommended. Questions? See <a href="/questions/">Questions about facials in Bolton</a>.</p>
       </section>
     </noscript>
 
@@ -192,7 +191,7 @@
             <ul class="foot-links">
               <li>Directions shared when you book</li>
               <li>Booking: by phone, or online anytime</li>
-              <li>First visit? $10 toward any service</li>
+              <li>New to In2Skin? A $30 consultation is credited in full toward your first treatment</li>
               <li><a href="/questions/">Questions about facials? See our answers</a></li>
               <li><a href="/privacy.html">Privacy — how we handle your information</a></li>
               <li>Facials near: <a href="/facials-caledon/">Caledon</a> · <a href="/facials-kleinburg/">Kleinburg</a> · <a href="/facials-vaughan/">Vaughan</a> · <a href="/facials-brampton/">Brampton</a> · <a href="/facials-nobleton/">Nobleton</a> · <a href="/facials-king-city/">King City</a> · <a href="/facials-orangeville/">Orangeville</a> · <a href="/facials-georgetown/">Georgetown</a> · <a href="/facials-toronto/">Toronto</a> · <a href="/facials-mississauga/">Mississauga</a></li>
@@ -206,10 +205,13 @@
       </div>
     </footer>
 
-    <!-- mobile bar (Tony Nov 19, 2026): Book Online + Chat — Call moved
-         out of the bar; it stays in the header. -->
+    <!-- mobile bar (Tony Nov 19, 2026): on the home screen the first
+         thing a visitor sees must not be a payment option — the bar
+         offers "See prices" there (its label is set per screen in
+         showView); everywhere else it offers "Book Online". Chat
+         stays. Call moved out of the bar; it stays in the header. -->
     <div class="mobile-bar">
-      <a class="btn btn-book" href="#/book" data-nav="book">Book Online</a>
+      <a class="btn btn-book" id="mobileBarCta" href="#/book" data-nav="book">Book Online</a>
       <button class="btn btn-ghost" type="button" id="mobileChatBtn">Chat</button>
     </div>
 
@@ -234,7 +236,7 @@
     <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
     <div class="pkg-bar" id="pkgBar" role="status" aria-live="polite">
       <span class="pkg-text" id="pkgText">Pick a treatment</span>
-      <button type="button" class="btn btn-call pkg-go" id="pkgContinue">Continue →</button>
+      <button type="button" class="btn btn-call pkg-go" id="pkgContinue">Book →</button>
     </div>
     <div class="pkg-bar" id="giftBar" role="status" aria-live="polite">
       <span class="pkg-text" id="giftBarText">Pick a kind of gift</span>
@@ -274,7 +276,7 @@
         price: "$85", priceNum: 85,
         img: "assets/classic-facial.webp",
         imgAlt: "Hands massaging a creamy mask into a client's face during a Classic Facial, eyes closed, deeply relaxed",
-        short: "Deep cleanse, massage & glow. The classic refresh.",
+        short: "Deep cleanse, steam, extractions if needed, hydration mask, facial massage incl. neck + décolletage.",
         intro: [
           "Cleansing, steam, extractions if needed, a hydration mask, and a facial massage including neck and décolletage — tailored to your skin that day. Perfect for acne-prone, sensitive, or dull complexions, with no downtime."
         ],
@@ -307,7 +309,7 @@
         price: "$125", priceNum: 125,
         img: "assets/anti-aging.webp",
         imgAlt: "A side-profile facial — two black-gloved hands massaging golden serum into the skin, warm gold light, serum bottle and cream jar nearby",
-        short: "Firmer, smoother, brighter. Our most restorative facial.",
+        short: "All of Classic, plus a second mask + arm massage while the second mask is on + serums and Circadia products in the masks, matched to the skin.",
         intro: [
           "80 minutes of Circadia anti-aging care: two masks matched to your skin, targeted serums, a relaxing arm massage, and firming massage & rich hydration — for firm, youthful skin."
         ],
@@ -558,7 +560,7 @@
       { id:"reflexology", name:"Reflexology", desc:"Feet, whole-body calm", price:"$35", priceNum:35, mins:20 }
     ];
     function addonById(id){ for (var i=0;i<ADDONS.length;i++) if (ADDONS[i].id===id) return ADDONS[i]; return null; }
-    function bookingAddons(){ return (booking.addons || []).map(addonById).filter(Boolean); }
+    function bookingAddons(){ var seen = {}; return (booking.addons || []).map(addonById).filter(Boolean).filter(function(a){ if (seen[a.id]) return false; seen[a.id] = true; return true; }); }
     function bookingLabel(){
       var s = currentService(); if (!s) return "";
       // A consultation shows its format — video call or in person.
@@ -587,25 +589,24 @@
       return bookingLabel() + " · " + bookingMins() + " · " + bookingPrice() + (booking.type === "after" && s.id !== CONSULT.id ? " (includes the $15 Private Hours premium)" : "");
     }
 
-    /* Live checkout total: base price + $15 Private Hours premium, less the
-       $10 first-visit offer, less any gift-certificate balance entered.
-       A referral code entered in the gift-code field applies the referrer's
-       credit instead, and makes a Reflexology booking free if they have a
-       free add-on banked. */
+    /* Live checkout total: base price + $15 Private Hours premium, less
+       any gift-certificate balance entered. A referral code entered in
+       the gift-code field applies the referrer's credit instead, and
+       makes a Reflexology booking free if they have a free add-on
+       banked. */
     var giftBalanceCents = 0;
     var referralFree = 0;
     var referralCodeApplied = false;
     function bookTotalCents(){
       var s = currentService(); if (!s) return 0;
       // A consultation is $30 flat — no Private Hours premium, no
-      // first-visit offer, no add-ons, no gift code on it.
+      // add-ons, no gift code on it.
       if (s.id === CONSULT.id) return 3000;
       var total = (s.priceNum || 0) * 100 + (booking.type === "after" ? 1500 : 0);
       bookingAddons().forEach(function(a){ total += a.priceNum * 100; });
       var reflex = addonById("reflexology");
       if (s.id === "reflexology" && referralFree > 0) total -= s.priceNum * 100;
       else if (reflex && bookingAddons().some(function(a){ return a.id === "reflexology"; }) && referralFree > 0) total -= reflex.priceNum * 100;
-      if (s.priceNum > 0 && booking.first !== "no") total -= 1000;
       total -= giftBalanceCents;
       return Math.max(0, total);
     }
@@ -617,7 +618,6 @@
       if (s.id === CONSULT.id) return "$30 — pay securely by card at checkout";
       var parts = [];
       if (booking.type === "after") parts.push("includes the $15 Private Hours premium");
-      if (booking.first !== "no") parts.push("$10 first-visit offer applied");
       if (referralCodeApplied) parts.push("referral credit applied");
       else if (giftBalanceCents > 0) parts.push("gift code applied");
       if ((s.id === "reflexology" || bookingAddons().some(function(a){ return a.id === "reflexology"; })) && referralFree > 0) parts.push("free reflexology applied");
@@ -668,20 +668,90 @@
       if (id === "nano-needling") return booking.service === "microneedling";
       return false;
     }
+    function txPeelBlocked(id){
+      // Chemical Peels + NANO Needling do not work together (Tony Nov 19,
+      // 2026): with a peel picked, NANO is unpickable, and vice versa.
+      // No other peel combination is blocked — the full peels + add-ons
+      // compatibility list still needs Sarah's word.
+      var hasNano = (booking.addons || []).indexOf("nano-needling") >= 0;
+      if (id === "nano-needling") return booking.service === "chemical-peels";
+      if (id === "chemical-peels") return booking.service === "nano-needling" || hasNano;
+      return false;
+    }
+    function txGuidedBlocked(id){
+      // Pick-flow enforcement (Tony Nov 19, 2026): once a main with a
+      // GUIDED entry is picked, only the things that go with it can be
+      // picked — anything else is unpickable, not just unlit. Mains
+      // without a GUIDED entry (peels, microneedling, consult, a
+      // standalone add-on) keep the old behaviour. In practice this
+      // bites for The Works, which already includes red light +
+      // reflexology, so those two cannot be added to it.
+      var g = GUIDED[booking.service];
+      if (!g) return false;
+      var svc = svcById(id);
+      if (!svc || svc.cat.indexOf("Enhancement") !== 0) return false;
+      return g.indexOf(id) < 0;
+    }
+    function txBlocked(id){
+      return txNeedleBlocked(id) || txPeelBlocked(id) || txGuidedBlocked(id);
+    }
+    /* Add-ons are a SET (Tony Nov 19, 2026): each one is counted exactly
+       once, however it got into the booking. Every mutation goes through
+       here, and every read goes through bookingAddons(), so a double
+       tap, a Book-button handoff or a stale array can never charge an
+       add-on twice. */
+    function dedupeAddons(){
+      booking.addons = (booking.addons || []).filter(function(id, i, arr){ return arr.indexOf(id) === i; });
+    }
+    function pruneAddons(){
+      // Drop anything the picked main no longer allows (a Works swap
+      // drops red light + reflexology, already included; a peel drops
+      // NANO). Called after every service change.
+      dedupeAddons();
+      booking.addons = (booking.addons || []).filter(function(id){ return !txBlocked(id); });
+    }
     function txNeedleNoteOn(){
       return booking.service === "microneedling" || booking.service === "nano-needling" || (booking.addons || []).indexOf("nano-needling") >= 0;
     }
+    function txPeelNoteOn(){
+      return booking.service === "chemical-peels" || booking.service === "nano-needling" || (booking.addons || []).indexOf("nano-needling") >= 0;
+    }
     function txState(id){
       var cls = "";
+      // The Works is one row with two variants inside it (Tony Nov 19,
+      // 2026): it reads selected when either variant is the booking.
+      if (id === "the-works"){
+        if (booking.service === "combo-classic" || booking.service === "combo-anti") cls += " sel";
+        return cls;
+      }
       if (booking.service === id) cls += " sel";
       if ((booking.addons || []).indexOf(id) >= 0) cls += " added";
       if (booking.service && booking.service !== id && guidedFor(booking.service).indexOf(id) >= 0 && (booking.addons || []).indexOf(id) < 0) cls += " rec";
-      if (txNeedleBlocked(id)) cls += " off";
+      if (txBlocked(id)) cls += " off";
+      // Light + reflexology are already inside The Works — say so on
+      // the row instead of letting them double-add.
+      if (txGuidedBlocked(id)) cls += " included";
       return cls;
     }
     function pickerPick(id){
       booking.addons = booking.addons || [];
-      if (txNeedleBlocked(id)) return;
+      // Blocked is blocked (Tony Nov 19, 2026): needle, peel and
+      // guided incompatibilities never enter the booking, however
+      // the tap arrives.
+      if (txBlocked(id)) return;
+      // The Works row picks its current variant (the variant buttons
+      // pick a variant directly); default Classic if none is chosen yet.
+      if (id === "the-works"){
+        if (booking.service === "combo-classic" || booking.service === "combo-anti"){
+          booking.service = null;
+          if (booking.addons.length){ booking.service = booking.addons[0]; booking.addons = booking.addons.slice(1); }
+        } else {
+          booking.service = "combo-classic";
+        }
+        pruneAddons();
+        syncPicker();
+        return;
+      }
       // A consultation is just the consultation — no add-ons, and never
       // booked for a friend.
       if (id === CONSULT.id){ booking.addons = []; booking.forWhom = "me"; booking.service = id; syncPicker(); return; }
@@ -709,6 +779,11 @@
           booking.service = id;
         }
       }
+      // A swap can strand an extra the new main does not allow (a Works
+      // swap drops red light + reflexology, already included) — prune,
+      // and keep the add-ons a set.
+      pruneAddons();
+      dedupeAddons();
       syncPicker();
     }
     function syncPicker(){
@@ -725,38 +800,67 @@
       });
       var note = document.getElementById("txNeedleNote");
       if (note) note.hidden = !txNeedleNoteOn();
+      var peelNote = document.getElementById("txPeelNote");
+      if (peelNote) peelNote.hidden = !txPeelNoteOn();
+      // The Works is one row with the Classic / Anti-Aging choice
+      // inside it — its price and minutes follow the chosen variant
+      // (or show the range while neither is chosen).
+      var worksRow = document.querySelector('.tx-row[data-tx-id="the-works"]');
+      if (worksRow){
+        var wp = worksRow.querySelector(".tx-price b");
+        var wm = worksRow.querySelector(".tx-mins");
+        if (wp) wp.textContent = booking.service === "combo-classic" ? "$160" : booking.service === "combo-anti" ? "$195" : "$160–$195";
+        if (wm) wm.textContent = booking.service === "combo-classic" ? "· 55 minutes" : booking.service === "combo-anti" ? "· 80 minutes" : "· 55–80 minutes";
+      }
       // The consult format buttons in an open details panel.
       document.querySelectorAll("[data-tx-format]").forEach(function(b){
         b.classList.toggle("sel", (b.getAttribute("data-tx-format") === "in-person") === (booking.format === "in-person"));
       });
       pkgBarShow();
-      // Keep the wizard's own step-1 pick-list in step with the picker
-      // while the client is still picking (step 1 only — never touch a
-      // later step, the client may be typing in it).
-      if (booking.step === 1) renderBooking();
+      /* Keep the wizard in step with the picker. Step 1 is the
+         "pick from the list above" prompt and step 2 is the calendar —
+         both re-render, so the summary on the calendar never shows a
+         stale pick (Tony Nov 19, 2026: the flow showed no trace of
+         what he picked). A service change can strand the picked time
+         (different length, different slots), so drop it first. Step 3
+         (details) is never re-rendered — the client may be typing in
+         it — so its summary lines are updated in place instead. */
+      if (booking.step === 1 || booking.step === 2){
+        if (booking.step === 2 && booking.time && timesFor().indexOf(booking.time) < 0) booking.time = null;
+        renderBooking();
+      } else if (booking.step === 3){
+        var treatDd = document.getElementById("bookTreatSummary");
+        if (treatDd) treatDd.textContent = bookingLabel() + " · " + bookingMins() + " · " + bookingPrice();
+        refreshBookTotal();
+      }
     }
     function txDetailsHTML(id){
+      // ONE Book button for the whole price list (Tony Nov 19, 2026):
+      // the pinned bar below the list. Details panels carry information
+      // only — no Book button in any of them.
       if (id === CONSULT.id){
         return "<p>20 minutes with Sarah, on video or in person at the studio. $30, credited in full toward any treatment you book after. For first-time clients — one consultation per client.</p>" +
           '<div class="pick-grid" style="margin:10px 0 14px;">' +
             '<button type="button" class="pick' + (booking.format !== "in-person" ? " sel" : "") + '" data-tx-format="video"><span class="t">Video call</span><span class="d">Google Meet — your link arrives by email; no app needed</span></button>' +
             '<button type="button" class="pick' + (booking.format === "in-person" ? " sel" : "") + '" data-tx-format="in-person"><span class="t">In person</span><span class="d">At the studio in Bolton — come as you are</span></button>' +
-          '</div>' +
-          '<button class="btn btn-book" data-book="' + CONSULT.id + '">Book Consultation — $30</button>';
+          '</div>';
+      }
+      if (id === "the-works"){
+        return "<p>Facial + red light therapy + reflexology, all at the same time while your mask works. So relaxing, clients fall asleep.</p>" +
+          "<p>With Classic ($160, 55 min): cleanse, steam, extractions if needed, hydration mask, facial massage incl. neck + décolletage. With Anti-Aging ($195, 80 min): all of that + a second mask + arm massage while the second mask is on + serums and Circadia products in the masks, matched to the skin.</p>" +
+          '<p style="margin-top:10px;"><a href="#/the-works" data-nav="the-works">See The Works &rarr;</a></p>';
       }
       var c = null;
       for (var i = 0; i < COMBOS.length; i++) if (COMBOS[i].id === id) c = COMBOS[i];
       if (c){
         var base = c.id === "combo-classic" ? "Classic Facial" : "Anti-Aging Facial";
         return "<p>" + base + " + red light therapy + reflexology, all at the same time while your mask works. So relaxing, clients fall asleep.</p>" +
-          '<button class="btn btn-book" data-book="' + c.id + '">Book The Works — ' + c.price + '</button>' +
           '<p style="margin-top:10px;"><a href="#/the-works" data-nav="the-works">See The Works &rarr;</a></p>';
       }
       var s = svcById(id);
       if (!s) return "";
       return s.intro.map(function(p){ return "<p>" + p + "</p>"; }).join("") +
-        "<h4>What\u2019s included</h4>" + tickList(s.includes) +
-        '<button class="btn btn-book" data-book="' + s.id + '">Book ' + s.name + ' — ' + s.price + '</button>';
+        "<h4>What\u2019s included</h4>" + tickList(s.includes);
     }
     function toggleTxDetails(id){
       var row = document.querySelector('.tx-row[data-tx-id="' + id + '"]');
@@ -802,65 +906,83 @@
        services picker plus the booking wizard, together. */
     function bookHTML(){
       // ONE canonical treatments list: every treatment + price, once, as
-      // compact rows. The wizard has its own pick-list; condition cards and
-      // the footer link to treatments instead of listing them.
+      // compact rows. Condition cards and the footer link to treatments
+      // instead of listing them.
       //
       // Services-list picker (Tony Nov 19, 2026): the list IS the picker.
       // Every row carries a plain "what it's for" line under the name —
       // the service's own short line, plain text, never a link. Tapping
-      // a main row picks it and lights its compatible add-ons gold, right
-      // here on the list; tapping a lit add-on adds it (sage + "Added ✓").
-      // Tapping a service NAME expands its details in place — never
-      // navigates away. The Book button books the picked main plus any
-      // added add-ons, into the wizard steps.
+      // a row SELECTS it (compact checkmark, sage — the colour stays
+      // while it is selected); tapping a lit add-on adds it. Tapping a
+      // service NAME expands its details in place — never from the
+      // select tap, and never navigates away. ONE Book button for the
+      // whole list: the pinned bar below it. No per-row Book buttons.
       function txRow(s){
+        var included = s.cat.indexOf("Enhancement") === 0
+          ? '<span class="tx-included">Already included in The Works</span>' : "";
         return '<div class="tx-row' + txState(s.id) + '" data-tx-id="' + s.id + '">' +
+          '<span class="tx-check" aria-hidden="true">✓</span>' +
           '<div class="tx-info"><div class="tx-top"><button type="button" class="tx-name-btn" data-tx-expand="' + s.id + '" aria-expanded="false"><span class="tx-name">' + s.name + '</span></button> <span class="tx-mins">· ' + s.minsLabel + '</span></div>' +
-          '<div class="tx-for">' + s.short + '</div></div>' +
-          '<span class="tx-price"><b>' + s.price + '</b><span class="tx-added">Added ✓</span></span>' +
-          '<button class="btn btn-book btn-book-sm" data-book="' + s.id + '">Book</button></div>';
+          '<div class="tx-for">' + s.short + '</div>' + included + '</div>' +
+          '<span class="tx-price"><b>' + s.price + '</b><span class="tx-added">Added ✓</span></span></div>';
       }
-      var COMBO_WHAT = {
-        "combo-classic": "Classic Facial + red light + reflexology, all at once while your mask works.",
-        "combo-anti": "Anti-Aging Facial + red light + reflexology, all at once while your mask works."
-      };
-      function txCombo(c){
-        return '<div class="tx-row' + txState(c.id) + '" data-tx-id="' + c.id + '">' +
-          '<div class="tx-info"><div class="tx-top"><button type="button" class="tx-name-btn" data-tx-expand="' + c.id + '" aria-expanded="false"><span class="tx-name">' + c.name + '</span></button> <span class="tx-mins">· ' + c.minsLabel + '</span></div>' +
-          '<div class="tx-for">' + COMBO_WHAT[c.id] + '</div></div>' +
-          '<span class="tx-price"><b>' + c.price + '</b><span class="tx-added">Added ✓</span></span>' +
-          '<button class="btn btn-book btn-book-sm" data-book="' + c.id + '">Book</button></div>';
+      // The Works is ONE row (Tony Nov 19, 2026): the Classic ($160) /
+      // Anti-Aging ($195) choice lives inside it, since the facial is
+      // the only difference — and the row spells out what is in it, in
+      // Sarah's own words, so the $35 gap is explained.
+      var WORKS_WHAT = "Your facial + red light + reflexology, all at once while your mask works. With Classic: cleanse, steam, extractions if needed, hydration mask, facial massage incl. neck + décolletage. With Anti-Aging: all of that + a second mask + arm massage while the second mask is on + serums and Circadia products in the masks, matched to the skin.";
+      function txWorks(){
+        var selClassic = booking.service === "combo-classic";
+        var selAnti = booking.service === "combo-anti";
+        return '<div class="tx-row' + txState("the-works") + '" data-tx-id="the-works">' +
+          '<span class="tx-check" aria-hidden="true">✓</span>' +
+          '<div class="tx-info"><div class="tx-top"><button type="button" class="tx-name-btn" data-tx-expand="the-works" aria-expanded="false"><span class="tx-name">The Works</span></button> <span class="tx-mins">· ' + (selClassic ? "55 minutes" : selAnti ? "80 minutes" : "55–80 minutes") + '</span></div>' +
+          '<div class="tx-for">' + WORKS_WHAT + '</div>' +
+          '<div class="tx-variants">' +
+            '<button type="button" class="tx-variant' + (selClassic ? " sel" : "") + '" data-tx-works="combo-classic">With Classic Facial — $160 · 55 min</button>' +
+            '<button type="button" class="tx-variant' + (selAnti ? " sel" : "") + '" data-tx-works="combo-anti">With Anti-Aging Facial — $195 · 80 min</button>' +
+          '</div></div>' +
+          '<span class="tx-price"><b>' + (selClassic ? "$160" : selAnti ? "$195" : "$160–$195") + '</b></span></div>';
       }
       function txGroup(title, rows){
         return '<h3 class="tx-group">' + title + '</h3><div class="tx-list">' + rows.join("") + '</div>';
       }
-      // Video consultation: no service page, so no treatment link — the
-      // button opens the wizard with it picked (startBooking knows it).
-      // It lives in Advanced now (Tony Nov 19, 2026): the Skin Tightening
-      // row is gone, and the consultation takes its place. The old
-      // "New to In2Skin?" group goes away — one consultation row, here.
+      // Video consultation: no service page, so no treatment link. It
+      // lives in Advanced now (Tony Nov 19, 2026): the Skin Tightening
+      // row is gone, and the consultation takes its place.
       function txConsult(c){
         return '<div class="tx-row' + txState(c.id) + '" data-tx-id="' + c.id + '">' +
+          '<span class="tx-check" aria-hidden="true">✓</span>' +
           '<div class="tx-info"><div class="tx-top"><button type="button" class="tx-name-btn" data-tx-expand="' + c.id + '" aria-expanded="false"><span class="tx-name">' + c.name + '</span></button> <span class="tx-mins">· ' + c.minsLabel + '</span></div>' +
           '<div class="tx-for">New to In2Skin? 20 minutes with Sarah — $30, credited in full toward your first treatment. First-time clients only.</div></div>' +
-          '<span class="tx-price"><b>' + c.price + '</b></span>' +
-          '<button class="btn btn-book btn-book-sm" data-book="' + c.id + '">Book</button></div>';
+          '<span class="tx-price"><b>' + c.price + '</b></span></div>';
+      }
+      // Needling sits together (Tony Nov 19, 2026): microneedling and
+      // NANO are one treatment, one choice — Sarah picks the needle
+      // size at the visit. The quick visits are things you ADD to a
+      // facial, not standalone visits on their own.
+      function addonRows(){
+        var all = SERVICES.filter(function(s){ return s.cat.indexOf("Enhancement")===0; });
+        // NANO then Microneedling, right next to each other (Tony Nov 19,
+        // 2026): one treatment, one choice — Sarah picks the needle size
+        // at the visit. Microneedling is an Advanced service, not an
+        // Enhancement, so it is looked up directly — the old byId map
+        // only held Enhancements and silently dropped it.
+        var ordered = [svcById("nano-needling"), svcById("microneedling")].filter(Boolean)
+          .concat(all.filter(function(s){ return s.id !== "nano-needling" && s.id !== "microneedling"; }));
+        return ordered.map(txRow);
       }
       var txList =
         txGroup("Facials", SERVICES.filter(function(s){ return s.cat.indexOf("Signature")===0; }).map(txRow)) +
-        txGroup("Advanced", SERVICES.filter(function(s){ return s.cat.indexOf("Advanced")===0; }).map(txRow).concat([txConsult(CONSULT)])) +
-        '<p class="fine needling-note" id="txNeedleNote"' + (txNeedleNoteOn() ? "" : " hidden") + '>Needling is already in your booking — Sarah picks micro or nano at the visit.</p>' +
-        txGroup("Combos", COMBOS.map(txCombo)) +
-        txGroup("Just one thing? Quick visits", SERVICES.filter(function(s){ return s.cat.indexOf("Enhancement")===0; }).map(txRow));
+        txGroup("Advanced", SERVICES.filter(function(s){ return s.cat.indexOf("Advanced")===0 && s.id !== "microneedling"; }).map(txRow).concat([txConsult(CONSULT)])) +
+        '<p class="fine needling-note" id="txPeelNote"' + (txPeelNoteOn() ? "" : " hidden") + '>NANO Needling doesn\u2019t go with a peel — pick one or the other.</p>' +
+        txGroup("Combos", [txWorks()]) +
+        txGroup("Add to your facial", addonRows()) +
+        '<p class="fine needling-note" id="txNeedleNote"' + (txNeedleNoteOn() ? "" : " hidden") + '>Needling is already in your booking — Sarah picks micro or nano at the visit.</p>';
       return '' +
       '<section class="block" id="services" style="padding-top:56px;"><div class="wrap">' +
-        '<div class="sec-head center" style="margin-bottom:26px;"><div class="over">Services &amp; Prices</div><h2>Pick. See the price. <em>Book.</em></h2><p>Your journey to rejuvenated skin starts here &mdash; tap a treatment name for details, or book it right here.</p></div>' +
+        '<div class="sec-head center" style="margin-bottom:26px;"><div class="over">Services &amp; Prices</div><h2>Pick. See the price. <em>Book.</em></h2><p>Tap a treatment to pick it — tap its name for details. Then press Book below and choose your day and time.</p></div>' +
         txList +
-        '<div class="offer" style="border-radius:8px; margin-top:34px;"><div class="offer-in" style="padding:18px 16px;">' +
-          '<span class="big">First visit? $10 toward any service</span>' +
-          '<span class="small">Mention it when you book.</span>' +
-          '<button class="btn btn-light" data-book="classic-facial">Book &amp; Save $10</button>' +
-        '</div></div>' +
       '</div></section>' +
       '<section class="block band-deep" id="book"><div class="wrap">' +
         '<div class="sec-head center" style="margin-bottom:24px;"><div class="over">Book Online</div><h2>Book in under a <em>minute</em></h2><p>Pick a treatment → pick a time → done. We confirm by phone or email. <strong>Advance booking recommended.</strong></p></div>' +
@@ -899,6 +1021,21 @@
           '<div class="know"><h3>Arrive a little early</h3><p>Please arrive 5–10 minutes before your appointment. It gives you a moment to settle in — and keeps your full treatment time yours.</p></div>' +
           '<div class="know"><h3>What to wear</h3><p>Come exactly as you are — everyday clothes are perfect. You will rest on the treatment table, comfortably draped, and makeup is gently removed as part of your facial.</p></div>' +
           '<div class="know"><h3>Changing or cancelling</h3><p>Life happens. If you need to move your appointment, please call at least 24 hours ahead and we will find you a new time — there is no charge to reschedule.</p></div>' +
+        '</div>' +
+      '</div></section>' +
+      '<section class="block" id="reviews"><div class="wrap">' +
+        '<div class="sec-head center"><div class="over">Client Reviews</div><h2>What clients <em>say</em></h2><p>Client reviews will be featured here as they come in.</p></div>' +
+        '<div class="review-grid" id="reviewGrid">' +
+          '<article class="review-card review-empty">' +
+            '<div class="review-stars" aria-hidden="true">★ ★ ★ ★ ★</div>' +
+            '<h3>Be one of our first reviews</h3>' +
+            '<p>Book a visit — and if you love it, your review here helps neighbours searching for facials &amp; reflexology nearby find us.</p>' +
+          '</article>' +
+        '</div>' +
+        '<div class="photo-strip" style="margin:30px 0 0;">' +
+          '<img src="assets/rev-portrait.webp" alt="A smiling client in a white robe resting on the treatment table after her facial" loading="lazy" />' +
+          '<img src="assets/rev-glow.webp" alt="A client lying back smiling with her hands to her cheeks, skin glowing after a facial" loading="lazy" />' +
+          '<img src="assets/rev-robe.jpg" alt="A happy guest in a spa robe and towel wrap, smiling after her treatment" loading="lazy" />' +
         '</div>' +
       '</div></section>' +
       '<section class="block"><div class="wrap">' +
@@ -943,7 +1080,7 @@
             '<button class="pair-chip" data-book="combo-anti" style="cursor:pointer;">The Works with Anti-Aging Facial <b>$195 · 80 min</b></button>' +
           '</div>' +
           '<h2>Good to know</h2>' +
-          '<p>Book it as one treatment — pick either option above and you are done. First visit? Take $10 toward any service. Private Hours (early mornings and evenings, by request) are the regular price plus $15 per visit.</p>' +
+          '<p>Book it as one treatment — pick either option above and you are done. Private Hours (early mornings and evenings, by request) are the regular price plus $15 per visit.</p>' +
           '<h2>Pairs well with</h2>' +
           '<div class="pair-row">' +
             '<a class="pair-chip" href="#/nano-needling" data-nav="nano-needling">NANO Needling <b>$65 · 20 min</b></a>' +
@@ -974,6 +1111,7 @@
                     '<h1>Facials in Bolton that leave you <em>glowing.</em></h1>' +
           '<p class="lede">Facials, aesthetics &amp; reflexology in Bolton, Ontario</p>' +
           '<p class="hero-promise">Custom — made for you</p>' +
+          '<div class="hero-ctas"><a class="btn btn-hero" href="#/book" data-nav="book">See prices</a></div>' +
         '</div></div></div>' +
       '</section>' +
       '<section class="block" id="welcome"><div class="wrap">' +
@@ -995,34 +1133,12 @@
           '</div>' +
         '</div>' +
       '</div></section>' +
-      '<section class="block" id="pay"><div class="wrap">' +
-        '<div class="sec-head center" style="margin-bottom:24px;"><div class="over">Pay on the Spot</div><h2>Pay at your visit, <em>on your own phone</em></h2><p>No card terminal, and no handing your card to anyone. A payment link comes to your phone — by text, email, or a quick QR scan — you pay there, and you are done.</p></div>' +
-        '<div class="pay-rule"><strong>Payment happens on the spot — before you leave.</strong><p>If you are getting the service, you pay then and there, at the visit. That is the rule for every appointment.</p></div>' +
-        '<div class="pay-steps">' +
-          '<div class="pay-step"><div class="num">1</div><h3>We share the link</h3><p>At the end of your visit, we enter the amount owed and share a payment link — by text, by email, or as a QR code on our phone that you scan with your camera.</p></div>' +
-          '<div class="pay-step"><div class="num">2</div><h3>You pay on your phone</h3><p>Open the link on your own phone — or scan the QR code and it opens there — and pay by Visa, Mastercard, Visa Debit or Debit Mastercard. Your card number stays on your screen — we never see it or touch it.</p></div>' +
-          '<div class="pay-step"><div class="num">3</div><h3>Receipt, right away</h3><p>You get an instant receipt showing <strong>IN2SKIN</strong> — and IN2SKIN is what shows on your card statement, too. We see “paid” confirmed before you head home.</p></div>' +
-        '</div>' +
-        '<p class="pay-preview-note">Prefer cash or e-transfer? Those still work, as always. A plain Interac-only debit card cannot go through the link — e-transfer covers it.</p>' +
-      '</div></section>' +
-'<section class="block" id="reviews"><div class="wrap">' +
-        '<div class="sec-head center"><div class="over">Client Reviews</div><h2>What clients <em>say</em></h2><p>Client reviews will be featured here as they come in.</p></div>' +
-        '<div class="review-grid" id="reviewGrid">' +
-          '<article class="review-card review-empty">' +
-            '<div class="review-stars" aria-hidden="true">★ ★ ★ ★ ★</div>' +
-            '<h3>Be one of our first reviews</h3>' +
-            '<p>Book a visit — and if you love it, your review here helps neighbours searching for facials &amp; reflexology nearby find us.</p>' +
-            '<div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:14px;"><button class="btn btn-book" data-book="classic-facial">Book Your First Visit</button></div>' +
-          '</article>' +
-        '</div>' +
-        '<div class="photo-strip" style="margin:30px 0 0;">' +
-          '<img src="assets/rev-portrait.webp" alt="A smiling client in a white robe resting on the treatment table after her facial" loading="lazy" />' +
-          '<img src="assets/rev-glow.webp" alt="A client lying back smiling with her hands to her cheeks, skin glowing after a facial" loading="lazy" />' +
-          '<img src="assets/rev-robe.jpg" alt="A happy guest in a spa robe and towel wrap, smiling after her treatment" loading="lazy" />' +
-        '</div>' +
+      '<section class="block" style="padding:0 0 92px;"><div class="wrap">' +
+        '<div class="sec-head center"><div class="over">First-Time Guests</div><h2>Book your <em>first visit</em></h2><p>New to In2Skin? Start with the Classic Facial — 55 minutes, $85, tailored to your skin that day. Or talk it over first: a 20-minute consultation with Sarah, $30, credited in full toward your first treatment.</p></div>' +
+        '<div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;"><button class="btn btn-book btn-big" data-book="classic-facial">Book your first visit — $85</button><button class="btn btn-ghost btn-big" data-book="consultation">Talk it over first — $30</button></div>' +
       '</div></section>' +
       '<section class="block band-deep"><div class="wrap">' +
-        '<div class="sec-head center" style="margin-bottom:26px;"><div class="over">Sound Familiar?</div><h2>Do you have…</h2><p>Find yours — then book the fix, right here in Bolton.</p></div>' +
+        '<div class="sec-head center" style="margin-bottom:26px;"><div class="over">Sound Familiar?</div><h2>Do you have…</h2><p>Tap the one that sounds like you — it opens the price list with that treatment already picked.</p></div>' +
         '<div class="photo-strip two">' +
           '<img src="assets/cond-mirror.jpg" alt="A woman studying her skin in a round mirror, checking the areas that bother her" loading="lazy" />' +
           '<img src="assets/cond-cream.webp" alt="A woman smoothing moisturising cream into her cheek — skin asking for hydration" loading="lazy" />' +
@@ -1035,6 +1151,7 @@
           '<article class="cond"><h3>Fine lines?</h3><p>Lines showing more than you’d like — skin asking for firming care.</p><p class="rec">Try: Anti-Aging Facial — $125</p><div class="book-row" style="display:flex;gap:10px;margin-top:8px;"><button class="btn btn-book" data-cond-service="anti-aging-facial">Choose this &rarr;</button></div></article>' +
           '<article class="cond"><h3>Tired skin?</h3><p>Stressed, worn-out skin — and a worn-out you.</p><p class="rec">Try: The Works combo — $160</p><div class="book-row" style="display:flex;gap:10px;margin-top:8px;"><button class="btn btn-book" data-cond-service="combo-classic">Choose this &rarr;</button></div></article>' +
         '</div>' +
+        '<p style="text-align:center; margin-top:18px;"><a href="#/book" data-nav="book"><strong>See all prices &rarr;</strong></a></p>' +
         '<div class="sec-head aud-head" style="margin-top:48px;margin-bottom:6px;"><div class="over">For Your Moment</div><h2 style="font-size:1.9rem;">Getting ready for something?</h2></div>' +
         '<div class="aud-grid">' +
           '<article class="cond"><img class="cond-img" src="assets/ready-bride.webp" alt="A bride having her makeup finished on her wedding morning, hair in an elegant updo with her dress hanging behind her" loading="lazy" /><h3>Getting married?</h3><p>Look your best on the big day — polished, glowing, photo-ready skin.</p><p class="rec">Try: Microdermabrasion — $55 + Classic Facial — $85</p><div style="display:flex;gap:10px;margin-top:8px;"><button class="btn btn-book" data-cond-service="classic-facial" data-cond-addons="microdermabrasion">Choose this &rarr;</button></div></article>' +
@@ -1055,6 +1172,16 @@
         '<p style="max-width:640px;">Private Hours is our premier experience, the studio reserved just for you. Early mornings and evenings are available by request. You pay the regular price of the services you pick, plus $15 per visit. Call (289) 212-4124 or email bookings@boltonfacials.com and Sarah will set it up.</p>' +
         '<div style="margin-top:22px;"><a class="btn btn-light" href="tel:+12892124124">Call Sarah — (289) 212-4124</a></div>' +
         '<div class="photo-strip wide" style="margin:32px 0 0;"><img src="assets/quiet-candles.webp" alt="The studio after hours — a candlelit treatment room with candles glowing along the stone walls" loading="lazy" /></div>' +
+      '</div></section>' +
+      '<section class="block" id="pay"><div class="wrap">' +
+        '<div class="sec-head center" style="margin-bottom:24px;"><div class="over">Pay on the Spot</div><h2>Pay at your visit, <em>on your own phone</em></h2><p>No card terminal, and no handing your card to anyone. A payment link comes to your phone — by text, email, or a quick QR scan — you pay there, and you are done.</p></div>' +
+        '<div class="pay-rule"><strong>Payment happens on the spot — before you leave.</strong><p>If you are getting the service, you pay then and there, at the visit. That is the rule for every appointment.</p></div>' +
+        '<div class="pay-steps">' +
+          '<div class="pay-step"><div class="num">1</div><h3>We share the link</h3><p>At the end of your visit, we enter the amount owed and share a payment link — by text, by email, or as a QR code on our phone that you scan with your camera.</p></div>' +
+          '<div class="pay-step"><div class="num">2</div><h3>You pay on your phone</h3><p>Open the link on your own phone — or scan the QR code and it opens there — and pay by Visa, Mastercard, Visa Debit or Debit Mastercard. Your card number stays on your screen — we never see it or touch it.</p></div>' +
+          '<div class="pay-step"><div class="num">3</div><h3>Receipt, right away</h3><p>You get an instant receipt showing <strong>IN2SKIN</strong> — and IN2SKIN is what shows on your card statement, too. We see “paid” confirmed before you head home.</p></div>' +
+        '</div>' +
+        '<p class="pay-preview-note">Prefer cash or e-transfer? Those still work, as always. A plain Interac-only debit card cannot go through the link — e-transfer covers it.</p>' +
       '</div></section>';
     }
 
@@ -1233,80 +1360,30 @@
       }).join("") + '</div>';
 
       var body = "";
+      // Self-heal stale state: a consultation is just the consultation —
+      // no add-ons, and never booked for a friend. And anything the
+      // picked main no longer allows is pruned (a Works swap drops red
+      // light + reflexology, already included; a peel drops NANO).
+      if (isConsult()){
+        if ((booking.addons || []).length) booking.addons = [];
+        if (booking.forWhom !== "me") booking.forWhom = "me";
+      }
+      pruneAddons();
+      // "Build your visit" IS the calendar (Tony Nov 19, 2026): the
+      // price list above is the one place to pick — the wizard must not
+      // duplicate it with a second pick-list. Step 1 is a prompt, not a
+      // pick-list — and it must NEVER auto-advance: a tap on the list
+      // calls syncPicker, which re-renders the wizard, and an advance
+      // here would jump the visitor to the calendar (and hide the Book
+      // button) after their very first pick. The Book button, and
+      // startBooking, are the only ways to step 2.
       if (booking.step === 1){
-        // "Build your visit" (Tony Nov 17, 2026): multi-pick. A main
-        // treatment is single-select — tapping a different main swaps it,
-        // add-ons stay. Add-ons toggle in/out; tapping an add-on first
-        // makes it the main (standalone 20-minute visit). Nothing here
-        // auto-advances — the package bar below is the way forward.
-        var facials = SERVICES.filter(function(s){ return s.cat.indexOf("Signature")===0; });
-        var advanced = SERVICES.filter(function(s){ return s.cat.indexOf("Advanced")===0; });
-        var quick = SERVICES.filter(function(s){ return s.cat.indexOf("Enhancement")===0; });
-        // Guided add-ons (Tony Nov 19, 2026): once a main is picked, the
-        // wizard points at the add-ons that fit it, so nobody misses the
-        // extras that go with their treatment. GUIDED + guidedFor live at
-        // top level now — the wizard and the services-list picker share it.
-        // Needling is one treatment (Tony Nov 19, 2026): microneedling
-        // and NANO needling are the same thing, just the needle size —
-        // a booking picks one or the other, never both.
-        var NEEDLE_NOTE = "Needling is already in your booking — Sarah picks micro or nano at the visit.";
-        var hasNano = (booking.addons || []).indexOf("nano-needling") >= 0;
-        // Self-heal stale state (e.g. a saved package from before the
-        // rule): if microneedling is the main, NANO cannot also be an extra.
-        if (booking.service === "microneedling" && hasNano){
-          booking.addons = (booking.addons || []).filter(function(id){ return id !== "nano-needling"; });
-          hasNano = false;
-        }
-        // Self-heal stale state: a consultation is just the consultation —
-        // no add-ons, and never booked for a friend.
-        if (isConsult()){
-          if ((booking.addons || []).length) booking.addons = [];
-          if (booking.forWhom !== "me") booking.forWhom = "me";
-        }
-        var microBlocked = booking.service === "nano-needling" || hasNano;
-        var nanoBlocked = booking.service === "microneedling";
-        function pickRow(s){
-          var blocked = s.id === "microneedling" && microBlocked;
-          return '<button type="button" class="pick pick-row' + (booking.service===s.id ? " sel" : "") + (blocked ? " off" : "") + '"' + (blocked ? " disabled" : "") + ' data-pick-service="' + s.id + '">' +
-            '<span class="t">' + s.name + '</span><span class="d">' + s.minsLabel + '</span><span class="pr">' + s.price + '</span></button>';
-        }
-        function comboRow(c){
-          return '<button type="button" class="pick pick-row' + (booking.service===c.id ? " sel" : "") + '" data-pick-service="' + c.id + '">' +
-            '<span class="t">' + c.name + '</span><span class="d">' + c.minsLabel + '</span><span class="pr">' + c.price + '</span></button>';
-        }
-        function addonRow(s){
-          var on = booking.service===s.id || (booking.addons || []).indexOf(s.id) >= 0;
-          var blocked = s.id === "nano-needling" && nanoBlocked;
-          var rec = guidedFor(booking.service).indexOf(s.id) >= 0;
-          return '<button type="button" class="pick pick-row' + (on ? " sel" : "") + (blocked ? " off" : "") + (rec ? " rec" : "") + '"' + (blocked ? " disabled" : "") + ' data-pick-addon="' + s.id + '">' +
-            '<span class="t">' + s.name + '</span><span class="d">' + s.minsLabel + '</span><span class="pr">' + s.price + '</span></button>';
-        }
-        function group(title, rows){
-          return '<h4 class="pick-group">' + title + '</h4><div class="pick-list">' + rows.join("") + '</div>';
-        }
-        var guided = guidedFor(booking.service);
-        var mainSvc = currentService();
-        var guidedHint = "";
-        if (mainSvc && guided.length && !isConsult()){
-          var names = guided.map(function(id){ var a = addonById(id); return a ? a.name : id; });
-          guidedHint = '<p class="goes-well">Goes well with ' + mainSvc.name + ': ' + names.join(", ") + ' — tap to add.</p>';
-        }
         body = '<div class="book-step on"><h3>Build your visit</h3>' +
-          '<p class="sub">Tap to pick — mix a treatment with extras and watch your visit build below.</p>' +
-          group("Facials", facials.map(pickRow)) +
-          group("Advanced", advanced.map(pickRow)) +
-          (microBlocked ? '<p class="fine needling-note">' + NEEDLE_NOTE + '</p>' : '') +
-          group("Combos", COMBOS.map(comboRow)) +
-          group("New to In2Skin? Talk it over first", [pickRow(CONSULT)]) +
-          '<p class="sub" style="margin-top:-6px;">20 minutes with Sarah — $30, credited in full toward any treatment you book after. For first-time clients — one consultation per client. Choose video or in person below.</p>' +
-          (isConsult() ?
-            '<div class="pick-grid" style="margin-bottom:20px;">' +
-              '<button type="button" class="pick' + (booking.format !== "in-person" ? " sel" : "") + '" data-pick-format="video"><span class="t">Video call</span><span class="d">Google Meet — your link arrives by email; no app needed</span></button>' +
-              '<button type="button" class="pick' + (booking.format === "in-person" ? " sel" : "") + '" data-pick-format="in-person"><span class="t">In person</span><span class="d">At the studio in Bolton — come as you are</span></button>' +
-            '</div>' : '') +
-          guidedHint +
-          (isConsult() ? "" : group("Just one thing? Quick visits", quick.map(addonRow))) +
-          (nanoBlocked ? '<p class="fine needling-note">' + NEEDLE_NOTE + '</p>' : '') +
+          (booking.service ?
+            '<p class="book-summary"><strong>Your visit — </strong>' + bookingAddonTotalText() + '</p>' +
+            '<p class="sub">Press Book below to choose your day and time — or change your pick in the price list above.</p>' :
+            '<p class="sub">Pick your treatment from the price list above — then choose your day and time here.</p>') +
+          '<p><button type="button" class="btn btn-ghost" id="toServices">See the price list ↑</button></p>' +
           '<div class="err" id="bookErr"></div></div>';
       }
       else if (booking.step === 2){
@@ -1343,8 +1420,12 @@
             '<span class="num">' + day + '</span><span class="dot" aria-hidden="true"></span></button>';
         }
         body = '<div class="book-step on"><h3>Choose a day &amp; time</h3>' +
-          '<p class="book-summary">' + bookingAddonTotalText() + ' — <button type="button" class="linklike" id="changeTreatment">Change</button></p>' +
+          '<p class="book-summary"><strong>Your visit — </strong>' + bookingAddonTotalText() + ' — <button type="button" class="linklike" id="changeTreatment">Change</button></p>' +
           (isConsult() ?
+            '<div class="pick-grid" style="margin-bottom:20px;">' +
+              '<button type="button" class="pick' + (booking.format !== "in-person" ? " sel" : "") + '" data-pick-format="video"><span class="t">Video call</span><span class="d">Google Meet — your link arrives by email; no app needed</span></button>' +
+              '<button type="button" class="pick' + (booking.format === "in-person" ? " sel" : "") + '" data-pick-format="in-person"><span class="t">In person</span><span class="d">At the studio in Bolton — come as you are</span></button>' +
+            '</div>' +
             '<div class="pick-grid" style="margin-bottom:20px;">' +
               '<button type="button" class="pick' + (!booking.reqAfter ? " sel" : "") + '" data-pick-reqmode="regular"><span class="t">Regular Hours</span><span class="d">Mon–Sat, 10 AM–4 PM — books right away</span></button>' +
               '<button type="button" class="pick' + (booking.reqAfter ? " sel" : "") + '" data-pick-reqmode="after"><span class="t">Evening / Early Morning</span><span class="d">By request — Sarah says yes or no</span></button>' +
@@ -1390,8 +1471,6 @@
             '<div class="field"><label for="bfFPhone">Friend\u2019s phone</label><input id="bfFPhone" type="tel" placeholder="e.g. (905) 555-0100" /></div>' +
             '<div class="field"><label for="bfFEmail">Friend\u2019s email (optional — confirmation goes here)</label><input id="bfFEmail" type="email" placeholder="friend@example.com" /></div>' +
           '</div>' +
-          '<div class="field"><label for="bfFirst">Is this your friend\u2019s first visit to In2Skin?</label>' +
-            '<select id="bfFirst"><option value="yes">Yes — first visit</option><option value="no">They have visited before</option></select></div>' +
           '<div class="field"><label for="bfRefCode">Who sent you? (optional)</label><input id="bfRefCode" type="text" autocomplete="off" placeholder="e.g. ALEX-4821" value="' + (booking.referredBy || "") + '" /><p class="fine" style="margin-top:6px;">A friend shared their code with you? Enter it here — they earn credit when you book and pay.</p></div>' +
           '<div class="field"><label for="bfGiftCode">Gift certificate code (optional)</label><input id="bfGiftCode" type="text" autocomplete="off" placeholder="e.g. IN2SKIN-ABC123" /><p class="fine" id="bfGiftNote" style="margin-top:6px;">Have a gift certificate? Enter the code — its balance comes off this booking. Anything left stays on the code.</p></div>'
         :
@@ -1400,16 +1479,13 @@
             '<div class="field"><label for="bfPhone">Phone</label><input id="bfPhone" name="phone" type="tel" autocomplete="tel" placeholder="e.g. (905) 555-0100" /></div>' +
             '<div class="field"><label for="bfEmail">' + ((consultMode && booking.format !== "in-person") ? "Email (required) — your video link goes here" : "Email (optional) — for your confirmation") + '</label><input id="bfEmail" name="email" type="email" autocomplete="email" placeholder="you@example.com" /></div>' +
           '</div>' +
-          (consultMode ? "" :
-          '<div class="field"><label for="bfFirst">Is this your first visit to In2Skin?</label>' +
-            '<select id="bfFirst" name="first"><option value="yes">Yes — first visit</option><option value="no">I have visited before</option></select></div>') +
           '<div class="field"><label for="bfRefCode">Who sent you? (optional)</label><input id="bfRefCode" type="text" autocomplete="off" placeholder="e.g. ALEX-4821" value="' + (booking.referredBy || "") + '" /><p class="fine" style="margin-top:6px;">A friend shared their code with you? Enter it here — they earn credit when you book and pay.</p></div>' +
           (reqMode ? "" :
           '<div class="field"><label for="bfGiftCode">Gift certificate code (optional)</label><input id="bfGiftCode" type="text" autocomplete="off" placeholder="e.g. IN2SKIN-ABC123" /><p class="fine" id="bfGiftNote" style="margin-top:6px;">Have a gift certificate? Enter the code — its balance comes off this booking. Anything left stays on the code.</p></div>');
         body = '<div class="book-step on"><h3>' + (friendMode ? "Your details — and your friend\u2019s" : "Your details") + '</h3>' +
           '<p class="sub">' + (consultMode && booking.format !== "in-person" ? "Almost done — just your name, phone and email. Your video link goes to your email." : "Almost done — just your name and phone. Email is optional, for your confirmation.") + '</p>' +
           '<div class="summary-box"><dl>' +
-            '<dt>Treatment</dt><dd>' + bookingLabel() + ' · ' + bookingMins() + ' · ' + bookingPrice() + (booking.type === "after" && !consultMode ? ' (Private Hours)' : '') + '</dd>' +
+            '<dt>Treatment</dt><dd id="bookTreatSummary">' + bookingLabel() + ' · ' + bookingMins() + ' · ' + bookingPrice() + (booking.type === "after" && !consultMode ? ' (Private Hours)' : '') + '</dd>' +
             '<dt>When</dt><dd>' + (dObj ? fmtDate(dObj) : "") + ' at ' + booking.time + (reqMode ? ' (by request)' : '') + '</dd>' +
             '<dt>Where</dt><dd>' + (consultMode ? (booking.format === "in-person" ? "In person at In2Skin · Bolton, Ontario" : "On video — your link arrives by email") : "In2Skin · Bolton, Ontario") + '</dd>' +
             '<dt>' + (reqMode ? "Due" : "Due at checkout") + '</dt><dd id="bookTotal">' + (reqMode ? "$30 — only if Sarah says yes, by card" : bookTotalText()) + '</dd>' +
@@ -1478,6 +1554,10 @@
             (booking.forWhom === "friend" && booking.guestName ?
             'The <strong>' + bookingLabel() + '</strong>' + (booking.type === "after" ? ' — a Private Hours appointment —' : '') + ' is reserved for <strong>' + booking.guestName + '</strong> on <strong>' + (d3 ? fmtDate(d3) : "") + ' at ' + booking.time + '</strong> at In2Skin in Bolton. They just show up — everything is arranged.' :
             'Your <strong>' + bookingLabel() + '</strong>' + (booking.type === "after" && !isConsult() ? ' — a Private Hours appointment —' : '') + ' is reserved for <strong>' + (d3 ? fmtDate(d3) : "") + ' at ' + booking.time + '</strong>' + (isConsult() ? (booking.format === "in-person" ? ' at In2Skin in Bolton. We look forward to welcoming you.' : ' — on video, your link arrives by email.') : ' at In2Skin in Bolton. We look forward to welcoming you.'))) + '</p></div>' +
+          '<div class="summary-box" style="margin-top:16px;"><dl>' +
+            '<dt>Treatment</dt><dd>' + bookingLabel() + ' · ' + bookingMins() + ' · ' + bookingPrice() + '</dd>' +
+            '<dt>When</dt><dd>' + (d3 ? fmtDate(d3) : "") + ' at ' + booking.time + (isReq ? ' (by request)' : '') + '</dd>' +
+          '</dl></div>' +
           '<div class="after-list">' +
             '<div class="after-item"><span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h16v12H4z" stroke="#2F4A2C" stroke-width="1.8"/><path d="m4 7 8 6 8-6" stroke="#2F4A2C" stroke-width="1.8"/></svg></span>' +
               '<div>' + confirmItem + '</div></div>' +
@@ -1507,50 +1587,9 @@
     function wireBooking(){
       var shell = document.getElementById("bookShell");
       if (!shell) return;
-      shell.querySelectorAll("[data-pick-service]").forEach(function(b){
-        b.addEventListener("click", function(){
-          /* Multi-pick (Tony Nov 17, 2026): tapping a main selects it.
-             Tapping the same main again removes it — the first extra, if
-             any, is promoted to main so the package always has one.
-             Tapping a different main swaps it; extras stay. No
-             auto-advance: the package bar is the way forward. */
-          var id = b.getAttribute("data-pick-service");
-          booking.addons = booking.addons || [];
-          // A consultation is just the consultation — no add-ons, and
-          // never booked for a friend.
-          if (id === CONSULT.id){ booking.addons = []; booking.forWhom = "me"; }
-          if (booking.service === id){
-            booking.service = null;
-            if (booking.addons.length){ booking.service = booking.addons[0]; booking.addons = booking.addons.slice(1); }
-          } else {
-            var ai = booking.addons.indexOf(id);
-            if (ai >= 0) booking.addons.splice(ai, 1);
-            booking.service = id;
-          }
-          syncPicker();
-        });
-      });
-      shell.querySelectorAll("[data-pick-addon]").forEach(function(b){
-        b.addEventListener("click", function(){
-          /* Add-on toggle: no main yet → it becomes the main (standalone
-             20-minute visit). It is the main → remove it (promote the
-             first extra if there is one). Otherwise toggle it as an extra. */
-          var id = b.getAttribute("data-pick-addon");
-          booking.addons = booking.addons || [];
-          // A consultation is just the consultation — no add-ons.
-          if (isConsult()) return;
-          if (!booking.service){ booking.service = id; }
-          else if (booking.service === id){
-            booking.service = null;
-            if (booking.addons.length){ booking.service = booking.addons[0]; booking.addons = booking.addons.slice(1); }
-          }
-          else {
-            var i = booking.addons.indexOf(id);
-            if (i >= 0) booking.addons.splice(i, 1); else booking.addons.push(id);
-          }
-          syncPicker();
-        });
-      });
+      // The wizard has no pick-list of its own any more (Tony Nov 19,
+      // 2026): the price list above is the one place to pick. The
+      // wizard's old pick handlers are gone with it.
       shell.querySelectorAll("[data-pick-type]").forEach(function(b){
         b.addEventListener("click", function(){
           booking.type = b.getAttribute("data-pick-type");
@@ -1621,7 +1660,9 @@
         b.addEventListener("click", function(){ booking.time = b.getAttribute("data-pick-time"); renderBooking(); });
       });
       var chg = document.getElementById("changeTreatment");
-      if (chg) chg.addEventListener("click", function(){ booking.step = 1; renderBooking(); scrollToTopOf("bookShell"); });
+      if (chg) chg.addEventListener("click", function(){ renderBooking(); scrollToTopOf("services"); });
+      var toSvc = document.getElementById("toServices");
+      if (toSvc) toSvc.addEventListener("click", function(){ scrollToTopOf("services"); });
       if (booking.step === 2){
         paintDateStatuses();
         fetchAvailRange();
@@ -1653,10 +1694,8 @@
           })
           .catch(function(){ if (note) note.textContent = "Could not check that code right now — you can still continue; the code is checked again at checkout."; });
       });
-      var bfFirstSel = document.getElementById("bfFirst");
-      if (bfFirstSel) bfFirstSel.addEventListener("change", function(){ booking.first = bfFirstSel.value; refreshBookTotal(); });
       var back1 = document.getElementById("backTo1");
-      if (back1) back1.addEventListener("click", function(){ booking.step = 1; renderBooking(); scrollToTopOf("bookShell"); });
+      if (back1) back1.addEventListener("click", function(){ renderBooking(); scrollToTopOf("services"); });
       var to3 = document.getElementById("toStep3");
       if (to3) to3.addEventListener("click", function(){
         if (!booking.date){ bookErr("Please choose a day to continue."); guideBookingDate(); return; }
@@ -1702,10 +1741,6 @@
           guideMissed([{ sel:"#bfEmail", msg:"Please add your email — your video link goes there." }], bookErr);
           return;
         }
-        // The first-visit field is hidden for consultations (the
-        // $10 offer never applies to one) — default to "no" there.
-        var bfFirstEl = document.getElementById("bfFirst");
-        booking.first = bfFirstEl ? bfFirstEl.value : "no";
         var giftCodeEl = document.getElementById("bfGiftCode");
         booking.giftCode = giftCodeEl ? giftCodeEl.value.trim() : "";
         var refCodeEl = document.getElementById("bfRefCode");
@@ -1744,7 +1779,7 @@
           body: JSON.stringify({ service: booking.service, format: booking.format, addons: booking.addons, date: booking.date, time: booking.time, type: booking.type,
             forWhom: booking.forWhom, name: booking.name, phone: booking.phone, email: booking.email,
             guestName: booking.guestName, guestPhone: booking.guestPhone, guestEmail: booking.guestEmail,
-            first: booking.first, giftCode: booking.giftCode, referredBy: booking.referredBy,
+            giftCode: booking.giftCode, referredBy: booking.referredBy,
             website: (document.getElementById("bfWebsite") || {}).value || "",
             formLoadedAt: (document.getElementById("bfTs") || {}).value || "" }) })
         .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
@@ -1788,10 +1823,12 @@
        of the booking wizard is in view (and the chat is closed). */
     function pkgBarVisible(){
       if (booking.step !== 1) return false;
-      // The package bar follows the picking, wherever it happens: the
-      // services list is the picker too, not just the wizard.
-      var inView = function(el){ if (!el) return false; var r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < window.innerHeight; };
-      return inView(document.getElementById("book")) || inView(document.getElementById("services"));
+      // ONE Book button for the whole price list (Tony Nov 19, 2026): it
+      // must never vanish mid-pick. The old in-view gate hid it the
+      // moment the list scrolled out of view — the visitor was left with
+      // a pick and no way forward. It shows whenever the book screen is up.
+      var v = document.getElementById("view-book");
+      return !!(v && v.classList.contains("active"));
     }
     /* Wizard bar active (Tony Nov 18, 2026): while the booking or gift
        summary bar is pinned, the body carries has-wiz-bar — the CSS hides
@@ -1867,14 +1904,12 @@
       return true;
     }
     function guideBookingStep1(){
-      // The choices live in two places now: the services list (the
-      // picker) and the wizard's own step 1. Glow the one the client
-      // is looking at.
+      // The choices live in one place now: the services list (the
+      // picker). Glow its rows and scroll to them — the wizard has no
+      // pick-list of its own any more (Tony Nov 19, 2026).
       var svc = document.getElementById("services");
-      var inSvc = false;
-      if (svc){ var r = svc.getBoundingClientRect(); inSvc = r.bottom > 0 && r.top < window.innerHeight; }
-      if (inSvc) glowPick("#services .tx-row", svc);
-      else glowPick("#bookShell [data-pick-service], #bookShell [data-pick-addon]", document.getElementById("bookShell"));
+      glowPick("#services .tx-row", svc);
+      scrollToTopOf("services");
     }
     function guideBookingDate(){
       glowPick("#bookShell .cal-day:not(:disabled)", document.querySelector("#bookShell .cal"));
@@ -2328,6 +2363,12 @@
       closeMenus();
       try { if (location.hash !== "#/" + current) history.replaceState(null, "", "#/" + current); } catch (e) {}
       window.scrollTo(0, 0);
+      /* Pinned bar (Tony Nov 19, 2026): no payment option first on the
+         home screen — the bar offers "See prices" there; on every
+         other screen it offers "Book Online". Same destination
+         (#/book, the price list), different framing. */
+      var barCta = document.getElementById("mobileBarCta");
+      if (barCta) barCta.textContent = current === "home" ? "See prices" : "Book Online";
       /* The bottom bars are scroll-driven — a screen change with no
          scroll event would leave the last screen's bar showing, so
          re-evaluate them here (the gift bar was stranding itself on
@@ -2364,6 +2405,20 @@
       }
       var exp = ev.target.closest("[data-tx-expand]");
       if (exp){ toggleTxDetails(exp.getAttribute("data-tx-expand")); return; }
+      // The Works variant buttons pick that variant outright (no toggle —
+      // the row tap is what toggles The Works on and off).
+      var works = ev.target.closest("[data-tx-works]");
+      if (works){
+        var wid = works.getAttribute("data-tx-works");
+        booking.addons = booking.addons || [];
+        var ai = booking.addons.indexOf(wid);
+        if (ai >= 0) booking.addons.splice(ai, 1);
+        booking.service = wid;
+        pruneAddons();
+        dedupeAddons();
+        syncPicker();
+        return;
+      }
       if (ev.target.closest("[data-book]")) return;
       if (ev.target.closest(".tx-details")) return;
       var row = ev.target.closest(".tx-row[data-tx-id]");
@@ -2519,7 +2574,7 @@
       if (has("works","combo","all at once","everything"))
         return { text:"<strong>The Works</strong> is our signature combo: a facial + red light therapy + reflexology, all at the same time while your mask works — so relaxing, clients fall asleep. <strong>$160</strong> with the Classic Facial, <strong>$195</strong> with Anti-Aging.", actions:[svcBtn("combo-classic"), svcBtn("combo-anti")] };
       if (has("price","cost","how much","prices","expensive","cheap","afford"))
-        return { text:"Here are the prices, all up front: Classic Facial <strong>$85</strong> · Anti-Aging Facial <strong>$125</strong> · Chemical Peels <strong>$125–$475</strong> · NANO Needling <strong>$65</strong> · Microdermabrasion <strong>$55</strong> · Light Therapy <strong>$55</strong> · Reflexology <strong>$35</strong> · The Works <strong>$160 / $195</strong> · Microneedling <strong>$65</strong>. First visit? <strong>$10 off</strong>.", actions:[{ label:"See Services & Book", view:"book" }] };
+        return { text:"Here are the prices, all up front: Classic Facial <strong>$85</strong> · Anti-Aging Facial <strong>$125</strong> · Chemical Peels <strong>$125–$475</strong> · NANO Needling <strong>$65</strong> · Microdermabrasion <strong>$55</strong> · Light Therapy <strong>$55</strong> · Reflexology <strong>$35</strong> · The Works <strong>$160 / $195</strong> · Microneedling <strong>$65</strong>. New here? A $30 consultation is credited in full toward your first treatment.", actions:[{ label:"See Services & Book", view:"book" }] };
       if (has("hour","open","when","private","early","evening","sunday","weekend","late"))
         return { text:"Daytime appointments run at regular prices, Monday to Saturday, 10 AM to 4 PM. <strong>Private Hours</strong> are our premier appointments, early mornings and evenings by request, reserved just for you, one-on-one. You pay the regular price of the services you pick, plus <strong>$15</strong> per visit. Sundays the studio is closed.", actions:[{ label:"Book a Visit", view:"book" }] };
       if (has("where","location","address","direction","toronto","drive","far","bolton"))
@@ -2527,7 +2582,7 @@
       if (has("pay","cash","etransfer","e-transfer","e transfer","card","debit"))
         return { text: siteContent ? siteContent.payAnswer : "When you book online you pay in full <strong>securely by card</strong> — Visa, Mastercard, Amex and Apple Pay. <strong>Cash or Interac e-transfer</strong> are also welcome at the studio. Plain Interac-only debit cards cannot be charged by card, so those clients pay by e-transfer.", actions:[] };
       if (has("first visit","discount","offer","deal","promo","10 off","$10"))
-        return { text:"Yes — <strong>first visit: $10 toward any service</strong>. Just mention it when you book, online or by phone.", actions:[{ label:"Book & Save $10", view:"book" }] };
+        return { text:"New to In2Skin? A <strong>consultation is $30 for 20 minutes</strong> — video or in person — and that $30 comes off your first treatment in full, so the consultation is effectively free. That is the one first-visit offer.", actions:[{ label:"Book a Consultation", view:"book" }] };
       if (has("dry","tight skin","flaky","thirsty","dehydrat"))
         return { text:"For dry, tight, thirsty skin, the <strong>Classic Facial</strong> is the one — deep cleanse, warm steam, a custom mask and rich hydration. <strong>$85 for 55 minutes</strong>, and skin leaves soft and supple.", actions:[svcBtn("classic-facial")] };
       if (has("acne","breakout","teen","pimple","oily","blemish"))

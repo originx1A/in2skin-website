@@ -104,7 +104,7 @@ const {
   listConsultRequests, acceptConsultRequest, declineConsultRequest, sendDueConsultReminders,
 } = require("../../lib/bookings");
 const {
-  dateKey, money, SERVICES, COMBOS, QUIET_PREMIUM_CENTS, FIRST_VISIT_CENTS,
+  dateKey, money, SERVICES, COMBOS, QUIET_PREMIUM_CENTS,
   parseTime, durationFor, findService,
 } = require("../../lib/schedule");
 const { getSettings, saveSettings, transferStatus } = require("../../lib/transfer");
@@ -785,7 +785,7 @@ module.exports = async (req, res) => {
     if ((req.query || {}).view === "catalog") {
       return res.status(200).json({
         services: SERVICES, combos: COMBOS,
-        quietPremiumCents: QUIET_PREMIUM_CENTS, firstVisitCents: FIRST_VISIT_CENTS,
+        quietPremiumCents: QUIET_PREMIUM_CENTS,
       });
     }
     if ((req.query || {}).view === "referrals") {

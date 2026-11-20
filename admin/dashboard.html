@@ -125,7 +125,7 @@
 
       <section class="dash-sec" id="sec-walkin" style="margin-top:36px;">
         <h2 style="font-size:1.4rem;"><span class="sec-sym" aria-hidden="true">+</span> Book a walk-in</h2>
-        <p class="sub">Book a client yourself — same prices, same gift / referral / first-visit rules as online booking.</p>
+        <p class="sub">Book a client yourself — same prices, same gift / referral rules as online booking.</p>
         <form id="walkForm">
           <div class="form-2col">
             <div class="field"><label for="wkName">Client's name</label><input id="wkName" type="text" placeholder="e.g. Alex Taylor" /></div>
@@ -145,7 +145,6 @@
             <div class="field"><label for="wkGift">Gift / referral code (optional)</label><input id="wkGift" type="text" placeholder="e.g. IN2SKIN-ABC123" /></div>
             <div class="field"><label for="wkRef">Referred by (optional)</label><input id="wkRef" type="text" placeholder="e.g. ALEX-4821" /></div>
           </div>
-          <div class="field"><label><input id="wkFirst" type="checkbox" checked /> First visit — $10 off applies</label></div>
           <div class="field"><label for="wkPay">Payment</label>
             <select id="wkPay">
               <option value="cash">Paid now — cash</option>
@@ -647,7 +646,6 @@
             else if (/\bcash\b/.test(t)) fills2.push({ id: "wkPay", value: "cash", label: "Payment", select: true });
             var gc = talkFindGiftCode(t);
             if (gc) fills2.push({ id: "wkGift", value: gc, label: "Gift code" });
-            if (/not (a )?first/.test(t)) fills2.push({ id: "wkFirst", check: false, label: "First visit" });
             if (!fills2.length) return { ok: false, message: "I heard “book” but not who or when — try “Book Alex Taylor tomorrow at 2”." };
             return { ok: true, jump: "sec-walkin", fills: fills2, message: "Filled the walk-in — check it, then tap “Book this appointment”." };
           }
@@ -2138,16 +2136,14 @@
           if (!date || !svc){ sel.innerHTML = '<option value="">Pick a day first</option>'; return; }
           loadTimesInto(sel, date, svc, type);
         }
-        // Consultation walk-ins (Tony Nov 19, 2026): the $10
-        // first-visit offer never applies, evening/early morning costs
-        // no extra, and the client's email is required for a video call
-        // (the link goes there) but not for an in-person visit. The form
-        // says so when the consultation is picked.
+        // Consultation walk-ins (Tony Nov 19, 2026): evening/early
+        // morning costs no extra, and the client's email is required
+        // for a video call (the link goes there) but not for an
+        // in-person visit. The form says so when the consultation
+        // is picked.
         function syncWalkConsultUI(){
           var svc = document.getElementById("wkService").value;
           var isConsult = svc === "consultation";
-          var firstField = document.getElementById("wkFirst").closest(".field");
-          if (firstField) firstField.style.display = isConsult ? "none" : "";
           var formatField = document.getElementById("wkFormatField");
           if (formatField) formatField.style.display = isConsult ? "" : "none";
           var typeSel = document.getElementById("wkType");
@@ -2173,7 +2169,6 @@
             name: document.getElementById("wkName").value.trim(),
             phone: document.getElementById("wkPhone").value.trim(),
             email: document.getElementById("wkEmail").value.trim(),
-            first: document.getElementById("wkFirst").checked ? "yes" : "no",
             giftCode: document.getElementById("wkGift").value.trim(),
             referredBy: document.getElementById("wkRef").value.trim(),
             payment: document.getElementById("wkPay").value,
