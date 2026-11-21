@@ -392,6 +392,8 @@ body.dock-off .dock{display:none!important}
 .ao-pick.added .ao-state{color:var(--sage-deep)}
 .ao-pick-wrap .ao-more{margin:8px 2px 0}
 #addonsDone{margin-top:16px}
+/* Nov 20 mobile fixes: the long picker button must wrap inside the card, never bleed off the screen */
+@media(max-width:640px){#addonsDone{width:100%;white-space:normal;line-height:1.35;text-align:center}}
 .cal-help{margin:0 0 10px;font-size:.95rem;color:var(--ink-soft)}
 .reserve .step-hint{display:block;margin:0 0 10px}
 #step-details.glow-pick #detailsForm input{animation:piece-pulse 1.6s ease-in-out infinite;border-color:#C9A15A}
@@ -440,7 +442,7 @@ body.dock-off .dock{display:none!important}
   .book-grid{grid-template-columns:1fr}
   .book-sel{position:static;order:-1}
 }
-@media(max-width:860px){body{padding-bottom:64px}}
+@media(max-width:860px){body{padding-bottom:calc(124px + env(safe-area-inset-bottom))}}
 
 /* ===== no pills (Tony Nov 20): refined cards + buttons, small radius, thin gold border, soft gradient backing ===== */
 .btn{border-radius:8px}
@@ -542,6 +544,8 @@ video[src*="products-hands"]{object-position:50% 60%}
 .duo-frame video,.duo-frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .duo-cap{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;padding-top:6px}
 .duo-tag{font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:#9A7A3E;font-weight:600}
+/* Nov 20 mobile fix: letterspaced card titles must sit well inside their cards on phones */
+@media(max-width:640px){.duo-tag{font-size:.66rem;letter-spacing:.16em}}
 .duo-title{font-family:var(--serif, 'Cormorant Garamond', serif);font-style:italic;font-size:1.15rem;line-height:1.2}
 .duo-card:hover .duo-frame{box-shadow:0 0 0 1px #C9A15A,0 0 0 5px var(--paper),0 0 0 6px #C9A15A,0 30px 50px -22px rgba(58,40,20,.6)}
 
