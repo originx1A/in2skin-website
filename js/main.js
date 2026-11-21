@@ -109,7 +109,7 @@
   function payLines(T) {
     var credit = D.consultDollars, dep = D.depositDollars, cr = creditAmt(T), rem = Math.max(0, T.total - cr), L = [];
     if (cr) L.push(["Gift code " + S.code.code, "−" + money(cr)]);
-    if (S.option === "G") { L.push(["Paid today", pr(T, rem)]); L.push(["At the visit", money(0)]); }
+    if (S.option === "G" || S.option === "F") { L.push(["Paid today", pr(T, rem)]); L.push(["At the visit", money(0)]); }
     else if (S.option === "A") { var d = Math.min(dep, rem); L.push(["Due today: deposit", money(d)], ["At your visit", pr(T, Math.max(0, rem - d))]); }
     return L;
   }
@@ -305,7 +305,7 @@
     date: "Pick a day — gold days have times; grey days are full or closed (Sundays).",
     time: "Pick a start time — the studio holds it while you pay.",
     details: "Your name, email and phone — your confirmation goes to your email.",
-    option: "A $30 deposit holds your time — the balance is due at your visit.",
+    option: "A $30 deposit holds your time, or pay in full now — the rest is due at your visit.",
     reserve: "Tap Reserve — you pay securely by card, then you are booked in.",
     friend: "Add your friend, then your own details for the receipt."
   };
@@ -375,7 +375,7 @@
       $$(".opt-card").forEach(function (c) { c.setAttribute("aria-checked", String(c.getAttribute("data-option") === S.option)); });
       var parts = [(S.who === "friend" && S.F.name ? "For " + S.F.name + ": " : "") + T.items.map(function (i) { return i.name; }).join(" + ")]; parts.push(hm(T.mins) + " · " + pr(T, netTotal(T))); if (S.date) parts.push(dateLabel()); if (S.time) parts.push(S.time);
       $("#reserveSum").textContent = parts.join(" · ");
-      if (!submitting) $("#reserveBtn").textContent = S.option === "G" ? "Pay " + pr(T, Math.max(0, T.total - creditAmt(T))) + " and book it for " + (S.F.name || "my friend") : S.option === "A" ? "Pay $" + D.depositDollars + " deposit to hold this time" : "Reserve my time";
+      if (!submitting) $("#reserveBtn").textContent = S.option === "G" ? "Pay " + pr(T, Math.max(0, T.total - creditAmt(T))) + " and book it for " + (S.F.name || "my friend") : S.option === "F" ? "Pay " + pr(T, Math.max(0, T.total - creditAmt(T))) + " in full" : S.option === "A" ? "Pay $" + D.depositDollars + " deposit to hold this time" : "Reserve my time";
     }
     // running total: side panel (desktop, picker steps) + dock (phone)
     var tp = $("#totalPanel");
@@ -502,7 +502,7 @@
     var payload = {
       service: apiService(), addons: apiAddons(), date: S.date, time: S.time, type: "regular",
       name: friend ? F.yname : S.D.name, email: friend ? F.yemail : S.D.email, phone: friend ? F.yphone : S.D.phone,
-      payMode: friend ? "full" : "deposit", who: friend ? "friend" : "me", forWhom: friend ? "friend" : "me",
+      payMode: friend ? "full" : (S.option === "F" ? "full" : "deposit"), who: friend ? "friend" : "me", forWhom: friend ? "friend" : "me",
       giftCode: S.code ? S.code.code : "",
       website: "", formLoadedAt: String(LOADED_AT),
     };

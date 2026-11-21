@@ -56,6 +56,7 @@
               + '<dt>Where</dt><dd>In2Skin · Bolton, Ontario</dd>'
               + '<dt>Paid</dt><dd>' + money(b.amountPaidCents) + (b.status === "deposit-paid" ? " deposit" : "") + (b.giftAppliedCents ? ' (includes ' + money(b.giftAppliedCents) + (b.giftKind === "consult-credit" ? ' consultation credit)' : ' from your gift certificate)') : '') + ' — shows as IN2SKIN on your statement</dd>'
               + (b.status === "deposit-paid" ? '<dt>Balance due at your visit</dt><dd><strong>' + money(b.balanceDueCents || 0) + '</strong> — pay at the studio by cash, e-transfer or card on your own phone</dd>' : '')
+              + (b.status === "paid" && (b.amountPaidCents || 0) > 0 ? '<dt>Due at your visit</dt><dd>Nothing, paid in full</dd>' : '')
               + '</dl></div>'
               + ((b.giftAppliedCents && b.giftKind === "consult-credit")
                 ? '<p style="margin-top:12px;"><strong>' + money(b.giftAppliedCents) + ' consultation credit applied</strong> — your consultation covered ' + money(b.giftAppliedCents) + ' of this treatment.</p>' : '')
