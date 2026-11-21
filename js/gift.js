@@ -8,6 +8,16 @@
   if (!$("#giftFlow")) return;
   var RM = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: false };
   var G = { amt: null, tre: null, other: false, name: "", rphone: "", msg: "", del: null, remail: "", when: "now", date: "", buyer: "", bemail: "", bphone: "", paying: false, done: false };
+  /* one click submits (Nov 20, 2026): while the payment request is in
+     flight, paint() never resets the Pay button's label and later clicks
+     are ignored — the button must not look idle while swallowing clicks. */
+  var submitting = false;
+  /* Where the gift is redeemed (Nov 20, 2026): the live site reads as
+     boltonfacials.com; a preview shows its own host. */
+  function siteLabel() {
+    var h = location.host;
+    return (h === "www.boltonfacials.com" || h === "boltonfacials.com") ? "boltonfacials.com" : h;
+  }
   function PHONE(v) { return String(v || "").replace(/\D/g, "").length >= 10; }
   var EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -66,7 +76,7 @@
       $("#gpLines").innerHTML = '<div><span>' + (G.tre ? esc(G.tre) + " voucher" : "Gift certificate") + '</span><b>' + money(G.amt) + '</b></div>' +
         '<div><span>For</span><b>' + esc(G.name) + '</b></div>' +
         '<div><span>' + (G.del === "email" ? "Emailed to them " + (G.when === "date" ? "on " + dateWords(G.date) : "right away") : "Sent to you to print") + '</span><b></b></div>';
-      $("#gpTotal").textContent = money(G.amt); $("#giftPay").textContent = "Pay " + money(G.amt);
+      $("#gpTotal").textContent = money(G.amt); if (!submitting) $("#giftPay").textContent = "Pay " + money(G.amt);
     }
   }
   function advance() { paint(); var n = next(); setTimeout(function () { go($(TARGET[n])); }, RM.matches ? 0 : 140); }
@@ -142,7 +152,7 @@
     if (o.delivery === "email" && o.toEmail) {
       send.hidden = false;
       var body = "Hi " + o.toName + ",\n\n" + o.buyerName + " has given you a gift certificate for In2Skin in Bolton: " + (o.treatment ? o.treatment + " (value " + money(o.amount) + ")" : money(o.amount)) + ".\n" +
-        (o.message ? "\n\"" + o.message + "\"\n" : "") + "\nYour code: " + code + "\nRedeem it when you book at boltonfacials.com or call (289) 212-4124.\n";
+        (o.message ? "\n\"" + o.message + "\"\n" : "") + "\nYour code: " + code + "\nRedeem it when you book at " + siteLabel() + " or call (289) 212-4124.\n";
       send.setAttribute("href", "mailto:" + encodeURIComponent(o.toEmail).replace("%40", "@") + "?subject=" + encodeURIComponent("A gift for you from " + o.buyerName) + "&body=" + encodeURIComponent(body));
     } else { send.hidden = true; }
     ["gf1", "gf2", "gf3", "gf4"].forEach(function (id) { var el = document.getElementById(id); if (el) el.hidden = true; });
@@ -151,6 +161,8 @@
   }
   $("#giftPay").addEventListener("click", function () {
     if (next() !== "pay") { toMissing(next()); return; }
+    if (submitting) return;
+    submitting = true;
     var order = buildOrder();
     var btn = $("#giftPay"); btn.disabled = true; btn.textContent = "Taking you to secure payment…";
     var err = $("#giftPayErr"); if (err) { err.hidden = true; err.textContent = ""; }
@@ -161,6 +173,7 @@
         location.href = res.j.url; /* Stripe Checkout — paying completes the gift */
       })
       .catch(function (e) {
+        submitting = false;
         btn.disabled = false; btn.textContent = "Pay " + money(order.amount);
         if (err) { err.hidden = false; err.textContent = e.message || "Something went wrong — please try again."; }
       });
@@ -197,6 +210,11 @@
         G.paying = true; G.done = true; paint();
       });
   }
+
+  /* Redeem line (Nov 20, 2026): the static page says boltonfacials.com;
+     on a preview it reads the preview's own host. */
+  var gcHow = document.getElementById("gcHow");
+  if (gcHow) gcHow.textContent = "Redeem when you book at " + siteLabel() + " or call (289) 212-4124.";
 
   paint();
 })();

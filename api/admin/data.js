@@ -99,14 +99,14 @@ const {
   giftDisplayStatus, getBooking, markBookingOutcome, saveBooking,
   cancelBooking, moveBooking, deleteBooking, buildBooking, createBookingCheckout, createPayLink,
   sendBookingConfirmation, sendWalkInConfirmation, sendHoldEmail, finalizePaidBooking,
-  balanceDue, recordPayment, getPayment, deletePayment, newId, PHONE_DISPLAY,
+  balanceDue, recordPayment, getPayment, deletePayment, newId, PHONE_DISPLAY, siteUrlFor,
   dueFinishChecks, notifyFinishCheck, markFinishDone, snoozeFinishCheck,
   listConsultRequests, acceptConsultRequest, declineConsultRequest, sendDueConsultReminders,
   sendDueGiftCertificates,
 } = require("../../lib/bookings");
 const {
   dateKey, money, SERVICES, COMBOS, QUIET_PREMIUM_CENTS,
-  parseTime, durationFor, findService,
+  parseTime, durationFor, findService, dedupeServicesByName,
 } = require("../../lib/schedule");
 const { getSettings, saveSettings, transferStatus } = require("../../lib/transfer");
 const { listReferrals, getOrCreateReferral, getReferralByCode, deleteReferral, normalizeReferralCode, attendeeOf } = require("../../lib/referrals");
@@ -635,6 +635,9 @@ module.exports = async (req, res) => {
       if (b.view === "bookings" && b.action === "walk-in") {
         const payment = ["cash", "e-transfer", "pay-link", "later", "no-charge"].includes(b.payment) ? b.payment : "later";
         const { bufferMins, blocks } = await studioForDate(b.date);
+        // Where the walk-in was booked (Nov 20, 2026): the checkout
+        // success URL and every later email link back to this origin.
+        b.origin = siteUrlFor(req);
         const booking = await buildBooking(b, { bufferMins, blocks, allowToday: true, allowAddonMain: true, via: "admin" });
         // No charge (Tony Nov 19, 2026 — Tony's free test consultation,
         // and any on-the-house booking Sarah decides): nothing is owed,
@@ -809,6 +812,7 @@ module.exports = async (req, res) => {
           amountCents: due, clientName: who.name || booking.name,
           contact: who.email || booking.email, method: "email",
           serviceLabel: `${booking.serviceName} — balance`, bookingId: booking.id,
+          origin: booking.origin || siteUrlFor(req),
         });
         booking.paylinkId = out.id;
         await saveBooking(booking);
@@ -905,8 +909,11 @@ module.exports = async (req, res) => {
       return res.status(200).json({ entries });
     }
     if ((req.query || {}).view === "catalog") {
+      // One row per treatment (Nov 20, 2026): SERVICES carries both
+      // needling ids under the one combined name — the dropdown shows it
+      // once (nano-needling, the current id, wins).
       return res.status(200).json({
-        services: SERVICES, combos: COMBOS,
+        services: dedupeServicesByName(SERVICES), combos: COMBOS,
         quietPremiumCents: QUIET_PREMIUM_CENTS,
       });
     }

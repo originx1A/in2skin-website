@@ -13,7 +13,7 @@
 // buyer to print. Email delivery takes an optional sendOn date.
 const { getStripe } = require("../lib/stripe");
 const { GIFT_OPTIONS, priceVoucher, money } = require("../lib/schedule");
-const { SITE_URL } = require("../lib/bookings");
+const { siteUrlFor } = require("../lib/bookings");
 const { sendEmail } = require("../lib/email");
 const { checkLimit } = require("../lib/rate-limit");
 const { torontoDateKey } = require("../lib/transfer");
@@ -132,6 +132,9 @@ async function handleVoucherBuy(req, res, b) {
       {
         kind: "voucher",
         voucherLabel: priced.label,
+        // Where the gift was bought (Nov 20, 2026): the certificate email
+        // links back to this origin.
+        origin: siteUrlFor(req),
         voucherFor: JSON.stringify({
           service: priced.main.id,
           serviceName: priced.main.name,
@@ -140,8 +143,8 @@ async function handleVoucherBuy(req, res, b) {
         }),
       },
     ),
-    success_url: `${SITE_URL}/gift/?paid={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${SITE_URL}/gift/`,
+    success_url: `${siteUrlFor(req)}/gift/?paid={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${siteUrlFor(req)}/gift/`,
   });
   return res.status(200).json({ url: session.url });
 }
@@ -230,13 +233,16 @@ async function handleAgentGift(req, res, b) {
         recipientName,
         recipientEmail,
         message: String(b.message || "").trim().slice(0, 500),
+        // Where the gift was bought (Nov 20, 2026): the certificate email
+        // links back to this origin.
+        origin: siteUrlFor(req),
       }, b.kind === "voucher" ? {
         kind: "voucher",
         voucherLabel,
         voucherFor: JSON.stringify(voucherFor),
       } : {}),
-      success_url: `${SITE_URL}/gift-sent.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${SITE_URL}/#gift`,
+      success_url: `${siteUrlFor(req)}/gift-sent.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${siteUrlFor(req)}/#gift`,
     });
     // The buyer pays on their own phone — the link goes to their email.
     // If the email does not go out, say so: the agent must not tell the
@@ -342,9 +348,11 @@ module.exports = async (req, res) => {
       }],
       payment_intent_data: { statement_descriptor: "IN2SKIN" },
       customer_email: n.buyerEmail,
-      metadata: giftSessionMeta(n),
-      success_url: `${SITE_URL}/gift/?paid={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${SITE_URL}/gift/`,
+      // Where the gift was bought (Nov 20, 2026): the certificate email
+      // links back to this origin.
+      metadata: giftSessionMeta(n, { origin: siteUrlFor(req) }),
+      success_url: `${siteUrlFor(req)}/gift/?paid={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${siteUrlFor(req)}/gift/`,
     });
     return res.status(200).json({ url: session.url });
   } catch (err) {

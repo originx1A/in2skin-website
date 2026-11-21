@@ -6,7 +6,7 @@ const crypto = require("crypto");
 const { kvSet } = require("../../lib/kv");
 const { sendEmail } = require("../../lib/email");
 const { adminEmails, MAGIC_LINK_MINUTES } = require("../../lib/auth");
-const { SITE_URL } = require("../../lib/bookings");
+const { siteUrlFor } = require("../../lib/bookings");
 const { checkLimit } = require("../../lib/rate-limit");
 
 module.exports = async (req, res) => {
@@ -34,10 +34,14 @@ module.exports = async (req, res) => {
     }
     const token = crypto.randomBytes(32).toString("hex");
     await kvSet(`admin:magic:${token}`, { email, exp: Date.now() + MAGIC_LINK_MINUTES * 60 * 1000 });
+    // The sign-in link goes back to the origin the request came from
+    // (Nov 20, 2026): a preview sign-in lands on the preview dashboard,
+    // not the live site.
+    const origin = siteUrlFor(req);
     await sendEmail({
       to: email,
       subject: "Your In2Skin admin sign-in link",
-      html: `<h2 style="font-family:Georgia,serif;color:#2F4A2C;">Sign in to In2Skin admin</h2><p>Tap the link below — it signs you in for 30 days, no password needed. It expires in ${MAGIC_LINK_MINUTES} minutes.</p><p><a href="${SITE_URL}/admin/?token=${token}">${SITE_URL}/admin/?token=${token}</a></p><p>If you did not ask for this, just ignore it.</p><p>— In2Skin</p>`,
+      html: `<h2 style="font-family:Georgia,serif;color:#2F4A2C;">Sign in to In2Skin admin</h2><p>Tap the link below — it signs you in for 30 days, no password needed. It expires in ${MAGIC_LINK_MINUTES} minutes.</p><p><a href="${origin}/admin/?token=${token}">${origin}/admin/?token=${token}</a></p><p>If you did not ask for this, just ignore it.</p><p>— In2Skin</p>`,
     });
     return res.status(200).json({ ok: true, message: `Sign-in link sent to ${email} — check your inbox (and spam). It expires in ${MAGIC_LINK_MINUTES} minutes.` });
   } catch (err) {

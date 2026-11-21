@@ -25,6 +25,11 @@
   var LOADED_AT = Date.now();
 
   /* ---------- state ---------- */
+  /* one click submits (Nov 20, 2026): while a payment request is in
+     flight the Reserve button stays dead until the answer comes back —
+     and render() never resets its label mid-flight, or the button looks
+     idle while swallowing clicks. */
+  var submitting = false;
   var S = { main: null, variant: null, ans: {}, addonsDone: false, confirmed: false, date: null, time: null, option: null, who: "me", F: { name: "", email: "", phone: "", msg: "", yname: "", yemail: "", yphone: "" }, D: { name: "", email: "", phone: "" }, code: null, referredBy: null, booked: false };
   var I = {}; D.groups.forEach(function (g) { g.items.forEach(function (i) { I[i.id] = i; i.group = g.id; }); });
   var works = I["the-works"];
@@ -98,6 +103,9 @@
   }
   function pr(T, n) { return (T.from ? "from " : "") + money(n); }
   function creditAmt(T) { return S.code ? Math.min(S.code.balance, T.total) : 0; }
+  /* what the client actually pays after a gift code (Nov 20, 2026): the
+     bars show the NET total, never the gross. */
+  function netTotal(T) { return Math.max(0, T.total - creditAmt(T)); }
   function payLines(T) {
     var credit = D.consultDollars, dep = D.depositDollars, cr = creditAmt(T), rem = Math.max(0, T.total - cr), L = [];
     if (cr) L.push(["Gift code " + S.code.code, "−" + money(cr)]);
@@ -342,7 +350,7 @@
       });
       h += '</div>';
       var bl = blocked(); if (bl.length) h += '<div class="ao-blocked">' + bl.map(function (id) { return '<div class="ao-off" aria-disabled="true"><span class="ao-dname">' + esc(I[id].name) + '</span><span class="ao-reason">' + esc(statusOf(id).why) + '</span></div>'; }).join("") + "</div>";
-      h += '<button type="button" class="btn btn-gold" id="addonsDone">Continue — pick a day ↓' + (T.items.length ? ' · ' + hm(T.mins) + ' · ' + pr(T, T.total) : '') + '</button>';
+      h += '<button type="button" class="btn btn-gold" id="addonsDone">Continue — pick a day ↓' + (T.items.length ? ' · ' + T.items.map(function (i) { return i.name; }).join(" + ") + ' · ' + hm(T.mins) + ' · ' + pr(T, netTotal(T)) : '') + '</button>';
       f.innerHTML = h;
       if (window.IN2_WATCH_VIDEOS) window.IN2_WATCH_VIDEOS(f);
     }
@@ -365,9 +373,9 @@
       $("#step-details").hidden = fr;
       var gm = $("#gcodeMsg"); if (S.code) { var cr = creditAmt(T), left = Math.max(0, S.code.balance - cr); gm.hidden = false; gm.className = "gcode-msg ok"; gm.textContent = "Code " + S.code.code + " applied, −" + money(cr) + (left > 0 ? " · " + money(left) + " left on the code." : " · Code fully used."); } else if (!gm.classList.contains("bad")) gm.hidden = true;
       $$(".opt-card").forEach(function (c) { c.setAttribute("aria-checked", String(c.getAttribute("data-option") === S.option)); });
-      var parts = [(S.who === "friend" && S.F.name ? "For " + S.F.name + ": " : "") + T.items.map(function (i) { return i.name; }).join(" + ")]; parts.push(hm(T.mins) + " · " + pr(T, T.total)); if (S.date) parts.push(dateLabel()); if (S.time) parts.push(S.time);
+      var parts = [(S.who === "friend" && S.F.name ? "For " + S.F.name + ": " : "") + T.items.map(function (i) { return i.name; }).join(" + ")]; parts.push(hm(T.mins) + " · " + pr(T, netTotal(T))); if (S.date) parts.push(dateLabel()); if (S.time) parts.push(S.time);
       $("#reserveSum").textContent = parts.join(" · ");
-      $("#reserveBtn").textContent = S.option === "G" ? "Pay " + pr(T, Math.max(0, T.total - creditAmt(T))) + " and book it for " + (S.F.name || "my friend") : S.option === "A" ? "Pay $" + D.depositDollars + " deposit to hold this time" : "Reserve my time";
+      if (!submitting) $("#reserveBtn").textContent = S.option === "G" ? "Pay " + pr(T, Math.max(0, T.total - creditAmt(T))) + " and book it for " + (S.F.name || "my friend") : S.option === "A" ? "Pay $" + D.depositDollars + " deposit to hold this time" : "Reserve my time";
     }
     // running total: side panel (desktop, picker steps) + dock (phone)
     var tp = $("#totalPanel");
@@ -377,7 +385,7 @@
     $("#tpTotals").innerHTML = totalsHTML(T, false);
     $("#tpGo").textContent = next === "summary" ? "Pick a day ↓" : "Next step ↓";
     $("#tpGo").hidden = next === "treatment";
-    $("#dockSum").innerHTML = T.items.length ? '<b>' + pr(T, T.total) + '</b> · ' + (T.mins ? hm(T.mins) : "") + ' · ' + T.items.length + (T.items.length > 1 ? " items" : " item") : "Pick a treatment";
+    $("#dockSum").innerHTML = T.items.length ? '<b>' + pr(T, netTotal(T)) + '</b> · ' + (T.mins ? hm(T.mins) : "") + ' · ' + T.items.length + (T.items.length > 1 ? " items" : " item") : "Pick a treatment";
     $("#dockGo").textContent = next === "reserve" ? "Reserve →" : "Next ↓";
     // gold guide: the current step glows, and its one-line explainer shows
     $$(".glow-pick").forEach(function (e) { e.classList.remove("glow-pick"); });
@@ -487,6 +495,9 @@
        booking for yourself; a booking for a friend is paid in full.
        The confirmation email + studio notification fire on payment. */
     var T = totals(), friend = S.who === "friend", F = S.F, when = dateLabel() + " · " + S.time;
+    if (submitting) return; /* one click submits — later clicks while the
+      request is in flight are ignored, not queued as second bookings */
+    submitting = true;
     var btn = $("#reserveBtn"); btn.disabled = true; btn.textContent = "Taking you to secure payment…";
     var payload = {
       service: apiService(), addons: apiAddons(), date: S.date, time: S.time, type: "regular",
@@ -510,12 +521,13 @@
       if (res.j.url) { location.href = res.j.url; return; } /* Stripe Checkout — paying completes the booking */
       /* Paid in full by a gift code — no checkout needed. The booking is
          recorded server-side; the confirmation email is on its way. */
+      submitting = false; btn.disabled = false;
       S.booked = true; render();
       var done = $("#bookDone"); done.hidden = false;
       done.textContent = "You're booked in for " + when + " — your confirmation email is on its way.";
       setTimeout(function () { goTo(done, true); }, RM.matches ? 0 : 140);
     }).catch(function (err) {
-      btn.disabled = false; render();
+      submitting = false; btn.disabled = false; render();
       toast(err.message || "Something went wrong — please try again.");
     });
   }

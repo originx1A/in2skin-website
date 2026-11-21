@@ -179,10 +179,14 @@ for (const f of pubFiles) {
   ok(!/"Microneedling"/.test(rest) && !/>Microneedling</.test(rest), `${rel}: no standalone Microneedling service name`);
 }
 
-// --- (6) Continue-bar totals (Tony Nov 20 17:55): the sticky bars show the
-// running calculation — picks + accumulated minutes + total price.
-ok(mainJs.includes("Continue — pick a day ↓' + (T.items.length ? ' · ' + hm(T.mins) + ' · ' + pr(T, T.total)"), "Continue button shows minutes + total");
-ok(mainJs.includes('parts.push(hm(T.mins) + " · " + pr(T, T.total))'), "Reserve bar shows minutes + total");
+// --- (6) Continue-bar totals (Tony Nov 20 17:55 + Nov 20 fix pass): the
+// sticky bars show the running calculation — picks + accumulated minutes
+// + total price — and the NET total after a gift code, never the gross.
+ok(mainJs.includes('T.items.map(function (i) { return i.name; }).join(" + ")'), "Continue button names the picks");
+ok(mainJs.includes("Continue — pick a day ↓' + (T.items.length ? ' · ' + T.items.map(function (i) { return i.name; }).join(\" + \") + ' · ' + hm(T.mins) + ' · ' + pr(T, netTotal(T))"), "Continue button shows picks + minutes + net total");
+ok(mainJs.includes('parts.push(hm(T.mins) + " · " + pr(T, netTotal(T)))'), "Reserve bar shows minutes + net total");
+ok(mainJs.includes("function netTotal(T) { return Math.max(0, T.total - creditAmt(T)); }"), "net total is the gross less the gift-code credit");
+ok(mainJs.includes("pr(T, netTotal(T))"), "sticky bars show the net total");
 
 // --- (7) Calendar greying: a day with no times left is greyed out, even
 // when the range free count still says the day has slots (the count is for

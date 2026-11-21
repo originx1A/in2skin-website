@@ -16,6 +16,9 @@
   var RM = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: false };
   var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"], MON3 = MONTHS.map(function (m) { return m.slice(0, 3); }), DN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   var LOADED_AT = Date.now();
+  /* one click submits (Nov 20, 2026): while the payment request is in
+     flight, later clicks are ignored instead of queuing a second booking. */
+  var submitting = false;
   /* Format: the page picks it (body data-consult-format="video" on the
      video page), ?format=video|in-person overrides it, otherwise the
      client picks on the page (the /consultation/ format step). */
@@ -167,6 +170,8 @@
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) miss.push(["#cxEmail", "Add an email — your confirmation goes there."]);
     if (phone.replace(/\D/g, "").length < 10) miss.push(["#cxPhone", "Add a mobile number so we can reach you about your appointment."]);
     if (miss.length) { toast(miss[0][1]); guide(true); setTimeout(function () { $(miss[0][0]).focus({ preventScroll: true }); }, 350); return; }
+    if (submitting) return;
+    submitting = true;
     var btn = $("#cxPay"); btn.disabled = true; btn.textContent = "Taking you to secure payment…";
     fetch("/api/book", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -178,6 +183,7 @@
       if (!res.ok || !res.j.url) { throw new Error((res.j && res.j.error) || "Booking did not go through."); }
       location.href = res.j.url; /* Stripe Checkout — paying completes the booking */
     }).catch(function (err) {
+      submitting = false;
       btn.disabled = false; btn.textContent = "Pay $30 · card, Apple Pay or Google Pay";
       toast(err.message || "Something went wrong — please try again.");
     });

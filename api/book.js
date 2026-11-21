@@ -13,7 +13,7 @@ const {
 } = require("../lib/schedule");
 const { studioForDate } = require("../lib/studio");
 const {
-  SITE_URL, newId, saveBooking, listBookingsForDate,
+  siteUrlFor, newId, saveBooking, listBookingsForDate,
   getBooking, finalizePaidBooking, settleBookingPayment, balanceDue,
   sendHoldEmail, notifyStudioBooking,
   buildBooking, createBookingCheckout, createConsultRequest, CONSULT_ID,
@@ -145,6 +145,9 @@ async function handleAgentHold(req, res, b) {
       amountPaidCents: 0,
       status: "pending",
       via: "agent",
+      // Where this booking was made (Nov 20, 2026): the checkout success
+      // URL and every later email link back to this origin.
+      origin: siteUrlFor(req),
       emailSent: false,
       createdAt: new Date().toISOString(),
     };
@@ -187,8 +190,8 @@ async function handleAgentHold(req, res, b) {
       payment_intent_data: { statement_descriptor: "IN2SKIN" },
       customer_email: booking.email,
       metadata: { type: "booking", bookingId: booking.id, via: "agent", giftCode: "", giftAppliedCents: "0" },
-      success_url: `${SITE_URL}/booked.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${SITE_URL}/#book`,
+      success_url: `${siteUrlFor(req)}/booked.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${siteUrlFor(req)}/#book`,
     });
     booking.checkoutSessionId = session.id;
     booking.checkoutUrl = session.url;
@@ -285,6 +288,9 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: BOT_MSG });
       }
       try {
+        // Where the request was made (Nov 20, 2026): the studio email's
+        // dashboard link goes back to this origin.
+        b.origin = siteUrlFor(req);
         const created = await createConsultRequest(b);
         return res.status(200).json({ ok: true, requestId: created.id, format: created.format || "video", date: created.date, time: created.time });
       } catch (err) {
@@ -297,6 +303,9 @@ module.exports = async (req, res) => {
     // Shared creation path with the admin walk-in form (same validation,
     // slot rules incl. live buffer + blocks, and pricing).
     const { bufferMins, blocks } = await studioForDate(b.date);
+    // Where the booking was made (Nov 20, 2026): the checkout success
+    // URL and every later email link back to this origin.
+    b.origin = siteUrlFor(req);
     const booking = await buildBooking(b, { bufferMins, blocks, via: "web" });
     const svc = findService(booking.service);
 
