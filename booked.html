@@ -31,6 +31,9 @@
         var msg = document.getElementById("bookedMsg");
         var detail = document.getElementById("bookedDetail");
         function money(c){ return "$" + (c/100).toFixed(2).replace(/\.00$/, ""); }
+        /* share link (Nov 20, 2026): the live site reads as
+           boltonfacials.com; a preview shows its own host. */
+        function siteLabel(){ var h = location.host; return (h === "www.boltonfacials.com" || h === "boltonfacials.com") ? "boltonfacials.com" : h; }
         function fmtDate(s){
           var p = s.split("-");
           return new Date(+p[0], +p[1]-1, +p[2]).toLocaleDateString("en-CA", { weekday:"long", month:"long", day:"numeric", year:"numeric" });
@@ -51,14 +54,20 @@
               + '<dt>Treatment</dt><dd>' + b.serviceName + '</dd>'
               + '<dt>When</dt><dd>' + fmtDate(b.date) + ' at ' + b.time + (b.type === "after" ? ' (Private Hours)' : '') + '</dd>'
               + '<dt>Where</dt><dd>In2Skin · Bolton, Ontario</dd>'
-              + '<dt>Paid</dt><dd>' + money(b.amountPaidCents) + (b.giftAppliedCents ? ' (includes ' + money(b.giftAppliedCents) + (b.giftKind === "consult-credit" ? ' consultation credit)' : ' from your gift certificate)') : '') + ' — shows as IN2SKIN on your statement</dd>'
+              + '<dt>Paid</dt><dd>' + money(b.amountPaidCents) + (b.status === "deposit-paid" ? " deposit" : "") + (b.giftAppliedCents ? ' (includes ' + money(b.giftAppliedCents) + (b.giftKind === "consult-credit" ? ' consultation credit)' : ' from your gift certificate)') : '') + ' — shows as IN2SKIN on your statement</dd>'
+              + (b.status === "deposit-paid" ? '<dt>Balance due at your visit</dt><dd><strong>' + money(b.balanceDueCents || 0) + '</strong> — pay at the studio by cash, e-transfer or card on your own phone</dd>' : '')
               + '</dl></div>'
               + ((b.giftAppliedCents && b.giftKind === "consult-credit")
-                ? '<p style="margin-top:12px;"><strong>' + money(b.giftAppliedCents) + ' consultation credit applied</strong> — your consultation with Sarah covered ' + money(b.giftAppliedCents) + ' of this treatment.</p>' : '')
+                ? '<p style="margin-top:12px;"><strong>' + money(b.giftAppliedCents) + ' consultation credit applied</strong> — your consultation covered ' + money(b.giftAppliedCents) + ' of this treatment.</p>' : '')
+              + ((/Consultation/.test(b.serviceName || "") && b.format === "video")
+                ? (b.meetLink
+                  ? '<div class="summary-box" style="margin-top:16px;"><dl><dt>Your video call</dt><dd><a href="' + b.meetLink + '">' + b.meetLink + '</a></dd></dl><p style="color:var(--ink-soft);">Tap the link at your appointment time — it opens in your browser, no app needed.</p></div>'
+                  : '<p style="margin-top:16px;"><strong>Your video link is coming</strong> — the studio will email it to you before your consultation.</p>')
+                : '')
               + (b.myReferralCode
                 ? '<div class="summary-box" style="margin-top:16px;"><dl>'
                   + '<dt>Your referral code</dt><dd><strong>' + b.myReferralCode + '</strong></dd>'
-                  + '<dt>Share it</dt><dd>boltonfacials.com/?ref=' + b.myReferralCode + '</dd></dl>'
+                  + '<dt>Share it</dt><dd>' + siteLabel() + '/?ref=' + b.myReferralCode + '</dd></dl>'
                   + '<p style="color:var(--ink-soft);">When three friends book and pay in full with your code, you earn $15 treatment credit and a free reflexology add-on. No cash value — credit is for treatments only.</p></div>'
                 : '')
               + '<p style="color:var(--ink-soft);">Need to move your appointment? Please call at least 24 hours ahead and we will find you a new time — there is no charge to reschedule.</p>';

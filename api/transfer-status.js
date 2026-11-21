@@ -1,16 +1,16 @@
 // GET /api/transfer-status — the voice agent's live check: may it transfer
-// this call to Sarah right now? No sign-in needed: the answer is just
+// this call to the studio right now? No sign-in needed: the answer is just
 // yes/no plus a clock reading, no private data. On any error the agent
 // takes a message instead of transferring. The response also carries
 // agentMode ("agent" | "direct") — the agent reads it from this same check:
 // "direct" means put every caller straight through while transfers are
-// allowed; outside her hours it still takes a message.
+// allowed; outside those hours it still takes a message.
 //
 // POST /api/transfer-status — the voice agent's take_message: a caller left
 // a message (name, number, reason). Authenticated by the AGENT_API_KEY env
 // var (header x-agent-key), the same check as the agent-hold path in
 // api/book.js. Stores the message in KV and emails it to the studio
-// (Sarah + Tony). Email never throws — a missing key just means no email.
+// (the studio + Tony). Email never throws — a missing key just means no email.
 const { getSettings, transferStatus } = require("../lib/transfer");
 const { saveMessage } = require("../lib/messages");
 const { notifyPush } = require("../lib/push");

@@ -18,57 +18,54 @@ to that number. Keep the agent's current voice unless Tony picks another.
 ## What it knows (from the website — never invent)
 Source of truth: `assets/knowledge.json` on the site — same facts, in
 plain words. Prices, hours, and booking rules come from there.
-- **Classic Facial** — 55 min, $65. A facial is a one-on-one professional
+- **Classic Facial** — 55 min, $85. A facial is a one-on-one professional
   skin treatment for the face, neck and shoulders: gentle deep cleanse,
   soft exfoliation, warm relaxing steam, soothing face, neck and shoulder
   massage, a custom treatment mask matched to the skin, then serum and
   moisturizer. Warm, gentle, deeply relaxing — many clients drift off and
   wake up glowing. Good for brighter, fresher, more even-looking skin and
   deep hydration. Perfect for first-timers.
-- **Anti-Aging Facial** — 80 min, $95. Eighty minutes of Circadia
+- **Anti-Aging Facial** — 80 min, $125. Eighty minutes of Circadia
   anti-aging care: everything in the Classic, with extended time at every
   step, advanced anti-aging serums, firming and lifting massage, targeted
   treatment for fine lines and uneven tone, rich finishing hydration.
   Good for fine lines looking softer, skin looking firmer, brighter and
   more youthful.
-- **Add-ons (NANO Needling, Light Therapy, and Reflexology 20 min each;
-  Microdermabrasion 15 min; with any facial):** NANO Needling $55 — ultra-fine
+- **Add-ons (Microneedling / NANO Needling, Light Therapy, Microdermabrasion and Reflexology
+  — 20 min each; with any facial):** Microneedling / NANO Needling $65 — microneedling and NANO needling are the same treatment, only the needle size differs; the studio picks the size at the visit. Ultra-fine
   nano tips help serums absorb deeply, a soft gliding sensation, for
-  plumper, smoother, more radiant skin. Microdermabrasion $45 — a polishing
+  plumper, smoother, more radiant skin. Microdermabrasion $55 — a polishing
   wand sweeps away dull surface skin, skin feels smoother right away, a
-  favourite before events and photos. Light Therapy (red light) $45 — lie
+  favourite before events and photos. Light Therapy (red light) $55 — lie
   back under warm red light for twenty restful minutes; supports collagen,
-  calms skin, evens tone; many clients nap. Reflexology $25 — gentle,
+  calms skin, evens tone; many clients nap. Reflexology $35 — gentle,
   skilled pressure across the reflex points of the feet (arch to back,
   toes to head and neck); deep relaxation through the whole body.
-- **Chemical Peels** — 25 min, $95–$475 (exact price confirmed at
+- **Chemical Peels** — 55 min, $125–$475 (exact price confirmed at
   consultation). A professional Circadia peel that lifts dull layers so
   fresh, bright skin can emerge; strengths range from gentle to advanced.
   A gentle warming sensation. Good for brighter, more even tone, smoother
   texture, fine lines and sun spots looking softened.
-- **Microneedling** — Custom, priced per consultation (60-min hold).
-  Also called collagen induction therapy: fine needles create controlled
-  micro-channels that prompt new collagen. Good for fine lines, acne
-  scarring, uneven texture and pores, over a series.
 - **Skin Tightening** — Custom, priced per consultation (60-min hold).
   Supports collagen and elastin so skin looks tighter, smoother and more
   lifted over time, commonly face and neck. Results build over a series.
 - **The Works combo** — facial + red light + reflexology at the same time,
-  $135 with Classic / $165 with Anti-Aging. So relaxing people sometimes
+  $160 with Classic / $195 with Anti-Aging. So relaxing people sometimes
   fall asleep.
 - **What a facial helps:** dry skin (deep hydration), acne-prone skin
   (deep cleanse + mask matched that day), dull skin (exfoliation + steam),
   fine lines (anti-aging facial), rosacea-prone skin (gentle, calming
   care, adjusted that day), tired skin (cleanse, massage, steam, mask).
   Teen acne care is its own teen offering, below the adult services.
-- **First visit:** $10 toward any service.
-- **Private Hours:** early morning 7–9am, after 7pm, Sundays — +$15/service.
-- **Regular hours:** 9:00am–5:30pm.
+- **Private Hours:** early mornings and evenings, Monday–Saturday — +$15 per
+  visit, however many treatments. Sundays closed — no Private Hours on Sundays.
+- **Regular hours:** Monday–Saturday, 9:00 AM–4:00 PM (last start 4:00 PM).
+  Sundays closed.
 - **Booking:** online at boltonfacials.com (live availability, email
   confirmation) or by phone. Bookings open from tomorrow, up to 60 days
   ahead. Advance booking recommended. Reschedule free with 24 hours' notice.
 - **Gap between appointments** — the room is cleaned and prepped between
-  appointments (Sarah sets the gap in the admin panel; 30 minutes by
+  appointments (Sarah sets the gap in the admin panel; 60 minutes by
   default), so back-to-back times are never offered. The agent never offers
   a time the calendar says is taken.
 - **Gift certificates:** any amount; the balance carries over and never expires.
@@ -79,11 +76,12 @@ plain words. Prices, hours, and booking rules come from there.
   the dollar value never expires.
 - **Referrals:** every three friends who book and pay in full earns $15
   credit plus a free reflexology add-on. No cash, ever. A friend counts
-  only when their booking is worth at least $65 (a full facial) — a $25
+  only when their booking is worth at least $85 (a full facial) — a $35
   add-on alone does not count.
 - **Payment:** cash or e-transfer; card by a pay link on the client's own
-  phone at the visit, or in full by card when booking online. Interac-only
-  debit → e-transfer. Charges show as IN2SKIN.
+  phone at the visit, or a $30 deposit by card when booking online (balance
+  at the visit). A booking for a friend is paid in full by the booker.
+  Interac-only debit → e-transfer. Charges show as IN2SKIN.
 - **Products:** Circadia professional skincare.
 - **Location:** a private studio in Bolton. The exact address is given on the
   booking confirmation ONLY — never read it out on the phone.
@@ -98,7 +96,8 @@ plain words. Prices, hours, and booking rules come from there.
 - **Only when Sarah is answering.** Before every transfer the agent calls
   GET https://boltonfacials.com/api/transfer-status — transfer only if it
   says transferAllowed: true. (Until that check is wired, use studio open
-  hours: regular 9:00am–5:30pm + Private Hours 7–9am, after 7pm, Sundays.)
+  hours: Monday–Saturday 9:00 AM–4:00 PM + Private Hours early mornings and
+  evenings. Sundays closed.)
 - **Agent bypass (Sarah's switch, "Who answers the phone?" on the admin
   panel):** the same transfer-status check returns `agentMode`. When it is
   `"direct"`, transfer EVERY caller to Sarah immediately — do not ask what
@@ -146,10 +145,10 @@ plain words. Prices, hours, and booking rules come from there.
   the link; if they do not pay in 30 minutes the time opens back up.
 - Service IDs for the functions: classic-facial, anti-aging-facial,
   nano-needling, microdermabrasion, light-therapy, reflexology,
-  chemical-peels, microneedling, skin-tightening. Combo bookings
+  chemical-peels, skin-tightening. Combo bookings
   (The Works) are taken by phone as a request for Sarah to confirm —
   the agent cannot hold a combo through the function.
-- First visit: $10 off applies automatically. Private Hours add $15.
+- Private Hours add $15 per visit.
 - Never promise a time as confirmed until the caller has paid.
 
 ## Agent functions (wire in the Retell dashboard)

@@ -37,10 +37,9 @@ module.exports = async (req, res) => {
           const { bufferMins, blocks } = await studioForDate(key);
           const opts = { bufferMins, blocks };
           // Four appointments a day, whatever they are (Tony Nov 19) —
-          // a full day shows no free slots. Video consultations never
-          // count toward the cap, so a treatment-full day still shows
-          // their gaps. After-hours is never bookable online, so its
-          // free count is always zero.
+          // a full day shows no free slots. Consultations share the
+          // cap with treatments (A4). After-hours is never bookable
+          // online, so its free count is always zero.
           const full = countsTowardCap(svc.id) && dayIsFull(bookings);
           dates[key] = {
             regular: { free: full ? 0 : freeTimes(key, "regular", service, bookings, opts, addonIds).length, total: allRegular.length },
@@ -52,7 +51,7 @@ module.exports = async (req, res) => {
       return res.status(200).json({ from: dateKey(fromD), to: dateKey(toD), dates, storageConfigured: configured() });
     }
     if (!parseDateLocal(date)) return res.status(400).json({ error: "Choose a valid date." });
-    // After-hours is by request through Sarah — never offered online
+    // After-hours is by request through the studio — never offered online
     // (Tony Nov 19, 2026).
     if (type === "after") return res.status(200).json({ date, times: [], dayFull: false, bookedCount: 0, storageConfigured: configured() });
     const all = timesFor(date, "regular", svc.id);
@@ -61,7 +60,7 @@ module.exports = async (req, res) => {
     const bookings = await listBookingsForDate(date);
     const { bufferMins, blocks } = await studioForDate(date);
     const bookedCount = countActiveBookings(bookings);
-    // A treatment-full day blocks treatments, never video consultations.
+    // A full day blocks every booking, consultations included (A4).
     const dayFull = countsTowardCap(svc.id) && dayIsFull(bookings);
     return res.status(200).json({ date, times: dayFull ? [] : freeTimes(date, "regular", service, bookings, { bufferMins, blocks }, addonIds), dayFull, bookedCount, storageConfigured: true });
   } catch (err) {

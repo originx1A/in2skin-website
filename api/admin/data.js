@@ -99,13 +99,14 @@ const {
   giftDisplayStatus, getBooking, markBookingOutcome, saveBooking,
   cancelBooking, moveBooking, deleteBooking, buildBooking, createBookingCheckout, createPayLink,
   sendBookingConfirmation, sendWalkInConfirmation, sendHoldEmail, finalizePaidBooking,
-  balanceDue, recordPayment, getPayment, deletePayment, newId, PHONE_DISPLAY,
+  balanceDue, recordPayment, getPayment, deletePayment, newId, PHONE_DISPLAY, siteUrlFor,
   dueFinishChecks, notifyFinishCheck, markFinishDone, snoozeFinishCheck,
   listConsultRequests, acceptConsultRequest, declineConsultRequest, sendDueConsultReminders,
+  sendDueGiftCertificates,
 } = require("../../lib/bookings");
 const {
   dateKey, money, SERVICES, COMBOS, QUIET_PREMIUM_CENTS,
-  parseTime, durationFor, findService,
+  parseTime, durationFor, findService, dedupeServicesByName,
 } = require("../../lib/schedule");
 const { getSettings, saveSettings, transferStatus } = require("../../lib/transfer");
 const { listReferrals, getOrCreateReferral, getReferralByCode, deleteReferral, normalizeReferralCode, attendeeOf } = require("../../lib/referrals");
@@ -128,6 +129,9 @@ const {
   storeTokens: googleStoreTokens,
   getStatus: googleStatus,
   disconnect: googleDisconnect,
+  getAccessToken: googleGetAccessToken,
+  createMeetEvent: googleCreateMeetEvent,
+  deleteMeetEvent: googleDeleteMeetEvent,
 } = require("../../lib/google");
 const { sendEmail } = require("../../lib/email");
 
@@ -135,9 +139,12 @@ function publicBooking(b) {
   return {
     id: b.id, serviceName: b.serviceName, service: b.service, format: b.format || null, date: b.date, time: b.time, type: b.type,
     name: b.name, phone: b.phone, email: b.email,
+    forWhom: b.forWhom || "me",
     guestName: b.guestName, guestPhone: b.guestPhone, guestEmail: b.guestEmail,
+    friendMessage: b.friendMessage || null, friendNoEmail: !!b.friendNoEmail,
     status: b.status, amountCents: b.amountCents, amountPaidCents: b.amountPaidCents,
     balanceDueCents: balanceDue(b),
+    payMode: b.payMode || "full", depositCents: b.depositCents != null ? b.depositCents : null,
     paymentMethod: b.paymentMethod || null, amountNote: b.amountNote || null,
     giftCode: b.giftCode, giftAppliedCents: b.giftAppliedCents, giftKind: b.giftKind || null,
     referralCode: b.referralCode || null, referralAppliedCents: b.referralAppliedCents || 0,
@@ -147,6 +154,7 @@ function publicBooking(b) {
     checkoutUrl: b.checkoutUrl || null, paylinkId: b.paylinkId || null,
     consultCreditCode: b.consultCreditCode || null,
     consultCreditCents: b.consultCreditCents || 0,
+    meetLink: b.meetLink || null,
     via: b.via || null, createdAt: b.createdAt,
   };
 }
@@ -323,7 +331,7 @@ async function sendBackupEmail(backup, period) {
   });
 }
 
-const UPCOMING = ["pending", "unpaid", "paid", "consultation"];
+const UPCOMING = ["pending", "unpaid", "paid", "deposit-paid", "consultation"];
 
 module.exports = async (req, res) => {
   // Weekly + monthly backups, fired by the Vercel crons (vercel.json) — a
@@ -461,7 +469,7 @@ module.exports = async (req, res) => {
         const redirectUri = googleRedirectUriFor(req);
         const state = await googleCreateState();
         const authUrl = googleBuildAuthUrl({ redirectUri, state });
-        await logAudit(session, "google.connect-start", "Google connect started — Sarah to tap Allow on Google's screen");
+        await logAudit(session, "google.connect-start", "Google connect started — waiting for the studio to tap Allow on Google's screen");
         return res.status(200).json({ authUrl, redirectUri });
       }
       // Google disconnect: revoke the tokens at Google (best-effort) and
@@ -471,6 +479,55 @@ module.exports = async (req, res) => {
         await googleDisconnect();
         await logAudit(session, "google.disconnect", "Google account disconnected — video consults need a Meet link pasted in again");
         return res.status(200).json({ connected: false });
+      }
+      // Proof test (Tony Nov 20, 2026 — "Can we do an example so we know
+      // that it's working?"): mint ONE real Meet event on the connected
+      // Google account, right now, through the same createMeetEvent the
+      // booking flow uses — then delete it immediately with
+      // meet-test-delete. Admin-only, fixed test values, no attendees, no
+      // client data, no emails. The event is 20 minutes starting a few
+      // minutes in the future. If Google isn't connected, this answers
+      // 409 "not connected" instead of minting anything.
+      if (b.view === "google-connect" && b.action === "meet-test") {
+        const status = await googleStatus();
+        if (!status.connected) {
+          return res.status(409).json({ error: "Google is not connected — connect the studio's Google account first, then run the test again." });
+        }
+        try {
+          const accessToken = await googleGetAccessToken();
+          const start = new Date(Date.now() + 5 * 60 * 1000);
+          const end = new Date(start.getTime() + 20 * 60 * 1000);
+          const created = await googleCreateMeetEvent({
+            accessToken,
+            summary: "TEST — In2Skin Meet check — DELETE",
+            description: "Connection proof test — delete this event right after checking the link.",
+            startISO: start.toISOString(),
+            endISO: end.toISOString(),
+            attendeeEmail: "",
+          });
+          if (!created.meetLink || !created.eventId) {
+            return res.status(502).json({ error: "Google answered without a Meet link — the connection may need to be re-done." });
+          }
+          await logAudit(session, "google.meet-test", `Meet proof test — event ${created.eventId} created, delete it right after checking the link`);
+          return res.status(200).json({ ok: true, meetLink: created.meetLink, eventId: created.eventId, htmlLink: created.htmlLink || null });
+        } catch (err) {
+          return res.status(err.status || 500).json({ error: err.message });
+        }
+      }
+      // Delete the proof-test event minted by meet-test. Same admin-only
+      // gate; the event id comes from the meet-test answer. An event
+      // that is already gone counts as deleted.
+      if (b.view === "google-connect" && b.action === "meet-test-delete") {
+        const eventId = String(b.eventId || "").trim();
+        if (!eventId) return res.status(400).json({ error: "Missing event id — run meet-test first." });
+        try {
+          const accessToken = await googleGetAccessToken();
+          await googleDeleteMeetEvent({ accessToken, eventId });
+          await logAudit(session, "google.meet-test-delete", `Meet proof test — event ${eventId} deleted`);
+          return res.status(200).json({ ok: true, deleted: true, eventId });
+        } catch (err) {
+          return res.status(err.status || 500).json({ error: err.message });
+        }
       }
       if (b.view === "consult-requests" && (b.action === "accept" || b.action === "decline")) {
         try {
@@ -578,6 +635,9 @@ module.exports = async (req, res) => {
       if (b.view === "bookings" && b.action === "walk-in") {
         const payment = ["cash", "e-transfer", "pay-link", "later", "no-charge"].includes(b.payment) ? b.payment : "later";
         const { bufferMins, blocks } = await studioForDate(b.date);
+        // Where the walk-in was booked (Nov 20, 2026): the checkout
+        // success URL and every later email link back to this origin.
+        b.origin = siteUrlFor(req);
         const booking = await buildBooking(b, { bufferMins, blocks, allowToday: true, allowAddonMain: true, via: "admin" });
         // No charge (Tony Nov 19, 2026 — Tony's free test consultation,
         // and any on-the-house booking Sarah decides): nothing is owed,
@@ -642,8 +702,8 @@ module.exports = async (req, res) => {
       if (b.view === "bookings" && (b.action === "complete" || b.action === "no-show") && b.bookingId) {
         const booking = await getBooking(b.bookingId);
         if (!booking) return res.status(404).json({ error: "Booking not found." });
-        if (!["paid", "consultation", "unpaid"].includes(booking.status)) {
-          return res.status(400).json({ error: "Only a paid, consultation or unpaid booking can be marked complete or no-show." });
+        if (!["paid", "deposit-paid", "consultation", "unpaid"].includes(booking.status)) {
+          return res.status(400).json({ error: "Only a paid, deposit-paid, consultation or unpaid booking can be marked complete or no-show." });
         }
         const updated = await markBookingOutcome(booking, b.action);
         await logAudit(session, `bookings.${b.action}`, `${booking.serviceName} — ${booking.date} ${booking.time}`);
@@ -687,7 +747,7 @@ module.exports = async (req, res) => {
         if (booking.status === "pending") {
           return res.status(400).json({ error: "This booking still has a card payment link out — wait for it to be paid, or cancel it and book again." });
         }
-        if (!["unpaid", "paid", "consultation"].includes(booking.status)) {
+        if (!["unpaid", "paid", "deposit-paid", "consultation"].includes(booking.status)) {
           return res.status(400).json({ error: "Payments can only be recorded on an upcoming or paid booking." });
         }
         const amountCents = Math.round(Number(b.amountCents));
@@ -705,7 +765,7 @@ module.exports = async (req, res) => {
           createdAt: new Date().toISOString(),
         });
         let finalized = false;
-        if (booking.status === "unpaid" && booking.amountPaidCents >= (booking.amountCents || 0)) {
+        if ((booking.status === "unpaid" || booking.status === "deposit-paid") && booking.amountPaidCents >= (booking.amountCents || 0)) {
           booking.status = "paid";
           await finalizePaidBooking(booking);
           finalized = true;
@@ -721,7 +781,7 @@ module.exports = async (req, res) => {
         if (booking.status === "pending") {
           return res.status(400).json({ error: `This booking still has a card payment link out for ${money(booking.amountCents)} — cancel it and book again, or record the difference after they pay.` });
         }
-        if (!["unpaid", "paid", "consultation"].includes(booking.status)) {
+        if (!["unpaid", "paid", "deposit-paid", "consultation"].includes(booking.status)) {
           return res.status(400).json({ error: "The amount can only be changed on an upcoming or paid booking." });
         }
         const amountCents = Math.round(Number(b.amountCents));
@@ -752,6 +812,7 @@ module.exports = async (req, res) => {
           amountCents: due, clientName: who.name || booking.name,
           contact: who.email || booking.email, method: "email",
           serviceLabel: `${booking.serviceName} — balance`, bookingId: booking.id,
+          origin: booking.origin || siteUrlFor(req),
         });
         booking.paylinkId = out.id;
         await saveBooking(booking);
@@ -821,6 +882,9 @@ module.exports = async (req, res) => {
       // rides this poll (only fires while the dashboard is open).
       // Never throws — a reminder failure must not break the poll.
       await sendDueConsultReminders();
+      // Same ride: gift certificates scheduled for today go out on
+      // this poll — no cron, no new function (see sendDueGiftCertificates).
+      await sendDueGiftCertificates();
       return res.status(200).json({
         unreadMessages,
         events,
@@ -845,8 +909,11 @@ module.exports = async (req, res) => {
       return res.status(200).json({ entries });
     }
     if ((req.query || {}).view === "catalog") {
+      // One row per treatment (Nov 20, 2026): SERVICES carries both
+      // needling ids under the one combined name — the dropdown shows it
+      // once (nano-needling, the current id, wins).
       return res.status(200).json({
-        services: SERVICES, combos: COMBOS,
+        services: dedupeServicesByName(SERVICES), combos: COMBOS,
         quietPremiumCents: QUIET_PREMIUM_CENTS,
       });
     }
@@ -949,7 +1016,7 @@ module.exports = async (req, res) => {
     if ((req.query || {}).view === "payments") {
       const date = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || "") ? req.query.date : dateKey(new Date());
       const spot = await listPayments(date, date);
-      const bookings = (await listBookingsForDate(date)).filter((b) => ["paid", "consultation", "unpaid"].includes(b.status));
+      const bookings = (await listBookingsForDate(date)).filter((b) => ["paid", "deposit-paid", "consultation", "unpaid"].includes(b.status));
       // Booking payment records are the audit trail for money already in a
       // booking's amountPaidCents — only pay-on-the-spot payments with no
       // booking add to the total, or the day's cash would count twice.

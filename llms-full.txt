@@ -3,7 +3,7 @@
 # Website: https://boltonfacials.com/
 # Short version: https://boltonfacials.com/llms.txt
 # Sitemap: https://boltonfacials.com/sitemap.xml
-# Prices are in Canadian dollars (CAD). Last updated: 2026-11-17.
+# Prices are in Canadian dollars (CAD). Last updated: 2026-11-20.
 
 > In2Skin is a private, one-on-one aesthetics studio in Bolton, Ontario, Canada.
 > Every treatment is custom — made for the client's skin that day. One client at
@@ -46,56 +46,53 @@
   for teen acne.
 - Anti-Aging Facial — 80 minutes — $125. Circadia anti-aging serums, firming
   massage, targeted care for fine lines and uneven tone.
-- Chemical Peels — 25 minutes — $125–$475. Professional Circadia peels matched to
+- Chemical Peels — 55 minutes — $125–$475. Professional Circadia peels matched to
   the client's skin at consultation; exact price confirmed up front before
   anything begins.
-- Microneedling — collagen induction treatment. From $150 — exact price
-  confirmed at consultation.
-- NANO Needling — 15 minutes (add-on) — $65. Nano infusion of professional serum
+- Microneedling / NANO Needling — 20 minutes (add-on) — $65. Nano infusion of professional serum
   for plumper, smoother, more radiant skin.
-- Microdermabrasion — 15 minutes (add-on) — $55. Gentle polish for smoother,
+- Microdermabrasion — 20 minutes (add-on) — $55. Gentle polish for smoother,
   brighter skin.
-- Light Therapy (red light therapy) — 15 minutes (add-on) — $55. Warm red light;
+- Light Therapy (red light therapy) — 20 minutes (add-on) — $55. Warm red light;
   supports collagen, calms skin, evens tone.
-- Reflexology — 15 minutes (add-on) — $35. Gentle pressure on reflex points of
+- Reflexology — 20 minutes (add-on) — $35. Gentle pressure on reflex points of
   the feet for whole-body relaxation.
 - The Works (signature combo) — facial + red light therapy + reflexology, all at
   the same time while the mask works: with Classic Facial (55 min) $160; with
   Anti-Aging Facial (80 min) $195.
-- Add-ons can be added to any treatment, or booked on their own as a 15-minute
-  visit. A first visit is $10 off any service, including a standalone add-on.
+- Add-ons can be added to any treatment, or booked on their own as a 20-minute
+  visit.
 
 ## Hours and Private Hours
 
-- Regular hours: daytime appointments, by booking.
-- Private Hours (premier appointments, reserved just for you): weekday mornings
-  7:00–9:00 AM, weekday evenings after 7:00 PM, and Sundays.
-- Private Hours cost $15 more per visit. Examples: Classic Facial $80 in
-  Private Hours; Anti-Aging Facial $110; Reflexology $40; The Works $150 (with
-  Classic) / $180 (with Anti-Aging). Classic Facial + Light Therapy is $125 in
+- Regular hours: Monday–Saturday, 9:00 AM–4:00 PM (last start 4:00 PM). Sundays closed.
+- Private Hours (premier appointments, reserved just for you): Monday–Saturday,
+  early mornings and evenings, by request. Sundays closed — no Private Hours on Sundays.
+- Private Hours cost $15 more per visit. Examples: Classic Facial $100 in
+  Private Hours; Anti-Aging Facial $140; Reflexology $50; The Works $175 (with
+  Classic) / $210 (with Anti-Aging). Classic Facial + Light Therapy is $155 in
   Private Hours — the $15 applies once per visit, however many treatments you
   book.
-- Appointments are spaced with 30 minutes between them so the room is reset for
-  each guest.
+- Appointments are spaced so the room is reset for each guest.
 - Advance booking is recommended to get the time you want.
 
 ## Booking and payment
 
 - Book online anytime at https://boltonfacials.com/ or call (289) 212-4124.
-- Booking is paid in full securely by card at booking (Stripe checkout); you
-  receive an email confirmation and the studio is notified instantly.
-- Payment: card online at booking; cash or Interac e-transfer also welcome at
-  the studio. Plain Interac-only debit cards cannot be charged by card — those
-  clients pay by e-transfer.
+- Booking is held with a $30 deposit by card at booking (Stripe checkout); the
+  balance is paid at your visit. You receive an email confirmation and the studio
+  is notified instantly.
+- Payment: card online at booking for the deposit; cash or Interac e-transfer also
+  welcome at the studio for the balance. Plain Interac-only debit cards cannot be
+  charged by card — those clients pay by e-transfer.
 - Pay on the spot: if you are getting the service, you pay at the visit, before
   leaving. You pay on your own phone through a payment link or QR code — the
   studio never sees your card number.
-- First visit offer: $10 toward any service.
 - To change or cancel a booking, call (289) 212-4124. If a booking made with a
   gift code is cancelled, the gift value goes back on the code.
 - Book for a friend: the booking wizard has a "For a Friend" option — enter the
-  friend's name, phone and email; the confirmation goes straight to them and they
-  just show up.
+  friend's name and phone (email optional); the confirmation goes straight to them
+  and they just show up. A booking for a friend is paid in full by the booker.
 - The website has a rule-based assistant chat that answers questions, recommends
   the right service for a visitor's skin concern, and guides them to booking.
 
@@ -160,7 +157,7 @@
   touch, and calming treatments such as red light therapy, which encourages a more
   even-looking complexion. Custom one-on-one treatments let products be chosen for
   sensitive, redness-prone skin on the day.
-- What NANO needling does: ultra-fine nano tips open shallow channels on the
+- What Microneedling / NANO Needling does: microneedling and NANO needling are the same treatment — only the needle size differs, and the studio picks the size at the visit. Ultra-fine nano tips open shallow channels on the
   skin's surface so professional serums absorb more deeply. Skin looks plumper,
   smoother and more radiant, and fine lines appear softer. Helps dull, dehydrated
   skin and early fine lines; often added to a facial.
@@ -173,11 +170,6 @@
   firmer and smoother, softens the appearance of fine lines, and restores a
   brighter, more even, youthful-looking glow. Results build with regular visits
   every 4–6 weeks.
-- What microneedling does: also called collagen induction therapy — fine needles
-  create controlled micro-channels in the skin, prompting the skin's natural
-  repair process and new collagen production. Improves the look of fine lines,
-  acne scarring, uneven texture and enlarged pores over a series of treatments.
-  neck. Suits anyone noticing looseness or sagging.
 
 ## Skin concerns (one page per concern)
 
@@ -187,10 +179,9 @@
 - Facials for rosacea and sensitive skin — https://boltonfacials.com/rosacea-sensitive-skin/
   (calm, soothing care; Classic Facial $85; Light Therapy $55)
 - Facials for dull skin — https://boltonfacials.com/dull-skin/
-  (Microdermabrasion $55 for an instant radiant glow; Classic Facial $85; NANO
-  Needling $65)
+  (Microdermabrasion $55 for an instant radiant glow; Classic Facial $85; Microneedling / NANO Needling $65)
 - Facials for fine lines — https://boltonfacials.com/fine-lines/
-  (Anti-Aging Facial $125; NANO Needling $65; microneedling from $150)
+  (Anti-Aging Facial $125; Microneedling / NANO Needling $65)
 - Facials for tired skin — https://boltonfacials.com/tired-skin/
   (The Works $160 with a Classic Facial / $195 with an Anti-Aging Facial —
   facial, red light and reflexology all at once)

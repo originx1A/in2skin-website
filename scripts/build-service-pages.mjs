@@ -104,13 +104,10 @@ function page(s) {
         priceRange: "$35 - $475",
         address: {
           "@type": "PostalAddress",
-          streetAddress: "92 Willow Street",
           addressLocality: "Bolton",
           addressRegion: "ON",
-          postalCode: "L7E 3G3",
           addressCountry: "CA",
         },
-        geo: { "@type": "GeoCoordinates", latitude: 43.88088, longitude: -79.73492 },
         areaServed: ["Bolton", "Caledon", "Kleinburg", "Vaughan", "Brampton", "Nobleton", "King City", "Orangeville", "Georgetown", "Toronto"],
       },
       offers: JSON.parse(priceOffer),
@@ -178,10 +175,10 @@ ${JSON.stringify(ld.faq, null, 2)}
         <a class="brand" href="/" aria-label="In2Skin — home"><span class="brand-text"><span class="wordmark">In2Skin</span><span class="tagline">Aesthetics · Bolton</span></span></a>
         <nav class="main" aria-label="Main">
           <a href="/">Home</a>
-          <a href="/#book">Book Online</a>
-          <a href="/#visit">Visit Us</a>
+          <a href="/#services">Book Online</a>
+          <a href="/contact/">Visit Us</a>
         </nav>
-        <a class="btn btn-book btn-book-sm header-book" href="/#book" style="white-space:nowrap;">Book Online</a>
+        <a class="btn btn-book btn-book-sm header-book" href="/?service=${s.id}#services" style="white-space:nowrap;">Book Online</a>
         <a class="btn btn-ghost header-call" href="${PHONE_TEL}" aria-label="Call In2Skin to book">Call<span class="btn-label-num">&nbsp;· ${PHONE_DISPLAY}</span></a>
       </div>
     </header>
@@ -206,9 +203,9 @@ ${JSON.stringify(ld.faq, null, 2)}
         <aside class="price-panel">
           <div class="pp-price">${esc(s.price)}</div>
           <div class="pp-mins">${esc(s.minsLabel)} · Bolton, Ontario</div>
-          <a class="btn btn-book btn-big" href="/#book" style="width:100%;">${s.price === "Custom" ? "Book a Consultation" : "Book Online — " + esc(s.price)}</a>
+          <a class="btn btn-book btn-big" href="/?service=${s.id}#services" style="width:100%;">${s.price === "Custom" ? "Book a Consultation" : "Book Online — " + esc(s.price)}</a>
           <a class="btn btn-ghost" href="${PHONE_TEL}" style="width:100%;">Call ${PHONE_DISPLAY}</a>
-          <p class="fine">Pay in full securely by card when you book.<br />Cash or e-transfer also welcome at your visit.</p>
+          <p class="fine">Hold your time with a $30 deposit by card when you book.<br />The balance is paid at your visit. Cash or e-transfer also welcome.</p>
         </aside>
       </div></div>
       <div style="height:64px;"></div>

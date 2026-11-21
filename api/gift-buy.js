@@ -5,11 +5,95 @@
 // POST with { kind: "voucher" } — a treatment voucher: a named facial +
 // add-ons, paid in full ahead, sold as "Good for [treatment]" instead of an
 // open amount. Same gift-code rails; the issued record is tagged voucherFor.
+// The /gift/ page posts its own order shape (see mapGiftPageOrder):
+// { amount, treatment, toName, toPhone, message, delivery, toEmail,
+//   sendOn, buyerName, buyerEmail, buyerPhone } — a treatment NAME maps to
+// a voucher (service id + add-ons), an amount maps to a certificate.
+// Print delivery needs NO recipient email: the certificate goes to the
+// buyer to print. Email delivery takes an optional sendOn date.
 const { getStripe } = require("../lib/stripe");
 const { GIFT_OPTIONS, priceVoucher, money } = require("../lib/schedule");
-const { SITE_URL } = require("../lib/bookings");
+const { siteUrlFor } = require("../lib/bookings");
 const { sendEmail } = require("../lib/email");
 const { checkLimit } = require("../lib/rate-limit");
+const { torontoDateKey } = require("../lib/transfer");
+
+// The /gift/ page's treatment buttons (data-tre in gift/index.html) map
+// to voucher services. "The Works" on that page is $160 — the Classic
+// variant (combo-classic). The server prices the voucher itself; the
+// page's amount is never trusted for a treatment.
+const GIFT_PAGE_TREATMENTS = {
+  "Classic Facial": "classic-facial",
+  "Anti-Aging Facial": "anti-aging-facial",
+  "The Works": "combo-classic",
+};
+
+function mapGiftPageOrder(b) {
+  const delivery = b.delivery === "print" ? "print" : "email";
+  const out = {
+    fromGiftPage: true,
+    buyerName: String(b.buyerName || "").trim(),
+    buyerEmail: String(b.buyerEmail || "").trim(),
+    buyerPhone: String(b.buyerPhone || "").trim(),
+    recipientName: String(b.toName || "").trim(),
+    recipientEmail: String(b.toEmail || "").trim(),
+    recipientPhone: String(b.toPhone || "").trim(),
+    message: String(b.message || "").trim().slice(0, 500),
+    delivery,
+    sendOn: "",
+  };
+  if (delivery === "email") {
+    // sendOn: "now" (or missing) means right away; a YYYY-MM-DD date
+    // means the certificate goes out ON that date, not at payment.
+    if (b.sendOn && b.sendOn !== "now") {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(b.sendOn)) throw new Error("Please choose a valid send date.");
+      if (b.sendOn < torontoDateKey()) throw new Error("Please choose today or a later date to send the gift.");
+      out.sendOn = b.sendOn;
+    }
+  }
+  if (b.treatment) {
+    const service = GIFT_PAGE_TREATMENTS[String(b.treatment).trim()];
+    if (!service) throw new Error("Please choose a treatment from the list.");
+    out.kind = "voucher";
+    out.service = service;
+    out.addons = [];
+    out.type = "regular";
+  } else {
+    const val = Math.round(Number(b.amount) * 100);
+    if (!val || val < 1000) throw new Error("Please enter an amount of $10 or more for a custom certificate.");
+    out.kind = "gift";
+    out.amountCents = val;
+  }
+  return out;
+}
+
+function checkGiftParties(b, { emailRequired, phonesRequired }) {
+  const bad = (msg) => { const e = new Error(msg); e.status = 400; return e; };
+  if (!b.buyerName) throw bad("Please add your name.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.buyerEmail || "")) throw bad("Please add your email — your confirmation is sent there.");
+  // Phones are required on the /gift/ page (it collects them); the legacy
+  // shape never had them, so they stay optional there.
+  if (phonesRequired && (!b.buyerPhone || b.buyerPhone.replace(/[^0-9]/g, "").length < 10)) throw bad("Please add your phone number.");
+  if (!b.recipientName) throw bad("Please add your friend's name — it goes on the certificate.");
+  if (phonesRequired && (!b.recipientPhone || b.recipientPhone.replace(/[^0-9]/g, "").length < 10)) throw bad("Please add your friend's phone number.");
+  if (emailRequired && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.recipientEmail || "")) throw bad("Please add your friend's email — the certificate code is sent there.");
+}
+
+function giftSessionMeta(b, extra) {
+  return Object.assign({
+    type: "gift",
+    amountCents: String(b.amountCents || 0),
+    buyerName: b.buyerName,
+    buyerEmail: b.buyerEmail,
+    buyerPhone: b.buyerPhone || "",
+    recipientName: b.recipientName,
+    recipientEmail: b.recipientEmail || "",
+    recipientPhone: b.recipientPhone || "",
+    message: b.message || "",
+    delivery: b.delivery || "email",
+    sendOn: b.sendOn || "",
+  }, extra || {});
+}
 
 async function handleVoucherBuy(req, res, b) {
   let priced;
@@ -18,14 +102,13 @@ async function handleVoucherBuy(req, res, b) {
   } catch (err) {
     return res.status(400).json({ error: err.message });
   }
-  if (!b.buyerName || !String(b.buyerName).trim()) return res.status(400).json({ error: "Please add your name." });
-  if (!b.buyerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(b.buyerEmail))) return res.status(400).json({ error: "Please add your email — your confirmation is sent there." });
-  if (!b.recipientName || !String(b.recipientName).trim()) return res.status(400).json({ error: "Please add your friend's name — it goes on the voucher." });
-  if (!b.recipientEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(b.recipientEmail))) return res.status(400).json({ error: "Please add your friend's email — the voucher code is sent there." });
-  const buyerName = String(b.buyerName).trim();
-  const buyerEmail = String(b.buyerEmail).trim();
-  const recipientName = String(b.recipientName).trim();
-  const recipientEmail = String(b.recipientEmail).trim();
+  try {
+    // Print delivery: no recipient email needed — the certificate goes
+    // to the buyer to print. Email delivery still needs one.
+    checkGiftParties(b, { emailRequired: b.delivery !== "print", phonesRequired: b.fromGiftPage === true });
+  } catch (err) {
+    return res.status(err.status || 400).json({ error: err.message });
+  }
   const stripe = getStripe();
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -38,31 +121,30 @@ async function handleVoucherBuy(req, res, b) {
         unit_amount: priced.totalCents,
         product_data: {
           name: `In2Skin Treatment Voucher — ${priced.label}`,
-          description: `Good for ${priced.label} · for ${recipientName} · No cash value · Dollar value never expires`,
+          description: `Good for ${priced.label} · for ${b.recipientName} · No cash value · Dollar value never expires`,
         },
       },
     }],
     payment_intent_data: { statement_descriptor: "IN2SKIN" },
-    customer_email: buyerEmail,
-    metadata: {
-      type: "gift",
-      kind: "voucher",
-      amountCents: String(priced.totalCents),
-      buyerName,
-      buyerEmail,
-      recipientName,
-      recipientEmail,
-      message: String(b.message || "").trim().slice(0, 500),
-      voucherLabel: priced.label,
-      voucherFor: JSON.stringify({
-        service: priced.main.id,
-        serviceName: priced.main.name,
-        addons: priced.addons.map((a) => ({ id: a.id, name: a.name })),
-        type: priced.type,
-      }),
-    },
-    success_url: `${SITE_URL}/gift-sent.html?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${SITE_URL}/#gift`,
+    customer_email: b.buyerEmail,
+    metadata: giftSessionMeta(
+      { amountCents: priced.totalCents, buyerName: b.buyerName, buyerEmail: b.buyerEmail, buyerPhone: b.buyerPhone || "", recipientName: b.recipientName, recipientEmail: b.recipientEmail || "", recipientPhone: b.recipientPhone || "", message: b.message || "", delivery: b.delivery || "email", sendOn: b.sendOn || "" },
+      {
+        kind: "voucher",
+        voucherLabel: priced.label,
+        // Where the gift was bought (Nov 20, 2026): the certificate email
+        // links back to this origin.
+        origin: siteUrlFor(req),
+        voucherFor: JSON.stringify({
+          service: priced.main.id,
+          serviceName: priced.main.name,
+          addons: priced.addons.map((a) => ({ id: a.id, name: a.name })),
+          type: priced.type,
+        }),
+      },
+    ),
+    success_url: `${siteUrlFor(req)}/gift/?paid={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${siteUrlFor(req)}/gift/`,
   });
   return res.status(200).json({ url: session.url });
 }
@@ -151,13 +233,16 @@ async function handleAgentGift(req, res, b) {
         recipientName,
         recipientEmail,
         message: String(b.message || "").trim().slice(0, 500),
+        // Where the gift was bought (Nov 20, 2026): the certificate email
+        // links back to this origin.
+        origin: siteUrlFor(req),
       }, b.kind === "voucher" ? {
         kind: "voucher",
         voucherLabel,
         voucherFor: JSON.stringify(voucherFor),
       } : {}),
-      success_url: `${SITE_URL}/gift-sent.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${SITE_URL}/#gift`,
+      success_url: `${siteUrlFor(req)}/gift-sent.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${siteUrlFor(req)}/#gift`,
     });
     // The buyer pays on their own phone — the link goes to their email.
     // If the email does not go out, say so: the agent must not tell the
@@ -196,25 +281,55 @@ module.exports = async (req, res) => {
     // Voice-agent sale: the agent collects buyer + friend details on the
     // call and gets a pay link emailed to the BUYER (see handleAgentGift).
     if (b.via === "agent") return await handleAgentGift(req, res, b);
-    if (b.kind === "voucher") return await handleVoucherBuy(req, res, b);
-    let amountCents = 0;
-    let label = "";
-    if (b.option && GIFT_OPTIONS[b.option]) {
-      amountCents = GIFT_OPTIONS[b.option].amountCents;
-      label = GIFT_OPTIONS[b.option].name;
-    } else if (b.option === "gift-custom") {
-      const val = Math.round(parseFloat(b.amount) * 100);
-      if (!val || val < 1000) return res.status(400).json({ error: "Please enter an amount of $10 or more for a custom certificate." });
-      amountCents = val;
-      label = "Custom Amount Gift Certificate";
+    // The /gift/ page posts its own order shape — map it first. The
+    // legacy shape ({ option | kind:"voucher" + service/addons }) still
+    // works, normalised into the same fields.
+    let n;
+    if (b.delivery || b.toName || b.treatment) {
+      try {
+        n = mapGiftPageOrder(b);
+      } catch (err) {
+        return res.status(400).json({ error: err.message });
+      }
+    } else if (b.kind === "voucher") {
+      n = {
+        kind: "voucher", service: b.service, addons: Array.isArray(b.addons) ? b.addons : [], type: b.type,
+        buyerName: String(b.buyerName || "").trim(), buyerEmail: String(b.buyerEmail || "").trim(),
+        buyerPhone: String(b.buyerPhone || "").trim(), recipientName: String(b.recipientName || "").trim(),
+        recipientEmail: String(b.recipientEmail || "").trim(), recipientPhone: String(b.recipientPhone || "").trim(),
+        message: String(b.message || "").trim().slice(0, 500), delivery: "email", sendOn: "",
+      };
     } else {
-      return res.status(400).json({ error: "Please choose a certificate." });
+      let amountCents = 0;
+      let label = "";
+      if (b.option && GIFT_OPTIONS[b.option]) {
+        amountCents = GIFT_OPTIONS[b.option].amountCents;
+        label = GIFT_OPTIONS[b.option].name;
+      } else if (b.option === "gift-custom") {
+        const val = Math.round(parseFloat(b.amount) * 100);
+        if (!val || val < 1000) return res.status(400).json({ error: "Please enter an amount of $10 or more for a custom certificate." });
+        amountCents = val;
+        label = "Custom Amount Gift Certificate";
+      } else {
+        return res.status(400).json({ error: "Please choose a certificate." });
+      }
+      n = {
+        kind: "gift", amountCents, label,
+        buyerName: String(b.buyerName || "").trim(), buyerEmail: String(b.buyerEmail || "").trim(),
+        buyerPhone: String(b.buyerPhone || "").trim(), recipientName: String(b.recipientName || "").trim(),
+        recipientEmail: String(b.recipientEmail || "").trim(), recipientPhone: String(b.recipientPhone || "").trim(),
+        message: String(b.message || "").trim().slice(0, 500), delivery: "email", sendOn: "",
+      };
     }
-    if (!b.buyerName || !String(b.buyerName).trim()) return res.status(400).json({ error: "Please add your name." });
-    if (!b.buyerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(b.buyerEmail))) return res.status(400).json({ error: "Please add your email — your confirmation is sent there." });
-    if (!b.recipientName || !String(b.recipientName).trim()) return res.status(400).json({ error: "Please add your friend's name — it goes on the certificate." });
-    if (!b.recipientEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(b.recipientEmail))) return res.status(400).json({ error: "Please add your friend's email — the certificate code is sent there." });
-
+    if (n.kind === "voucher") return await handleVoucherBuy(req, res, n);
+    try {
+      // Print delivery: no recipient email needed — the certificate goes
+      // to the buyer to print. Email delivery still needs one.
+      checkGiftParties(n, { emailRequired: n.delivery !== "print", phonesRequired: n.fromGiftPage === true });
+    } catch (err) {
+      return res.status(err.status || 400).json({ error: err.message });
+    }
+    const label = n.label || "Custom Amount Gift Certificate";
     const stripe = getStripe();
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -224,26 +339,20 @@ module.exports = async (req, res) => {
         quantity: 1,
         price_data: {
           currency: "cad",
-          unit_amount: amountCents,
+          unit_amount: n.amountCents,
           product_data: {
-            name: `In2Skin Gift Certificate — ${money(amountCents)}`,
-            description: `${label} for ${String(b.recipientName).trim()} · Gift codes never expire`,
+            name: `In2Skin Gift Certificate — ${money(n.amountCents)}`,
+            description: `${label} for ${n.recipientName} · Gift codes never expire`,
           },
         },
       }],
       payment_intent_data: { statement_descriptor: "IN2SKIN" },
-      customer_email: String(b.buyerEmail).trim(),
-      metadata: {
-        type: "gift",
-        amountCents: String(amountCents),
-        buyerName: String(b.buyerName).trim(),
-        buyerEmail: String(b.buyerEmail).trim(),
-        recipientName: String(b.recipientName).trim(),
-        recipientEmail: String(b.recipientEmail).trim(),
-        message: String(b.message || "").trim().slice(0, 500),
-      },
-      success_url: `${SITE_URL}/gift-sent.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${SITE_URL}/#gift`,
+      customer_email: n.buyerEmail,
+      // Where the gift was bought (Nov 20, 2026): the certificate email
+      // links back to this origin.
+      metadata: giftSessionMeta(n, { origin: siteUrlFor(req) }),
+      success_url: `${siteUrlFor(req)}/gift/?paid={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${siteUrlFor(req)}/gift/`,
     });
     return res.status(200).json({ url: session.url });
   } catch (err) {

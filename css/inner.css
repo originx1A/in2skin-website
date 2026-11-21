@@ -1,0 +1,97 @@
+/* In2Skin prototype — inner pages (treatments, concerns, towns, FAQ, gift, contact, privacy). Same tokens/header/footer as the home page. */
+.inner-hero{min-height:clamp(340px,50vh,500px)}
+.inner-hero .hero-in{padding:var(--s8) var(--s3) calc(var(--s8) + 36px)}
+.inner-hero .hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}
+.inner-hero h1{font-size:clamp(2.3rem,5.4vw,4.2rem);margin-bottom:0}
+.inner-hero .kicker{margin-bottom:var(--s2)}
+.inner-panel{z-index:2;padding:var(--s8) 0 var(--s12);background:radial-gradient(900px 520px at 100% 0,rgba(217,185,106,.18),transparent 60%),linear-gradient(172deg,var(--paper) 0%,var(--blush) 100%)}
+.inner-panel.alt{background:radial-gradient(900px 520px at 0 0,rgba(217,185,106,.18),transparent 60%),linear-gradient(172deg,#F3E4D0 0%,var(--sand) 100%)}
+.crumbs{font-size:.92rem;color:var(--ink-soft);margin-bottom:var(--s4)}
+.crumbs a{color:var(--sage-deep)}
+.svc-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:var(--s8);align-items:start}
+.svc-layout.single{grid-template-columns:minmax(0,760px);justify-content:center}
+.prose{min-width:0;max-width:720px}
+.prose p{font-size:1.06rem;max-width:66ch}
+.prose>.crumbs+p{font:500 clamp(1.3rem,2.2vw,1.6rem)/1.5 var(--serif);color:var(--ink)}
+.prose h2{font-size:clamp(1.7rem,3vw,2.2rem);margin:var(--s6) 0 var(--s2);display:flex;align-items:center;gap:14px}
+.prose h2::after{content:"";height:1px;flex:1 1 40px;max-width:120px;background:linear-gradient(90deg,var(--gold),transparent)}
+.prose h1{display:none}
+.prose .sub{font:italic 500 1.25rem/1.5 var(--serif);color:var(--ink-soft)}
+.prose a{text-underline-offset:3px}
+.prose strong{font-weight:500;color:var(--ink)}
+.tick-list{display:grid;gap:12px;margin:0 0 var(--s2)}
+.tick-list li{display:flex;gap:14px;align-items:flex-start;font-size:1.04rem}
+.tick-list .tk{flex:0 0 26px;width:26px;height:26px;margin-top:2px;border-radius:50%;background:var(--sage-soft);border:1px solid rgba(74,93,79,.4);display:grid;place-items:center}
+.tick-list .tk svg path{stroke:#2F4A2C}
+.faq{display:grid;gap:10px}
+.faq details{background:rgba(253,250,241,.78);border:1px solid rgba(176,141,79,.4);border-radius:18px;padding:0 20px}
+.faq summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:var(--s2);min-height:56px;font:600 1.12rem/1.3 var(--serif);color:var(--ink)}
+.faq summary::-webkit-details-marker{display:none}
+.faq .plus{flex:0 0 auto;font:400 1.5rem/1 var(--sans);color:var(--gold-text);transition:transform .2s ease}
+.faq details[open] .plus{transform:rotate(45deg)}
+.faq details[open]{background:rgba(255,253,246,.95);box-shadow:0 10px 26px rgba(120,86,20,.12)}
+.faq details p{margin:0 0 var(--s2);font-size:1rem}
+.pair-row{display:flex;flex-wrap:wrap;gap:10px}
+.pair-chip{display:inline-flex;align-items:center;gap:10px;min-height:48px;padding:10px 20px;border-radius:8px;background:rgba(253,250,241,.85);border:1.5px solid rgba(176,141,79,.55);color:var(--ink);text-decoration:none;font-weight:400;transition:all .2s ease}
+.pair-chip b{font-weight:500;color:var(--gold-text);font-size:.92rem}
+.pair-chip:hover{background:var(--ink);color:#FBF7EC;border-color:var(--ink)}
+.pair-chip:hover b{color:var(--gold-2)}
+.price-panel{position:sticky;top:calc(var(--hdr) + var(--s3));padding:var(--s4) var(--s3);border-radius:28px;background:linear-gradient(165deg,#FFFDF6,#F6E9D6);border:1.5px solid rgba(176,141,79,.5);box-shadow:0 24px 50px rgba(120,86,20,.16)}
+.pp-price{font:600 clamp(2.6rem,4vw,3.4rem)/1 var(--serif);color:var(--ink)}
+.pp-mins{margin:6px 0 var(--s2);color:var(--ink-soft);font-size:.98rem}
+.pp-alt{margin:0 0 var(--s1);font-size:.98rem;color:var(--ink-soft)}
+.pp-alt strong{color:var(--sage-deep);font-weight:500}
+.price-panel .fine{margin:var(--s2) 0 0;padding-top:var(--s2);border-top:1px solid rgba(176,141,79,.35);font-size:.92rem;line-height:1.5;color:var(--ink-soft)}
+.price-panel .pp-lead{font:italic 500 1.15rem/1.4 var(--serif);color:var(--ink);margin:0 0 var(--s1)}
+.photo-pair{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2);margin:var(--s4) 0}
+.photo-pair img{width:100%;height:100%;aspect-ratio:4/3;object-fit:cover;border-radius:24px;box-shadow:0 18px 40px rgba(60,44,20,.18)}
+.contact-list{display:grid;gap:var(--s2);margin:0 0 var(--s4)}
+.contact-list li{padding:var(--s2) var(--s3);border-radius:20px;background:rgba(253,250,241,.82);border:1px solid rgba(176,141,79,.4)}
+.contact-list b{display:block;font:600 .74rem/1 var(--sans);letter-spacing:.24em;text-transform:uppercase;color:var(--gold-text);margin-bottom:8px}
+.contact-list a{font:600 1.35rem/1.3 var(--serif);color:var(--ink)}
+.todo{font-style:italic;color:var(--gold-text)}
+@media(max-width:1023px){
+  .svc-layout{grid-template-columns:1fr;gap:var(--s6)}
+  .price-panel{position:static;order:-1;display:grid;grid-template-columns:auto 1fr;column-gap:var(--s3);align-items:center;padding:var(--s3)}
+  .price-panel .pp-mins,.price-panel .pp-alt,.price-panel .fine{grid-column:1/-1}
+  .price-panel .pp-price{grid-row:1}
+  .price-panel .pp-mins{margin:0}
+}
+@media(max-width:860px){
+  .inner-hero{min-height:clamp(300px,44svh,420px)}
+  .inner-hero .hero-in{padding:var(--s6) var(--s3) calc(var(--s6) + 28px)}
+}
+@media(max-width:640px){
+  .inner-panel{padding:var(--s6) 0 var(--s8)}
+  .photo-pair{grid-template-columns:1fr}
+  .faq summary{font-size:1.05rem}
+}
+
+.f-sub{margin-top:var(--s3)}
+.inner-panel::before{opacity:.09}
+@media(max-width:860px){
+  /* the fixed Book|Call bar must not sit over body text on the first screen */
+  .inner-hero{min-height:calc(100svh - var(--hdr))}
+  .inner-hero .hero-in{padding-bottom:150px}
+}
+
+/* video heroes: compact text block on the calmer side / bottom, soft scrim only where the text sits */
+.inner-hero[data-calm]{align-items:flex-end}
+.inner-hero[data-calm] .hero-scrim{background:linear-gradient(0deg,rgba(12,16,11,.78) 0%,rgba(12,16,11,.42) 38%,rgba(12,16,11,0) 70%)}
+.inner-hero[data-calm] .hero-in{padding-top:var(--s6);padding-bottom:calc(var(--s6) + 28px)}
+.inner-hero[data-calm] .hero-copy{max-width:520px}
+.inner-hero[data-calm] h1{font-size:clamp(2rem,4.4vw,3.4rem)}
+@media(min-width:861px){
+  .inner-hero[data-calm="right"] .hero-copy{margin-left:auto;text-align:right}
+  .inner-hero[data-calm="right"] .hero-scrim{background:linear-gradient(270deg,rgba(12,16,11,.7) 0%,rgba(12,16,11,.3) 40%,rgba(12,16,11,0) 62%),linear-gradient(0deg,rgba(12,16,11,.45),rgba(12,16,11,0) 45%)}
+}
+
+/* Phone video heroes (Tony Nov 20): never crop a 16:9 clip into a tall phone frame (faces got cut off).
+   The clip sits on top at 4:3, so the whole face and the device stay in frame; the title sits below on the dark band. */
+@media(max-width:860px){
+  .inner-hero[data-calm]{min-height:0;display:block;isolation:isolate;background:#141a12;padding-top:75vw}
+  .inner-hero[data-calm] .hero-video{position:absolute;top:0;left:0;right:0;bottom:auto;width:100%;height:75vw;object-fit:cover}
+  .inner-hero[data-calm] .hero-scrim{inset:auto 0 auto 0;top:calc(75vw - 90px);height:90px;background:linear-gradient(0deg,#141a12 0%,rgba(20,26,18,0) 100%)}
+  .inner-hero[data-calm] .hero-in{padding:16px 24px 76px}
+  .inner-hero[data-calm] h1{font-size:clamp(1.9rem,8vw,2.6rem)}
+}

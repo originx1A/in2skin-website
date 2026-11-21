@@ -59,15 +59,14 @@ Private one-on-one aesthetics studio in Bolton, Ontario. Public brand is
 
 ## Prices (exact — never change without Tony)
 
-Classic Facial 55 min $65 · Anti-Aging Facial 80 min $95 ·
-NANO Needling add-on 15 min $55 · Microdermabrasion add-on 15 min $45 ·
-Light Therapy add-on 15 min $45 · Reflexology add-on 15 min $25 ·
-Chemical Peels 25 min $95–$475 (booked at the $95 starting price; exact price
+Classic Facial 55 min $85 · Anti-Aging Facial 80 min $125 ·
+Microneedling / NANO Needling add-on 20 min $65 · Microdermabrasion add-on 20 min $55 ·
+Light Therapy add-on 20 min $55 · Reflexology add-on 20 min $35 ·
+Chemical Peels 55 min $125–$475 (booked at the $125 starting price; exact price
 confirmed at consultation, balance settled at the visit) ·
-Microneedling: Custom — ask for a quote / priced per
-consultation · The Works $135 / $165 · Private Hours +$15/service ·
-Payment: card online at booking
-(Stripe), cash or e-transfer also welcome at the studio. Plain Interac-only
+The Works $160 / $195 · Private Hours +$15 per visit ·
+Payment: $30 deposit by card online at booking
+(Stripe), balance at the visit; cash or e-transfer also welcome at the studio. Plain Interac-only
 debit does NOT work by card — those clients pay by e-transfer. Every charge
 shows as **IN2SKIN** on the card statement.
 

@@ -1,6 +1,8 @@
 // POST /api/book — create a booking + Stripe Checkout session.
-// Full payment at booking. Accepts an optional gift code (its balance comes
-// off the total; anything left stays on the code). Bookings fully covered
+// Deposit at booking ($30 for a booking for yourself; friend bookings
+// and consultations pay in full). The balance is due at the visit.
+// Accepts an optional gift code (its balance comes off the total;
+// anything left stays on the code). Bookings fully covered
 // by a gift code need no payment — they are confirmed straight away.
 const { getStripe } = require("../lib/stripe");
 const { kvGet, kvSet } = require("../lib/kv");
@@ -11,10 +13,11 @@ const {
 } = require("../lib/schedule");
 const { studioForDate } = require("../lib/studio");
 const {
-  SITE_URL, newId, saveBooking, listBookingsForDate,
-  getBooking, finalizePaidBooking, sendHoldEmail, notifyStudioBooking,
+  siteUrlFor, newId, saveBooking, listBookingsForDate,
+  getBooking, finalizePaidBooking, settleBookingPayment, balanceDue,
+  sendHoldEmail, notifyStudioBooking,
   buildBooking, createBookingCheckout, createConsultRequest, CONSULT_ID,
-  CONSULT_FORMATS, consultFormatOf, consultName,
+  CONSULT_FORMATS, consultFormatOf, consultName, meetLinkFor,
 } = require("../lib/bookings");
 const { getReferralByEmailOrPhone } = require("../lib/referrals");
 const { getOrCreateReferral } = require("../lib/referrals");
@@ -67,15 +70,15 @@ async function handleAgentHold(req, res, b) {
     // a returning client anyway.
     if (svc.id === CONSULT_ID) {
       const prior = await getReferralByEmailOrPhone(b.email, b.phone);
-      if (prior) return bad(res, "You've already had your consultation with Sarah — book your treatment directly.");
+      if (prior) return bad(res, "You've already had your consultation with the studio — book your treatment directly.");
     }
     const totalMins = durationForBooking(svc.id, addons);
     const addonNames = addons.map((id) => findService(id).name);
     const serviceLabel = svc.id === CONSULT_ID ? consultName(format) : (addonNames.length ? `${svc.name} + ${addonNames.join(" + ")}` : svc.name);
     const type = b.type === "after" ? "after" : "regular";
-    // Early mornings and evenings are by request through Sarah — the voice
+    // Early mornings and evenings are by request through the studio — the voice
     // agent never books them; it takes a message instead (Tony Nov 19).
-    if (type === "after") return bad(res, "Early mornings and evenings are by request — please take the caller's message and Sarah will call them back.");
+    if (type === "after") return bad(res, "Early mornings and evenings are by request — please take the caller's message and the studio will call them back.");
     const d = parseDateLocal(b.date);
     if (!d) return bad(res, "Please choose a day.");
     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -94,9 +97,9 @@ async function handleAgentHold(req, res, b) {
       return res.status(409).json({ error: "That time was just taken — please choose another time." });
     }
     // Four appointments a day, whatever they are (Tony Nov 19, 2026).
-    // Consultations never count toward the cap.
+    // Consultations share the cap (A4).
     if (countsTowardCap(svc.id) && dayIsFull(bookings)) {
-      return res.status(409).json({ error: "That day is fully booked — Sarah takes four appointments a day. Please choose another day." });
+      return res.status(409).json({ error: "That day is fully booked — the studio takes four appointments a day. Please choose another day." });
     }
 
     const baseCents = baseCentsFor(svc.id, addons, type);
@@ -142,13 +145,16 @@ async function handleAgentHold(req, res, b) {
       amountPaidCents: 0,
       status: "pending",
       via: "agent",
+      // Where this booking was made (Nov 20, 2026): the checkout success
+      // URL and every later email link back to this origin.
+      origin: siteUrlFor(req),
       emailSent: false,
       createdAt: new Date().toISOString(),
     };
     const holdUntil = new Date(Date.now() + PENDING_HOLD_MS).toISOString();
 
     // Consultation (or a booking fully covered): no payment due — hold
-    // the time and let Sarah confirm it. A consultation earns no
+    // the time and let the studio confirm it. A consultation earns no
     // referral credit and marks no client paid, so the hold email is the
     // only email on this path.
     if (amountCents === 0) {
@@ -184,8 +190,8 @@ async function handleAgentHold(req, res, b) {
       payment_intent_data: { statement_descriptor: "IN2SKIN" },
       customer_email: booking.email,
       metadata: { type: "booking", bookingId: booking.id, via: "agent", giftCode: "", giftAppliedCents: "0" },
-      success_url: `${SITE_URL}/booked.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${SITE_URL}/#book`,
+      success_url: `${siteUrlFor(req)}/booked.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${siteUrlFor(req)}/#book`,
     });
     booking.checkoutSessionId = session.id;
     booking.checkoutUrl = session.url;
@@ -229,13 +235,10 @@ module.exports = async (req, res) => {
       const bookingId = (session.metadata || {}).bookingId;
       const booking = await getBooking(bookingId);
       if (!booking) return res.status(404).json({ error: "Booking not found." });
-      if (booking.status !== "paid") {
-        booking.status = "paid";
-        booking.amountPaidCents = session.amount_total || booking.amountCents;
-        booking.stripePaymentIntentId = session.payment_intent || null;
-        await kvSet(`booking:${booking.id}`, booking);
-      }
-      await finalizePaidBooking(booking);
+      // One shared settle step (also used by the webhook): a full payment
+      // flips the booking to paid; a $30 deposit flips it to deposit-paid
+      // with a balance due at the visit.
+      await settleBookingPayment(booking, session);
       return res.status(200).json({
         paid: true,
         booking: {
@@ -247,10 +250,19 @@ module.exports = async (req, res) => {
           name: booking.name,
           guestName: booking.guestName,
           email: booking.email,
+          status: booking.status,
+          amountCents: booking.amountCents,
           amountPaidCents: booking.amountPaidCents,
+          balanceDueCents: balanceDue(booking),
+          payMode: booking.payMode || "full",
           giftAppliedCents: booking.giftAppliedCents,
           giftKind: booking.giftKind || null,
           myReferralCode: booking.myReferralCode || null,
+          // A paid video consultation carries its own fresh Meet link
+          // (minted at payment); one that never got a link yet still
+          // says it is coming — the confirmation page shows either.
+          meetLink: await meetLinkFor(booking),
+          meetLinkFailed: !!booking.meetLinkFailed,
         },
       });
     } catch (err) {
@@ -265,7 +277,7 @@ module.exports = async (req, res) => {
   try {
     const b = req.body || {};
     // Consultation request (after hours) — no payment, no slot
-    // hold; Sarah answers it on the dashboard. The voice agent may
+    // hold; the studio answers it on the dashboard. The voice agent may
     // submit one too (same key as holds); the web form uses the honeypot.
     if (b.consultRequest === true) {
       if (b.via === "agent") {
@@ -276,6 +288,9 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: BOT_MSG });
       }
       try {
+        // Where the request was made (Nov 20, 2026): the studio email's
+        // dashboard link goes back to this origin.
+        b.origin = siteUrlFor(req);
         const created = await createConsultRequest(b);
         return res.status(200).json({ ok: true, requestId: created.id, format: created.format || "video", date: created.date, time: created.time });
       } catch (err) {
@@ -288,6 +303,9 @@ module.exports = async (req, res) => {
     // Shared creation path with the admin walk-in form (same validation,
     // slot rules incl. live buffer + blocks, and pricing).
     const { bufferMins, blocks } = await studioForDate(b.date);
+    // Where the booking was made (Nov 20, 2026): the checkout success
+    // URL and every later email link back to this origin.
+    b.origin = siteUrlFor(req);
     const booking = await buildBooking(b, { bufferMins, blocks, via: "web" });
     const svc = findService(booking.service);
 
@@ -313,7 +331,7 @@ module.exports = async (req, res) => {
       try { await sendHoldEmail(booking, session.url); } catch (e) { console.error("[book:hold-email]", e); }
     }
     await notifyStudioBooking(booking, "new");
-    return res.status(200).json({ url: session.url, bookingId: booking.id });
+    return res.status(200).json({ url: session.url, bookingId: booking.id, payMode: booking.payMode, depositCents: booking.depositCents, amountCents: booking.amountCents });
   } catch (err) {
     console.error("[book]", err);
     return res.status(err.status || 500).json({ error: err.message });

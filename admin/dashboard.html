@@ -120,6 +120,8 @@
         <h3 style="font-size:1.1rem; margin:22px 0 8px;">Video consult links — Google connection</h3>
         <p class="sub">Connect the studio's Google account once, and every video consultation gets its own fresh Meet link automatically — no shared link, no pasting. Sarah signs in on Google's own screen and taps Allow; no password is shared with the site, and the connection can be removed here any time.</p>
         <p style="margin-top:12px;"><button class="btn btn-book" id="googleConnectBtn" type="button">Connect Google</button> <button class="btn btn-ghost" id="googleDisconnectBtn" type="button" style="display:none;">Disconnect Google</button> <span id="googleConnectMsg" style="color:#7A3B2E; margin-left:8px;"></span></p>
+        <p style="margin-top:12px;"><button class="btn btn-ghost" id="googleMeetTestBtn" type="button">Test Meet link</button> <button class="btn btn-ghost" id="googleMeetTestDeleteBtn" type="button" style="display:none;">Delete test link</button> <span id="googleMeetTestMsg" style="color:#7A3B2E; margin-left:8px;"></span></p>
+        <p id="googleMeetTestLink" style="margin-top:8px;"></p>
         <h3 style="font-size:1.1rem; margin:22px 0 8px;">Video call link</h3>
         <p class="sub">Your one Google Meet link for video consultations — paste it here and it goes into every confirmation and reminder email. Until you paste one, clients are told the link is coming.</p>
         <div class="field"><label for="meetLink">Google Meet link</label><input id="meetLink" type="url" placeholder="https://meet.google.com/abc-defg-hij" /></div>
@@ -317,12 +319,12 @@
         var TALK_SERVICES = [
           { keys: ["classic"], label: "Classic Facial" },
           { keys: ["anti-aging", "anti aging"], label: "Anti-Aging Facial" },
-          { keys: ["nano"], label: "NANO Needling" },
+          { keys: ["nano"], label: "Microneedling / NANO Needling" },
           { keys: ["microdermabrasion"], label: "Microdermabrasion" },
           { keys: ["light therapy", "red light"], label: "Light Therapy" },
           { keys: ["reflexology"], label: "Reflexology" },
           { keys: ["chemical peel", "peel"], label: "Chemical Peels" },
-          { keys: ["microneedling"], label: "Microneedling" },
+          { keys: ["microneedling"], label: "Microneedling / NANO Needling" },
           { keys: ["the works", "works"], label: "The Works" }
         ];
         var TALK_SECTIONS = [
@@ -1053,7 +1055,7 @@
                 var del = !p.bookingId ? ' <div style="margin-top:8px;"><button class="btn btn-ghost btn-book-sm" type="button" data-pay-del="' + p.id + '">Delete</button></div><div class="act-slot" data-slot="pay-' + p.id + '"></div>' : '';
                 rows.push('<div class="after-item"><div><strong>' + money(p.amountCents) + '</strong> — ' + (p.serviceLabel || "In2Skin visit") + ' · ' + (p.clientName || "Client") + ' · pay on the spot</div>' + del + '</div>');
               });
-              j.bookings.forEach(function(b){ rows.push('<div class="after-item"><div><strong>' + money(b.amountPaidCents || 0) + '</strong> — ' + b.serviceName + ' · ' + (b.guestName || b.name || "Client") + ' · ' + b.time + ' · ' + (b.via === "admin" ? "walk-in" : "online booking") + (b.giftAppliedCents ? ' · ' + money(b.giftAppliedCents) + ' from gift code' : '') + ((b.balanceDueCents || 0) > 0 ? ' · <strong style="color:#7A3B2E;">owes ' + money(b.balanceDueCents) + '</strong>' : '') + '</div></div>'); });
+              j.bookings.forEach(function(b){ rows.push('<div class="after-item"><div><strong>' + money(b.amountPaidCents || 0) + '</strong> — ' + b.serviceName + ' · ' + (b.forWhom === "friend" ? "Paid by " + b.name + " for " + (b.guestName || "?") : (b.guestName || b.name || "Client")) + ' · ' + b.time + ' · ' + (b.via === "admin" ? "walk-in" : "online booking") + (b.giftAppliedCents ? ' · ' + money(b.giftAppliedCents) + ' from gift code' : '') + ((b.balanceDueCents || 0) > 0 ? ' · <strong style="color:#7A3B2E;">owes ' + money(b.balanceDueCents) + '</strong>' : '') + '</div></div>'); });
               document.getElementById("payList").innerHTML = rows.length ? rows.join("") : "<p style='color:var(--ink-soft);'>No payments recorded for this day yet.</p>";
             })
             .catch(function(){ msg.textContent = "Could not load payments — check your connection."; });
@@ -1112,6 +1114,7 @@
                 rec.count++; rec.cents += (b.amountCents || 0);
                 total++; totalCents += (b.amountCents || 0);
                 if (b.status === "paid") paidCents += (b.amountPaidCents || b.amountCents || 0);
+                if (b.status === "deposit-paid") paidCents += (b.amountPaidCents || 0);
               });
               var rows = days.map(function(dy){
                 return '<div class="after-item"><div><strong>' + dy.label + '</strong> — ' + (dy.count ? dy.count + (dy.count === 1 ? " booking" : " bookings") + " · " + money(dy.cents) : "No bookings") + '</div></div>';
@@ -1156,13 +1159,13 @@
               calBookings = {};
               var rows = res.j.bookings.map(function(b){
                 calBookings[b.id] = b;
-                var needsOutcome = (b.status === "paid" || b.status === "consultation" || b.status === "unpaid") && isPastBooking(b);
+                var needsOutcome = (b.status === "paid" || b.status === "deposit-paid" || b.status === "consultation" || b.status === "unpaid") && isPastBooking(b);
                 var outcome = "";
-                if (b.status === "paid" || b.status === "consultation" || b.status === "unpaid"){
+                if (b.status === "paid" || b.status === "deposit-paid" || b.status === "consultation" || b.status === "unpaid"){
                   outcome = ' <button class="btn btn-book btn-book-sm" type="button" data-outcome="complete" data-id="' + b.id + '">Completed</button>'
                     + ' <button class="btn btn-ghost btn-book-sm" type="button" data-outcome="no-show" data-id="' + b.id + '">No-show</button>';
                 }
-                var upcoming = ["pending", "unpaid", "paid", "consultation"].indexOf(b.status) >= 0;
+                var upcoming = ["pending", "unpaid", "paid", "deposit-paid", "consultation"].indexOf(b.status) >= 0;
                 var acts = "";
                 if (upcoming){
                   acts = ' <button class="btn btn-ghost btn-book-sm" type="button" data-act="move" data-id="' + b.id + '">Move</button>'
@@ -1174,14 +1177,18 @@
                 }
                 acts += ' <button class="btn btn-ghost btn-book-sm" type="button" data-act="delete" data-id="' + b.id + '">Delete</button>';
                 return '<div class="after-item"><div><strong>' + fmtDate(b.date) + ' · ' + b.time + '</strong> — ' + b.serviceName
-                  + ' · ' + (b.guestName || b.name) + ' · ' + b.phone + ' · ' + b.email
+                  + (b.forWhom === "friend"
+                    ? ' · <strong>Paid by ' + b.name + ' for ' + (b.guestName || "?") + '</strong>'
+                      + '<br/>Booker: <a href="tel:' + (b.phone || "").replace(/[^0-9+]/g, "") + '">' + b.phone + '</a> · <a href="mailto:' + b.email + '">' + b.email + '</a>'
+                      + '<br/>Guest: <a href="tel:' + (b.guestPhone || "").replace(/[^0-9+]/g, "") + '">' + (b.guestPhone || "—") + '</a>' + (b.guestEmail ? ' · <a href="mailto:' + b.guestEmail + '">' + b.guestEmail + '</a>' : ' · <strong style="color:#7A3B2E;">No email for ' + (b.guestName || "guest") + ' — studio phones them</strong>')
+                    : ' · ' + (b.guestName || b.name) + ' · ' + b.phone + ' · ' + b.email)
                   + ' · <em>' + b.status + '</em>' + (b.type === "after" ? ' · Private Hours' : '')
                   + (b.giftCode ? ' · gift ' + b.giftCode : '')
                   + (b.referredBy ? ' · referred by ' + b.referredBy : '')
                   + ((b.balanceDueCents || 0) > 0 ? ' · <strong style="color:#7A3B2E;">owes ' + money(b.balanceDueCents) + '</strong>' : '')
                   + (b.paymentMethod ? ' · paid by ' + b.paymentMethod : '')
                   + (b.status === "pending" && b.checkoutUrl ? ' · <a href="' + b.checkoutUrl + '" target="_blank" rel="noopener">card link sent</a>' : '')
-                  + (b.service === "consultation" && b.format === "video" && res.j.meetLink ? ' · <a href="' + res.j.meetLink + '" target="_blank" rel="noopener">Join video call</a>' : '')
+                  + (b.service === "consultation" && b.format === "video" && upcoming && (b.meetLink || res.j.meetLink) ? ' · <a href="' + (b.meetLink || res.j.meetLink) + '" target="_blank" rel="noopener">Join video call</a>' : '')
                   + (b.giftAppliedCents > 0 && b.giftKind === "consult-credit" ? ' · <strong>' + money(b.giftAppliedCents) + ' consultation credit applied</strong>' : '')
                   + (b.consultCreditCode ? ' · consult credit <strong>' + b.consultCreditCode + '</strong> (' + money(b.consultCreditCents || 0) + ')' : '')
                   + (needsOutcome ? ' · <strong style="color:#7A3B2E;">Needs outcome — did they show up?</strong>' : '')
@@ -2106,6 +2113,44 @@
             })
             .catch(function(){ m.textContent = "Could not reach the server — check your connection and try again."; });
         });
+        // ---- Meet proof test: mint one real Meet link, then delete it ----
+        document.getElementById("googleMeetTestBtn").addEventListener("click", function(){
+          var m = document.getElementById("googleMeetTestMsg");
+          var out = document.getElementById("googleMeetTestLink");
+          var del = document.getElementById("googleMeetTestDeleteBtn");
+          m.textContent = "Making a test Meet link…";
+          out.textContent = "";
+          del.style.display = "none";
+          fetch("/api/admin/data", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ view:"google-connect", action:"meet-test" }) })
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ m.textContent = res.j.error || "Could not make a test link."; return; }
+              m.textContent = "Test link made — open it to check it, then delete it.";
+              out.innerHTML = "";
+              var a = document.createElement("a");
+              a.href = res.j.meetLink; a.textContent = res.j.meetLink; a.target = "_blank"; a.rel = "noopener";
+              out.appendChild(a);
+              del.setAttribute("data-event-id", res.j.eventId);
+              del.style.display = "";
+            })
+            .catch(function(){ m.textContent = "Could not reach the server — check your connection and try again."; });
+        });
+        document.getElementById("googleMeetTestDeleteBtn").addEventListener("click", function(){
+          var m = document.getElementById("googleMeetTestMsg");
+          var out = document.getElementById("googleMeetTestLink");
+          var del = document.getElementById("googleMeetTestDeleteBtn");
+          var eventId = del.getAttribute("data-event-id") || "";
+          m.textContent = "Deleting the test link…";
+          fetch("/api/admin/data", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ view:"google-connect", action:"meet-test-delete", eventId: eventId }) })
+            .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+            .then(function(res){
+              if (!res.ok){ m.textContent = res.j.error || "Could not delete the test link."; return; }
+              m.textContent = "Test link deleted.";
+              out.textContent = "";
+              del.style.display = "none";
+            })
+            .catch(function(){ m.textContent = "Could not reach the server — check your connection and try again."; });
+        });
         document.getElementById("gapBtns").addEventListener("click", function(ev){
           var btn = ev.target.closest(".gap-btn");
           if (!btn) return;
@@ -2224,7 +2269,7 @@
               var out = document.getElementById("walkResult");
               if (!res.ok){ err.textContent = res.j.error || "Could not book."; return; }
               var b = res.j.booking;
-              out.innerHTML = '<div class="book-step on" style="text-align:center;"><h3>Booked — ' + b.serviceName + '</h3><p>' + fmtDate(b.date) + ' at ' + b.time + ' · ' + (b.guestName || b.name) + ' · Total ' + money(b.amountCents) + (b.amountCents === 0 ? ' · No charge' : b.status === "paid" ? ' · Paid' : b.status === "unpaid" ? ' · Pay at the visit' : b.status === "pending" ? ' · Card link sent' : '') + '</p>'
+              out.innerHTML = '<div class="book-step on" style="text-align:center;"><h3>Booked — ' + b.serviceName + '</h3><p>' + fmtDate(b.date) + ' at ' + b.time + ' · ' + (b.guestName || b.name) + ' · Total ' + money(b.amountCents) + (b.amountCents === 0 ? ' · No charge' : b.status === "paid" ? ' · Paid' : b.status === "deposit-paid" ? ' · Deposit paid, ' + money(b.balanceDueCents || 0) + ' due at the visit' : b.status === "unpaid" ? ' · Pay at the visit' : b.status === "pending" ? ' · Card link sent' : '') + '</p>'
                 + (res.j.checkoutUrl ? '<p><a class="btn btn-book" href="' + res.j.checkoutUrl + '" target="_blank" rel="noopener">Open the card payment link →</a></p><p style="color:var(--ink-soft);">The link was also emailed to the client.</p>' : '')
                 + '</div>';
               loadCal(); loadPayments(); loadWeek();

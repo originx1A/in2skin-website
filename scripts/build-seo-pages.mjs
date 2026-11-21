@@ -11,7 +11,6 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SITE = "https://boltonfacials.com";
 const PHONE_DISPLAY = "(289) 212-4124";
 const PHONE_TEL = "tel:+12892124124";
-const GEO = { lat: 43.88088, lon: -79.73492 };
 
 function esc(s) {
   return String(s)
@@ -29,7 +28,6 @@ const TREATMENT_LINKS = [
   ["light-therapy", "Light Therapy", "$55"],
   ["reflexology", "Reflexology", "$35"],
   ["chemical-peels", "Chemical Peels", "$125–$475"],
-  ["microneedling", "Microneedling", "$65"],
 ];
 
 const FOOT_TREATMENTS = TREATMENT_LINKS.map(
@@ -77,10 +75,10 @@ function header() {
         <a class="brand" href="/" aria-label="In2Skin — home"><span class="brand-text"><span class="wordmark">In2Skin</span><span class="tagline">Aesthetics · Bolton</span></span></a>
         <nav class="main" aria-label="Main">
           <a href="/">Home</a>
-          <a href="/#book">Book Online</a>
-          <a href="/#visit">Visit Us</a>
+          <a href="/#services">Book Online</a>
+          <a href="/contact/">Visit Us</a>
         </nav>
-        <a class="btn btn-book btn-book-sm header-book" href="/#book" style="white-space:nowrap;">Book Online</a>
+        <a class="btn btn-book btn-book-sm header-book" href="/#services" style="white-space:nowrap;">Book Online</a>
         <a class="btn btn-ghost header-call" href="${PHONE_TEL}" aria-label="Call In2Skin to book">Call<span class="btn-label-num">&nbsp;· ${PHONE_DISPLAY}</span></a>
       </div>
     </header>`;
@@ -102,13 +100,10 @@ function page(p) {
       priceRange: "$35 - $475",
       address: {
         "@type": "PostalAddress",
-        streetAddress: "92 Willow Street",
         addressLocality: "Bolton",
         addressRegion: "ON",
-        postalCode: "L7E 3G3",
         addressCountry: "CA",
       },
-      geo: { "@type": "GeoCoordinates", latitude: GEO.lat, longitude: GEO.lon },
       areaServed: ["Bolton", "Caledon", "Kleinburg", "Vaughan", "Brampton", "Nobleton", "King City", "Orangeville", "Georgetown", "Toronto", "Mississauga"],
     },
     areaServed: p.areaServedExtra || "Bolton",
@@ -211,9 +206,9 @@ ${JSON.stringify(faqLd, null, 2)}
           <div class="pp-price">${esc(p.leadPrice)}</div>
           <div class="pp-mins">${esc(p.leadMins)} · Bolton, Ontario</div>
           ${p.panelExtra ? `<p style="font-size:.93rem; color:var(--ink-soft); margin-bottom:16px;">${p.panelExtra}</p>` : ""}
-          <a class="btn btn-book btn-big" href="/#book" style="width:100%;">Book Online — ${esc(p.leadPrice)}</a>
+          <a class="btn btn-book btn-big" href="/#services" style="width:100%;">Book Online — ${esc(p.leadPrice)}</a>
           <a class="btn btn-ghost" href="${PHONE_TEL}" style="width:100%;">Call ${PHONE_DISPLAY}</a>
-          <p class="fine">Pay in full securely by card when you book.<br />Cash or e-transfer also welcome at your visit.</p>
+          <p class="fine">Hold your time with a $30 deposit by card when you book.<br />The balance is paid at your visit. Cash or e-transfer also welcome.</p>
         </aside>
       </div></div>
       <div style="height:64px;"></div>
@@ -886,13 +881,13 @@ const CONDITIONS = [
         h: "Treatments that help",
         ticks: [
           "Anti-Aging Facial — $125 · 80 minutes. Firming massage, targeted anti-aging serums and rich hydration, for firm, youthful skin.",
-          "Needling (micro or nano) — $65 · 20 minutes. Sarah picks the needle size for your face — ultra-fine tips help serums absorb more deeply, and fine needles prompt new collagen, improving the look of fine lines, acne scarring, uneven texture and enlarged pores.",
+          "NANO Needling — $65 · 20 minutes. Ultra-fine nano tips help serums absorb more deeply, for plumper, smoother, more radiant skin.",
         ],
       },
       {
         h: "Good to know",
         body: [
-          "Microneedling is $65 for 20 minutes. Private Hours, early mornings and evenings by request, are the regular price plus $15 per visit.",
+          "NANO Needling is $65 for 20 minutes. Private Hours, early mornings and evenings by request, are the regular price plus $15 per visit.",
         ],
       },
     ],
@@ -901,7 +896,7 @@ const CONDITIONS = [
     panelExtra: "Classic Facial: <strong style=\"color:var(--sage-deep);\">$85 · 55 min</strong>",
     faq: [
       ["What is the best facial for fine lines?", "The Anti-Aging Facial, $125 for 80 minutes — firming massage, targeted serums and rich hydration, for firmer, smoother, brighter skin."],
-      ["What is microneedling?", "Collagen induction therapy: fine needles create controlled micro-channels, prompting the skin's natural repair and new collagen. It's $65 for 20 minutes, and Sarah picks the needle size (micro or nano) that's best for your face at the visit."],
+      ["What is NANO Needling?", "Ultra-fine nano tips open shallow channels on the skin's surface so professional serums absorb more deeply. Skin looks plumper, smoother and more radiant, and fine lines appear softer. It's $65 for 20 minutes."],
       ["How often should I book?", "Every 4 to 6 weeks. Results build with regular visits."],
       ["Can I add anything to a facial for fine lines?", "Yes — NANO Needling, $65, helps serums absorb more deeply, and Light Therapy, $55, supports the skin's natural renewal."],
     ],
@@ -976,7 +971,7 @@ const QUESTIONS = {
         "The Works — $160 with a Classic Facial (55 min), $195 with an Anti-Aging Facial (80 min)",
         "Add-ons — NANO Needling $65, Microdermabrasion $55, Light Therapy $55, Reflexology $35 (all four add-ons 20 minutes)",
         "Chemical Peels — $125–$475, 55 minutes, exact price confirmed at consultation",
-        "Microneedling — $65 for 20 minutes",
+        "NANO Needling — $65 for 20 minutes",
         "New to In2Skin? A $30 consultation is credited in full toward your first treatment · Private Hours — the regular price plus $15 per visit",
       ],
     },
@@ -984,7 +979,7 @@ const QUESTIONS = {
   leadPrice: "$85",
   leadMins: "Classic Facial · 55 minutes",
   faq: [
-    ["How much does a facial cost in Bolton?", "At In2Skin, the Classic Facial is $85 for 55 minutes and the Anti-Aging Facial is $125 for 80 minutes. Add-ons run $35 to $65, chemical peels run $125 to $475, and microneedling is $65."],
+    ["How much does a facial cost in Bolton?", "At In2Skin, the Classic Facial is $85 for 55 minutes and the Anti-Aging Facial is $125 for 80 minutes. Add-ons run $35 to $65, chemical peels run $125 to $475, and NANO Needling is $65."],
     ["What does a facial do?", "A facial deep-cleanses, exfoliates, steams, massages and hydrates your skin, finished with a mask matched to your skin that day. Skin leaves brighter, fresher and more hydrated — with a glow that lasts for days."],
     ["How long does a facial take?", "The Classic Facial takes 55 minutes and the Anti-Aging Facial takes 80 minutes. Add-ons take 20 minutes each, and can be added to a facial or booked on their own."],
     ["How often should I get a facial?", "Every 4 to 6 weeks. Most clients make it a monthly ritual."],
@@ -1003,13 +998,13 @@ const QUESTIONS = {
     ["What is reflexology?", "Reflexology is gentle, rhythmic pressure on points on your feet that map to the rest of your body — the arch to your back, the toes to your head and neck. It helps the whole body unwind, and many clients sleep beautifully that night. It is $35 for 20 minutes, on its own or added to a facial."],
     ["How much downtime is there after a chemical peel?", "It depends on the strength of the peel. Gentle peels have little to no downtime — skin looks fresh right away. Deeper peels can mean a few days of flaking or peeling as fresh skin emerges. Your consultation matches the peel to your skin and confirms exactly what to expect, before anything begins."],
     ["What is the best facial in Bolton?", "There is no single best facial — the best first facial at In2Skin is the Classic Facial, $85 for 55 minutes, tailored to your skin that day. If fine lines are your main concern, the Anti-Aging Facial, $125 for 80 minutes, adds firming massage and targeted serums."],
-    ["Where can I get microneedling near Bolton?", "At In2Skin, a private, one-on-one aesthetics studio in Bolton, Ontario — call (289) 212-4124 to book. Microneedling is collagen induction therapy that prompts the skin’s natural repair and new collagen, improving the look of fine lines, acne scarring, uneven texture and enlarged pores over a series of treatments. It's $65 for 20 minutes, and Sarah picks the needle size (micro or nano) that's best for your face at the visit."],
+    ["Where can I get NANO Needling near Bolton?", "At In2Skin, a private, one-on-one aesthetics studio in Bolton, Ontario — call (289) 212-4124 to book. NANO Needling uses ultra-fine nano tips to help professional serums absorb more deeply, for plumper, smoother, more radiant skin."],
     ["What is the difference between a facial and a chemical peel?", "A facial deep-cleanses, exfoliates, steams, massages and hydrates your skin, finished with a hydration mask — the Classic Facial is $85 for 55 minutes. A chemical peel is a professional Circadia peel solution that lifts away dull surface layers so fresher, brighter skin emerges; peels are $125–$475 for 55 minutes, including the consultation that matches the peel to your skin, with the exact price confirmed up front."],
-    ["Do I need to book a facial in advance in Bolton?", "Yes — advance booking is recommended at In2Skin to get the time you want. You can book online anytime on the website or call (289) 212-4124, and you pay in full securely by card when you book online."],
+    ["Do I need to book a facial in advance in Bolton?", "Yes — advance booking is recommended at In2Skin to get the time you want. You can book online anytime on the website or call (289) 212-4124, and you hold your time with a $30 deposit by card when you book online, the balance paid at your visit."],
     ["How much does The Works facial cost in Bolton?", "The Works is $160 with a Classic Facial (55 minutes) or $195 with an Anti-Aging Facial (80 minutes) at In2Skin in Bolton. It is a facial, red light therapy and reflexology all at the same time, while the mask works."],
-    ["Can I book a facial early in the morning or on a Sunday in Bolton?", "Early mornings and evenings are available as Private Hours, by request — call (289) 212-4124 or email bookings@boltonfacials.com and Sarah will set it up. You pay the regular price of the services you pick, plus $15 per visit. Sundays the studio is closed."],
+    ["Can I book a facial early in the morning or on a Sunday in Bolton?", "Early mornings and evenings are available as Private Hours, by request — call (289) 212-4124 or email bookings@boltonfacials.com and the studio will set it up. You pay the regular price of the services you pick, plus $15 per visit. Sundays the studio is closed."],
     ["Is there a facial for teenagers with acne in Bolton?", "Yes — the Classic Facial, $85 for 55 minutes, is the recommended affordable first step for teen acne at In2Skin in Bolton. It focuses on a thorough deep cleanse, gentle exfoliation and calming, hydrating care, with every step explained as it happens."],
-    ["How much does microneedling cost in Bolton?", "Microneedling at In2Skin is $65 for 20 minutes. Sarah picks the needle size (micro or nano) that's best for your face at the visit."],
+    ["How much does NANO Needling cost in Bolton?", "NANO Needling at In2Skin is $65 for 20 minutes."],
   ],
   areaServedExtra: "Bolton",
 };
