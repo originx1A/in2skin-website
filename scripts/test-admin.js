@@ -101,6 +101,20 @@ function addDays(dateStr, n) {
   d.setDate(d.getDate() + n);
   return sched.dateKey(d);
 }
+// First start day at least minDays out whose 3-day window holds no Sunday
+// (Nov 23, 2026): Sundays have no slots, so a range test expecting 15
+// free slots breaks whenever the window contains one. A window starting
+// Fri, Sat or Sun always does — start Mon–Thu instead.
+function weekdayRangeStart(baseStr, minDays) {
+  let n = minDays;
+  for (;;) {
+    const d = new Date(baseStr + "T00:00:00");
+    d.setDate(d.getDate() + n);
+    const day = d.getDay();
+    if (day >= 1 && day <= 4) return addDays(baseStr, n);
+    n++;
+  }
+}
 function torontoToday() {
   return transfer.torontoDateKey();
 }
@@ -184,9 +198,9 @@ async function run() {
   check("availability shows 12:00 after removal", res.body.times.includes("12:00 PM"), true);
 
   // ---------- 2b. availability range mode (date-grid statuses) ----------
-  const d5 = addDays(today, 5);
-  const d6 = addDays(today, 6);
-  const d7 = addDays(today, 7);
+  const d5 = weekdayRangeStart(today, 5);
+  const d6 = addDays(d5, 1);
+  const d7 = addDays(d5, 2);
   res = mockRes();
   await availability(mockReq({ query: { from: d5, to: d7, service: "classic-facial" } }), res);
   check("range -> 200", res.statusCode, 200);
@@ -232,6 +246,14 @@ async function run() {
   check("walk-in balance $0", walkIn.balanceDueCents, 0);
   check("walk-in via admin", walkIn.via, "admin");
   check("walk-in got a referral code", !!walkIn.myReferralCode, true);
+
+  // Complete / no-show need the visit to have happened (Nov 23, 2026):
+  // completing a future booking early would issue the $30 consultation
+  // credit before the visit. The refusal mutates nothing.
+  res = await callAdmin({ view: "bookings", action: "complete", bookingId: walkIn.id });
+  check("complete on a future booking -> 400", res.statusCode, 400);
+  res = await callAdmin({ view: "bookings", action: "no-show", bookingId: walkIn.id });
+  check("no-show on a future booking -> 400", res.statusCode, 400);
 
   res = await callAdmin({
     view: "bookings", action: "walk-in",

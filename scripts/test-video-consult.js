@@ -385,6 +385,11 @@ async function run() {
   c2b.date = transfer.torontoDateKey();
   c2b.time = fmtMins(transfer.torontoNow().mins + 120);
   await B.saveBooking(c2b);
+  // Hand-moved, not moveBooking (Nov 23, 2026): saveBooking only adds the
+  // new day's index, so a moved booking haunts its old day and blocks that
+  // slot — clear the old day, exactly as moveBooking does. Same for the
+  // hand-moves in section 11 below.
+  await B.removeBookingFromDate(c2b.id, futureWeekday(42));
   await B.cancelBooking(c2b, "something came up");
   assert.ok(lastEmailTo(c2.email).includes("call the studio"), "cancel under 24h: client is told to call the studio about the $30");
   // the treatment that uses the credit SHOWS it — confirmation + dashboard
@@ -454,6 +459,7 @@ async function run() {
   rConsult.date = todayKey;
   rConsult.time = fmtMins(nowMins + 30);
   await B.saveBooking(rConsult);
+  await B.removeBookingFromDate(rConsult.id, futureWeekday(54)); // hand-move: clear the old day's index
   const beforeCount = emailsTo(rClient.email).length;
   await B.sendDueConsultReminders();
   let rEmails = emailsTo(rClient.email);
@@ -471,6 +477,7 @@ async function run() {
   r2.date = todayKey;
   r2.time = fmtMins(nowMins + 120);
   await B.saveBooking(r2);
+  await B.removeBookingFromDate(r2.id, futureWeekday(55)); // hand-move: clear the old day's index
   const t2 = await B.buildBooking({ service: "classic-facial", date: futureWeekday(55), time: "10:00 AM", type: "regular", name: "Treatment Client", phone: "(905) 555-1102", email: "treatment@test.example", first: "no" }, { bufferMins: 60, blocks: [], via: "web" });
   await B.saveBooking(t2);
   t2.status = "paid";
@@ -478,6 +485,7 @@ async function run() {
   t2.date = todayKey;
   t2.time = fmtMins(nowMins + 30);
   await B.saveBooking(t2);
+  await B.removeBookingFromDate(t2.id, futureWeekday(55)); // hand-move: clear the old day's index
   await B.sendDueConsultReminders();
   assert.equal(emailsTo("far@test.example").length, 0, "a consult 2 hours out gets no reminder yet");
   assert.equal(emailsTo("treatment@test.example").length, 0, "a treatment gets no consult reminder");
@@ -489,6 +497,7 @@ async function run() {
   ipConsult.date = todayKey;
   ipConsult.time = fmtMins(nowMins + 30);
   await B.saveBooking(ipConsult);
+  await B.removeBookingFromDate(ipConsult.id, futureWeekday(56)); // hand-move: clear the old day's index
   await B.sendDueConsultReminders();
   const ipEmails = emailsTo(ipClient.email);
   assert.equal(ipEmails.length, 1, "one reminder for the in-person consult");

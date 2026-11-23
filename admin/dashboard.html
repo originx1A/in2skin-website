@@ -450,6 +450,11 @@
         }
         function talkFindService(text){
           var t = String(text).toLowerCase();
+          // "The Works" names a combo, not a single treatment: when the
+          // words "the works" are there, they win over "classic" /
+          // "anti-aging" inside the combo name — the combo (classic vs
+          // anti-aging) is picked by the variant, not by the service match.
+          if (t.indexOf("the works") >= 0) return "The Works";
           for (var i = 0; i < TALK_SERVICES.length; i++){
             var svc = TALK_SERVICES[i];
             for (var k = 0; k < svc.keys.length; k++){
@@ -640,7 +645,16 @@
             var d2 = talkParseDay(t, todayISO);
             if (d2) fills2.push({ id: "wkDate", value: d2, label: "Day" });
             var svc = talkFindService(t);
-            if (svc) fills2.push({ id: "wkService", value: svc, label: "Treatment", service: true });
+            if (svc){
+              var svcFill = { id: "wkService", value: svc, label: "Treatment", service: true };
+              // "The Works" is two combos — classic or anti-aging — and
+              // the words after it say which one (Nov 23, 2026).
+              if (svc === "The Works"){
+                if (/anti/.test(t)) svcFill.variant = "anti-aging";
+                else if (/classic/.test(t)) svcFill.variant = "classic";
+              }
+              fills2.push(svcFill);
+            }
             var tm = talkParseTimes(t);
             if (tm[0]) fills2.push({ id: "wkTime", value: tm[0], label: "Time", time: true });
             if (/private hours|after hours/.test(t)) fills2.push({ id: "wkType", value: "after", label: "Hours", select: true });
@@ -783,14 +797,27 @@
             if (f.service){
               var sel = document.getElementById("wkService");
               if (sel){
-                for (var i = 0; i < sel.options.length; i++){
-                  if (sel.options[i].text.toLowerCase().indexOf(f.value.toLowerCase()) === 0){
-                    sel.selectedIndex = i;
-                    sel.dispatchEvent(new Event("change", { bubbles: true }));
-                    talkFillField(sel, sel.value);
-                    filled.push(f.label);
-                    break;
+                var pick = -1;
+                // A variant ("The Works" with anti-aging / classic) picks
+                // the exact combo — the option must start with the service
+                // label AND contain the variant, so "classic" never lands
+                // on plain Classic Facial.
+                if (f.variant){
+                  for (var vi = 0; vi < sel.options.length; vi++){
+                    var vt = sel.options[vi].text.toLowerCase();
+                    if (vt.indexOf(f.value.toLowerCase()) === 0 && vt.indexOf(f.variant) >= 0){ pick = vi; break; }
                   }
+                }
+                if (pick < 0){
+                  for (var i = 0; i < sel.options.length; i++){
+                    if (sel.options[i].text.toLowerCase().indexOf(f.value.toLowerCase()) === 0){ pick = i; break; }
+                  }
+                }
+                if (pick >= 0){
+                  sel.selectedIndex = pick;
+                  sel.dispatchEvent(new Event("change", { bubbles: true }));
+                  talkFillField(sel, sel.value);
+                  filled.push(f.label);
                 }
               }
               return;
@@ -1028,7 +1055,7 @@
         fetch("/api/admin/session").then(function(r){ return r.json(); }).then(function(j){
           if (!j.signedIn){ window.location.href = "/admin/"; return; }
           document.getElementById("dashSub").textContent = "Signed in as " + (j.email || "studio") + " — today's payments and bookings below.";
-        }).catch(function(){ window.location.href = "/admin/"; });
+        }).catch(function(){ msg.textContent = "Couldn't reach the studio — check your connection, then refresh this page."; });
 
         document.getElementById("signOut").addEventListener("click", function(){
           fetch("/api/admin/session", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ action:"logout" }) })
@@ -1044,7 +1071,12 @@
             .then(function(res){
               if (!res.ok){ msg.textContent = res.j.error || "Could not load payments."; return; }
               var j = res.j;
-              document.getElementById("paySummary").innerHTML = '<dl><dt>' + fmtDate(j.date) + '</dt><dd>Total paid: <strong>' + j.total + '</strong> (' + (j.paySpot.length + j.bookings.length) + ' payments)</dd></dl>';
+              // Count real payments only (Nov 23, 2026): a booking-linked
+              // pay-on-the-spot record is the same money as the booking's
+              // amountPaidCents, and an unpaid booking is not a payment.
+              var paidCount = j.paySpot.filter(function(p){ return !p.bookingId; }).length
+                + j.bookings.filter(function(b){ return (b.amountPaidCents || 0) > 0; }).length;
+              document.getElementById("paySummary").innerHTML = '<dl><dt>' + fmtDate(j.date) + '</dt><dd>Total paid: <strong>' + j.total + '</strong> (' + paidCount + ' payments)</dd></dl>';
               payRecords = {};
               var rows = [];
               j.paySpot.forEach(function(p){
@@ -1281,7 +1313,20 @@
             } else if (kind === "cancel"){ openPanel(b.id, cancelPanel(b)); }
             else if (kind === "email"){ openPanel(b.id, emailPanel(b)); }
             else if (kind === "pay"){ openPanel(b.id, payPanel(b)); }
-            else if (kind === "delete"){ openPanel(b.id, deletePanel(b)); }
+            else if (kind === "delete"){
+              openPanel(b.id, deletePanel(b));
+              // Deletes are blocked until the first monthly backup email
+              // is sent (Nov 23, 2026): say so before Sarah confirms,
+              // not after she taps "Yes, delete it".
+              fetch("/api/admin/data?view=backup&status=1").then(function(r){ return r.json(); }).then(function(j){
+                if (!j.monthlyActive){
+                  var dm = document.getElementById("delMsg");
+                  if (dm) dm.textContent = "Deletes are off until the first monthly backup email is sent — this booking can't be deleted yet.";
+                  var dy = document.querySelector("[data-del-yes]");
+                  if (dy) dy.disabled = true;
+                }
+              }).catch(function(){});
+            }
             return;
           }
           var delYes = ev.target.closest("[data-del-yes]");
@@ -1390,7 +1435,7 @@
               .then(function(res){
                 var lm = document.getElementById("pyLinkMsg");
                 if (!res.ok){ lm.textContent = res.j.error || "Could not create the link."; pyLink.disabled = false; return; }
-                lm.innerHTML = 'Link sent — <a href="' + res.j.url + '" target="_blank" rel="noopener">open it</a>';
+                lm.innerHTML = (res.j.emailed === false ? 'Link ready — ' : 'Link sent — ') + '<a href="' + res.j.url + '" target="_blank" rel="noopener">open it</a>';
                 loadCal(); loadPayments();
               })
               .catch(function(){ document.getElementById("pyLinkMsg").textContent = "Could not create the link — check your connection."; pyLink.disabled = false; });
@@ -1414,7 +1459,7 @@
                 var body = '<div class="after-item"><div><strong>' + q.name + '</strong> — ' + (q.serviceName || "Consultation") + ' · ' + fmtDate(q.date) + ' at ' + q.time + ' · ' + q.phone + ' · ' + q.email
                   + ' · <em>' + q.status + '</em>' + (q.bookingId ? ' · booked' : '') + '</div>';
                 if (q.status === "requested"){
-                  body += '<div style="margin-top:8px;"><button class="btn btn-book btn-book-sm" type="button" data-crq-accept="' + q.id + '">Say yes — book it</button>'
+                  body += '<div style="margin-top:8px;"><label style="font-size:13px;">Day <input type="date" id="crqDate-' + q.id + '" value="' + q.date + '"></label> <label style="font-size:13px;">Time <input type="text" id="crqTime-' + q.id + '" value="' + q.time + '" style="width:90px;"></label> <button class="btn btn-book btn-book-sm" type="button" data-crq-accept="' + q.id + '">Say yes — book it</button>'
                     + ' <button class="btn btn-ghost btn-book-sm" type="button" data-crq-decline="' + q.id + '">Say no</button>'
                     + ' <span id="crqMsg-' + q.id + '" style="color:#7A3B2E;"></span></div>';
                 }
@@ -1433,7 +1478,14 @@
           var id = btn.getAttribute("data-crq-accept") || btn.getAttribute("data-crq-decline");
           var action = yesBtn ? "accept" : "decline";
           btn.disabled = true;
-          postAdmin({ view:"consult-requests", action: action, id: id })
+          var crqBody = { view:"consult-requests", action: action, id: id };
+          if (action === "accept"){
+            var crqD = document.getElementById("crqDate-" + id);
+            var crqT = document.getElementById("crqTime-" + id);
+            if (crqD && crqD.value) crqBody.date = crqD.value;
+            if (crqT && crqT.value.trim()) crqBody.time = crqT.value.trim();
+          }
+          postAdmin(crqBody)
             .then(function(res){
               var m = document.getElementById("crqMsg-" + id);
               if (!res.ok){ if (m) m.textContent = res.j.error || "Could not save."; btn.disabled = false; return; }
@@ -2069,7 +2121,7 @@
                 else if (g.connected) gm.textContent = "Connected" + (g.connectedAt ? " since " + fmtDate(String(g.connectedAt).slice(0, 10)) : "") + " — each video consultation gets its own fresh Meet link automatically.";
                 else gm.textContent = "Not connected yet — connect Google and each video consultation gets its own fresh Meet link automatically.";
               }
-              document.querySelectorAll(".gap-btn").forEach(function(btn){
+              document.querySelectorAll(".gap-btn[data-gap]").forEach(function(btn){
                 btn.setAttribute("aria-pressed", String(+btn.getAttribute("data-gap") === gapCurrent));
               });
               var rows = res.j.blocks.map(function(bk){
@@ -2160,7 +2212,7 @@
             .then(function(res){
               if (!res.ok){ document.getElementById("gapMsg").textContent = res.j.error || "Could not save."; return; }
               gapCurrent = res.j.bufferMins;
-              document.querySelectorAll(".gap-btn").forEach(function(x){ x.setAttribute("aria-pressed", String(+x.getAttribute("data-gap") === gapCurrent)); });
+              document.querySelectorAll(".gap-btn[data-gap]").forEach(function(x){ x.setAttribute("aria-pressed", String(+x.getAttribute("data-gap") === gapCurrent)); });
               document.getElementById("gapMsg").textContent = "Gap saved — " + gapCurrent + " minutes between appointments.";
             })
             .catch(function(){ document.getElementById("gapMsg").textContent = "Could not save — check your connection."; });

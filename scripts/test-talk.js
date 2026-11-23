@@ -50,6 +50,11 @@ eq(talkParseName("book alex at 10"), "Alex", "name book alex");
 eq(talkParseName("book a walk-in"), null, "name book a walk-in is null");
 eq(talkFindService("pay 125 for classic facial"), "Classic Facial", "service classic");
 eq(talkFindService("book microneedling tomorrow"), "Microneedling / NANO Needling", "service microneedling hears the combined needling name");
+// "The Works" is a combo, not a single treatment: the words "the works"
+// win over "classic" / "anti-aging" inside the combo name (Nov 23, 2026).
+eq(talkFindService("book the works with anti-aging friday"), "The Works", "service the works with anti-aging is The Works");
+eq(talkFindService("book the works classic friday"), "The Works", "service the works classic is The Works");
+eq(talkFindService("book the works friday"), "The Works", "service the works is The Works");
 
 // --- full commands ---
 let r = parseTalk("pay link 65 dollars for alex taylor", TODAY);
@@ -78,6 +83,14 @@ eq(fillsOf(r), { wkName: "Alex Taylor", wkDate: "2026-11-20", wkTime: "14:00" },
 
 r = parseTalk("book alex at 10", TODAY);
 eq(fillsOf(r), { wkName: "Alex", wkTime: "10:00" }, "book short fills");
+
+// "The Works" combo: the variant says which one — anti-aging, classic,
+// or none when she doesn't say (Nov 23, 2026).
+function worksVariant(text) { const f = (parseTalk(text, TODAY).fills || []).find((x) => x.id === "wkService"); return f ? (f.variant || null) : null; }
+eq(worksVariant("book the works with anti-aging friday"), "anti-aging", "works variant anti-aging");
+eq(worksVariant("book the works classic friday"), "classic", "works variant classic");
+eq(worksVariant("book the works friday"), null, "works variant none when unsaid");
+eq(fillsOf(parseTalk("book the works with anti-aging friday", TODAY)).wkService, "The Works", "works fill is The Works");
 
 r = parseTalk("go to calendar", TODAY);
 eq(r.ok, true, "jump ok");

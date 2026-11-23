@@ -279,7 +279,12 @@ async function run() {
   check("deductGift twice takes $0", await bookingsLib.deductGift(b), 0);
   check("gift balance $0 after full use", (await bookingsLib.getGift(partialGift.code)).balanceCents, 0);
   await assert.rejects(
-    bookingsLib.buildBooking(base({ giftCode: partialGift.code, date: futureDate(7) }), { bufferMins: 60, blocks: [], via: "web" }),
+    // A different day from base()'s futureDate(5) booking (Nov 23, 2026):
+    // on a Monday, futureDate(6) and futureDate(7) both land on the next
+    // Monday, so the second booking would collide with the saved one
+    // instead of reaching the gift check. futureDate(8) is always a
+    // different day from futureDate(6).
+    bookingsLib.buildBooking(base({ giftCode: partialGift.code, date: futureDate(8) }), { bufferMins: 60, blocks: [], via: "web" }),
     /no balance left/,
     "a fully-used code is refused server-side",
   );

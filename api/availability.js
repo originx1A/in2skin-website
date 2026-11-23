@@ -52,8 +52,23 @@ module.exports = async (req, res) => {
     }
     if (!parseDateLocal(date)) return res.status(400).json({ error: "Choose a valid date." });
     // After-hours is by request through the studio — never offered online
-    // (Tony Nov 19, 2026).
-    if (type === "after") return res.status(200).json({ date, times: [], dayFull: false, bookedCount: 0, storageConfigured: configured() });
+    // (Tony Nov 19, 2026). The dashboard needs the real times, though:
+    // the studio books Private Hours walk-ins and moves from there, and
+    // this endpoint is the dashboard's only time source. A signed-in admin
+    // gets the real after-hours times; everyone else still gets none.
+    if (type === "after") {
+      const { getSession } = require("../lib/auth");
+      const admin = await getSession(req);
+      if (!admin) return res.status(200).json({ date, times: [], dayFull: false, bookedCount: 0, storageConfigured: configured() });
+      const allAfter = timesFor(date, "after", svc.id);
+      if (!configured()) return res.status(200).json({ date, times: allAfter, storageConfigured: false });
+      const { listBookingsForDate } = require("../lib/bookings");
+      const bookingsAfter = await listBookingsForDate(date);
+      const { bufferMins, blocks } = await studioForDate(date);
+      const bookedCountAfter = countActiveBookings(bookingsAfter);
+      const dayFullAfter = countsTowardCap(svc.id) && dayIsFull(bookingsAfter);
+      return res.status(200).json({ date, times: dayFullAfter ? [] : freeTimes(date, "after", service, bookingsAfter, { bufferMins, blocks }, addonIds), dayFull: dayFullAfter, bookedCount: bookedCountAfter, storageConfigured: true });
+    }
     const all = timesFor(date, "regular", svc.id);
     if (!configured()) return res.status(200).json({ date, times: all, storageConfigured: false });
     const { listBookingsForDate } = require("../lib/bookings");
