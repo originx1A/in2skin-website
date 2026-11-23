@@ -51,6 +51,7 @@ const EXTRA_PAGES = [
   "/fine-lines/",
   "/tired-skin/",
   "/questions/",
+  "/prices/",
   "/privacy.html",
 ];
 
