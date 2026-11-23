@@ -17,15 +17,28 @@ module.exports = async (req, res) => {
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!secret) return res.status(503).json({ error: "STRIPE_WEBHOOK_SECRET is not set." });
 
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  const raw = Buffer.concat(chunks);
+  const sig = req.headers["stripe-signature"];
+
+  // The site has ONE webhook URL for both Stripe accounts, but test and
+  // live endpoints sign with DIFFERENT secrets. Try the live secret first,
+  // then the test secret (STRIPE_WEBHOOK_SECRET_TEST). Live stays exactly
+  // as before; test deliveries stop failing with "Invalid signature."
+  const secrets = [process.env.STRIPE_WEBHOOK_SECRET, process.env.STRIPE_WEBHOOK_SECRET_TEST].filter(Boolean);
   let event;
-  try {
-    const chunks = [];
-    for await (const chunk of req) chunks.push(chunk);
-    const raw = Buffer.concat(chunks);
-    const sig = req.headers["stripe-signature"];
-    event = stripe.webhooks.constructEvent(raw, sig, secret);
-  } catch (err) {
-    console.error("[webhook] signature verification failed:", err.message);
+  let lastErr;
+  for (const secret of secrets) {
+    try {
+      event = stripe.webhooks.constructEvent(raw, sig, secret);
+      break;
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  if (!event) {
+    console.error("[webhook] signature verification failed:", lastErr && lastErr.message);
     return res.status(400).json({ error: "Invalid signature." });
   }
 
