@@ -85,6 +85,31 @@ rewrite.
 > book their treatment directly. Do not argue, do not offer the
 > consultation again on this call.
 
+## How booking and payment work — the $30 deposit
+
+> ### Pay choice — deposit now, or pay in full now
+>
+> When you book a **treatment** (not a consultation), ask the caller
+> which they prefer:
+>
+> - **$30 deposit now** — the deposit holds their time, and the rest
+>   is due at the visit.
+> - **Pay in full now** — the full amount today, and nothing is due at
+>   the visit.
+>
+> Pass their answer to `book_appointment` as `payMode`: `"deposit"` or
+> `"full"`. If they do not say, the full amount is charged — so ask,
+> do not guess. A consultation stays **$30 in full — no choice**.
+>
+> The hold lasts 30 minutes either way: the payment link goes to their
+> email, and the appointment is confirmed only when they pay.
+
+**Dashboard note — `book_appointment` needs a `payMode` field:** add
+`payMode` (`"deposit"` | `"full"`) to `book_appointment` when V13 is
+applied. Until that is done the API defaults to full, so the agent
+cannot offer the deposit choice yet — it can only offer the full
+amount.
+
 ## Service ID — add to the list
 
 Add `consultation` to the service IDs the agent can book

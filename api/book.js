@@ -8,7 +8,7 @@ const { getStripe } = require("../lib/stripe");
 const { kvGet, kvSet } = require("../lib/kv");
 const {
   findService, parseDateLocal, timesFor, parseTime, normalizeAddons,
-  durationForBooking, baseCentsFor,
+  durationForBooking, baseCentsFor, money,
   slotTaken, PENDING_HOLD_MS, dayIsFull, countsTowardCap,
 } = require("../lib/schedule");
 const { studioForDate } = require("../lib/studio");
@@ -16,7 +16,7 @@ const {
   siteUrlFor, newId, saveBooking, listBookingsForDate,
   getBooking, finalizePaidBooking, settleBookingPayment, balanceDue,
   sendHoldEmail, notifyStudioBooking,
-  buildBooking, createBookingCheckout, createConsultRequest, CONSULT_ID,
+  buildBooking, createBookingCheckout, createConsultRequest, CONSULT_ID, DEPOSIT_CENTS,
   CONSULT_FORMATS, consultFormatOf, consultName, meetLinkFor,
 } = require("../lib/bookings");
 const { getReferralByEmailOrPhone } = require("../lib/referrals");
@@ -108,6 +108,13 @@ async function handleAgentHold(req, res, b) {
     // recorded as 0 so old bookings keep their recorded value.
     const firstVisitDiscountCents = 0;
     const amountCents = Math.max(0, baseCents);
+    // Pay choice (Tony Nov 21, 2026): the caller picks a $30 deposit now
+    // (rest at the visit) or the full amount now. Consultations are $30
+    // in full — no choice. Without a payMode from the agent the API
+    // defaults to full (the Retell book_appointment function has no
+    // payMode field yet — see docs/retell-v13-video-consult-prompt.md).
+    const payMode = svc.id === CONSULT_ID ? "full" : (b.payMode === "deposit" ? "deposit" : "full");
+    const depositCents = payMode === "deposit" ? Math.min(DEPOSIT_CENTS, amountCents) : amountCents;
     const myRef = await getOrCreateReferral({ name: b.name, email: b.email, phone: b.phone });
     const booking = {
       id: newId("bk"),
@@ -142,6 +149,8 @@ async function handleAgentHold(req, res, b) {
       referredBy: null,
       myReferralCode: myRef.code,
       amountCents,
+      payMode,
+      depositCents,
       amountPaidCents: 0,
       status: "pending",
       via: "agent",
@@ -168,6 +177,13 @@ async function handleAgentHold(req, res, b) {
     await saveBooking(booking);
     const stripe = getStripe();
     const isConsult = svc.id === CONSULT_ID;
+    // Deposit checkout: the card is charged the deposit only — the
+    // balance is due at the visit. The checkout names both amounts so
+    // the client is never surprised (mirrors createBookingCheckout).
+    const isDeposit = payMode === "deposit" && depositCents < amountCents;
+    const depositSuffix = isDeposit
+      ? ` · ${money(depositCents)} deposit today, ${money(amountCents - depositCents)} due at your visit`
+      : "";
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       currency: "cad",
@@ -176,20 +192,20 @@ async function handleAgentHold(req, res, b) {
         quantity: 1,
         price_data: {
           currency: "cad",
-          unit_amount: amountCents,
+          unit_amount: depositCents,
           product_data: {
             // The consultation's checkout names the service plainly
             // (Tony Nov 19, 2026); the statement descriptor is IN2SKIN.
             name: isConsult ? `${consultName(format)} — In2Skin` : `${serviceLabel} — ${b.date} at ${b.time}${type === "after" ? " (Private Hours)" : ""}`,
             description: isConsult
               ? `Payment for ${consultName(format)} · In2Skin, Bolton, Ontario — ${b.date} at ${b.time}`
-              : `In2Skin · Bolton, Ontario — held by phone`,
+              : `In2Skin · Bolton, Ontario — held by phone${depositSuffix}`,
           },
         },
       }],
       payment_intent_data: { statement_descriptor: "IN2SKIN" },
       customer_email: booking.email,
-      metadata: { type: "booking", bookingId: booking.id, via: "agent", giftCode: "", giftAppliedCents: "0" },
+      metadata: { type: "booking", bookingId: booking.id, via: "agent", giftCode: "", giftAppliedCents: "0", payMode, depositCents: String(depositCents) },
       success_url: `${siteUrlFor(req)}/booked.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrlFor(req)}/#book`,
     });
@@ -209,6 +225,8 @@ async function handleAgentHold(req, res, b) {
       time: booking.time,
       type: booking.type,
       amountCents: booking.amountCents,
+      payMode: booking.payMode,
+      depositCents: booking.depositCents,
       checkoutUrl: session.url,
       holdUntil,
     });
