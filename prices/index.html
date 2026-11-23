@@ -14,6 +14,9 @@
     .price-table td.num,.price-table th.num{text-align:right;white-space:nowrap;font-weight:600}
     .price-table tr.grp td{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:600;color:#B08D4F;border-bottom:1px solid #B08D4F;padding-top:1.4rem}
     .price-table td .sub{display:block;font-size:.92rem;color:#6b6558;font-weight:400}
+    @media (max-width:1023px){
+      .price-panel .btn{grid-column:1/-1;width:100%;box-sizing:border-box;white-space:normal;text-align:center}
+    }
     @media print{
       body *{visibility:visible!important}
       header.site,footer.site-foot,.dock,.to-top,.skip,.print-btn{display:none!important}
