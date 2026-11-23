@@ -1,7 +1,9 @@
 // POST /api/admin/magic-link { email } — email a one-tap sign-in link.
 // Only the configured studio emails (ADMIN_EMAIL, comma-separated) ever
-// receive one; the response is the same either way so the endpoint does
-// not leak addresses.
+// receive one. This page is private and not linked from the public site,
+// so a wrong email is told straight which studio emails get a link (Tony
+// Nov 19, 2026) — the list is built from the configured emails, so it
+// stays in sync if they ever change.
 const crypto = require("crypto");
 const { kvSet } = require("../../lib/kv");
 const { sendEmail } = require("../../lib/email");
@@ -30,7 +32,7 @@ module.exports = async (req, res) => {
     // public site, so say it straight: only the studio emails get a link,
     // and a wrong one is told so on the spot.
     if (!email || !studios.includes(email)) {
-      return res.status(400).json({ error: "That email is not a studio email — use rzgun6122@gmail.com or sdmadsen@live.com." });
+      return res.status(400).json({ error: "That email is not a studio email — use " + studios.join(" or ") + "." });
     }
     const token = crypto.randomBytes(32).toString("hex");
     await kvSet(`admin:magic:${token}`, { email, exp: Date.now() + MAGIC_LINK_MINUTES * 60 * 1000 });

@@ -705,6 +705,13 @@ module.exports = async (req, res) => {
         if (!["paid", "deposit-paid", "consultation", "unpaid"].includes(booking.status)) {
           return res.status(400).json({ error: "Only a paid, deposit-paid, consultation or unpaid booking can be marked complete or no-show." });
         }
+        // A future visit can't be marked complete or no-show yet (Nov 23,
+        // 2026): completing early would issue the $30 consultation credit
+        // before the visit happened. Today itself is fine.
+        const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/Toronto" });
+        if (booking.date > todayStr) {
+          return res.status(400).json({ error: "That appointment hasn't happened yet — mark it complete or no-show after the visit." });
+        }
         const updated = await markBookingOutcome(booking, b.action);
         await logAudit(session, `bookings.${b.action}`, `${booking.serviceName} — ${booking.date} ${booking.time}`);
         return res.status(200).json({ booking: publicBooking(updated) });
@@ -802,8 +809,24 @@ module.exports = async (req, res) => {
           return res.status(400).json({ error: "This booking is closed — a payment link can't be sent for it." });
         }
         if (booking.status === "pending" && booking.checkoutUrl) {
-          await logAudit(session, "bookings.pay-link", `${booking.serviceName} — ${booking.date} ${booking.time} · card link resent`);
-          return res.status(200).json({ url: booking.checkoutUrl, resent: true });
+          // Resend means the client gets a fresh email (Nov 23, 2026):
+          // the old code returned the link to Sarah and told her it was
+          // sent, but the client got nothing.
+          const who = attendeeOf(booking);
+          const to = who.email || booking.email;
+          const due = balanceDue(booking);
+          let emailed = false;
+          if (to) {
+            const first = String(who.name || booking.name || "").split(" ")[0] || "there";
+            await sendEmail({
+              to,
+              subject: `Your In2Skin payment link — ${money(due)}`,
+              html: `<h2 style="font-family:Georgia,serif;color:#2F4A2C;">Your In2Skin payment link</h2><p>Hi ${first},</p><p>Here is your secure payment link for <strong>${booking.serviceName}</strong> — <strong>${money(due)}</strong>:</p><p><a href="${booking.checkoutUrl}">${booking.checkoutUrl}</a></p><p>Pay by Visa, Mastercard, Amex or Apple Pay on your own phone. The charge shows as <strong>IN2SKIN</strong> on your card statement, and your receipt arrives the moment you pay.</p><p>— In2Skin, Bolton</p>`,
+            });
+            emailed = true;
+          }
+          await logAudit(session, "bookings.pay-link", `${booking.serviceName} — ${booking.date} ${booking.time} · card link resent${emailed ? " by email" : ""}`);
+          return res.status(200).json({ url: booking.checkoutUrl, resent: true, emailed });
         }
         const due = balanceDue(booking);
         if (due <= 0) return res.status(400).json({ error: "Nothing is owed on this booking." });

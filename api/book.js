@@ -244,7 +244,7 @@ async function handleAgentHold(req, res, b) {
 // Lookup scans the booking window (today through 60 days out) and returns
 // only the caller's own upcoming bookings — never a list of all bookings.
 // Responses never carry the studio address, directions, parking, or
-// Sarah's personal number (none of those live on a booking record).
+// the studio owner's personal number (none of those live on a booking record).
 const AGENT_UPCOMING = ["pending", "unpaid", "paid", "deposit-paid", "consultation"];
 
 function requireAgentKey(req, res) {
