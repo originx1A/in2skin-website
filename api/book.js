@@ -7,18 +7,20 @@
 const { getStripe } = require("../lib/stripe");
 const { kvGet, kvSet } = require("../lib/kv");
 const {
-  findService, parseDateLocal, timesFor, parseTime, normalizeAddons,
+  findService, parseDateLocal, dateKey, timesFor, parseTime, normalizeAddons,
   durationForBooking, baseCentsFor, money,
   slotTaken, PENDING_HOLD_MS, dayIsFull, countsTowardCap,
 } = require("../lib/schedule");
 const { studioForDate } = require("../lib/studio");
 const {
-  siteUrlFor, newId, saveBooking, listBookingsForDate,
+  siteUrlFor, newId, saveBooking, listBookingsForDate, listBookingsRange,
   getBooking, finalizePaidBooking, settleBookingPayment, balanceDue,
   sendHoldEmail, notifyStudioBooking,
   buildBooking, createBookingCheckout, createConsultRequest, CONSULT_ID, DEPOSIT_CENTS,
   CONSULT_FORMATS, consultFormatOf, consultName, meetLinkFor,
+  cancelBooking, moveBooking,
 } = require("../lib/bookings");
+const { torontoDateKey } = require("../lib/transfer");
 const { getReferralByEmailOrPhone } = require("../lib/referrals");
 const { getOrCreateReferral } = require("../lib/referrals");
 const { checkLimit } = require("../lib/rate-limit");
@@ -236,6 +238,132 @@ async function handleAgentHold(req, res, b) {
   }
 }
 
+// ---- Voice-agent lookup / move / cancel (Retell tools, Nov 23, 2026) ----
+// Same AGENT_API_KEY as holds; same upcoming statuses and move/cancel
+// mechanics as the admin panel (lib/bookings cancelBooking / moveBooking).
+// Lookup scans the booking window (today through 60 days out) and returns
+// only the caller's own upcoming bookings — never a list of all bookings.
+// Responses never carry the studio address, directions, parking, or
+// Sarah's personal number (none of those live on a booking record).
+const AGENT_UPCOMING = ["pending", "unpaid", "paid", "deposit-paid", "consultation"];
+
+function requireAgentKey(req, res) {
+  const key = process.env.AGENT_API_KEY;
+  if (!key) { res.status(503).json({ error: "AGENT_API_KEY is not set." }); return false; }
+  if (req.headers["x-agent-key"] !== key) { res.status(401).json({ error: "Agent key not accepted." }); return false; }
+  return true;
+}
+
+// What the agent needs to speak about a booking — and the bookingId it
+// passes back to move / cancel. No contact details: the agent already
+// knows what the caller told it.
+function agentBookingSummary(b) {
+  return {
+    bookingId: b.id,
+    serviceName: b.serviceName,
+    serviceLabel: b.serviceLabel || b.serviceName,
+    format: b.format || null,
+    date: b.date,
+    time: b.time,
+    type: b.type,
+    status: b.status,
+    amountCents: b.amountCents,
+    amountPaidCents: b.amountPaidCents || 0,
+    balanceDueCents: balanceDue(b),
+    payMode: b.payMode || "full",
+    giftCode: b.giftCode || null,
+    giftAppliedCents: b.giftAppliedCents || 0,
+    giftKind: b.giftKind || null,
+    myReferralCode: b.myReferralCode || null,
+  };
+}
+
+function normPhone(v) {
+  const d = String(v || "").replace(/[^0-9]/g, "");
+  return d.length >= 10 ? d.slice(-10) : "";
+}
+
+function normEmail(v) {
+  return String(v || "").trim().toLowerCase();
+}
+
+// POST /api/book { via: "agent", action: "lookup", phone?, email? } —
+// the caller's upcoming bookings. Matches the booker OR the guest (a
+// friend phoning about their own gift booking), by phone or email.
+async function handleAgentLookup(req, res, b) {
+  if (!requireAgentKey(req, res)) return;
+  try {
+    const phone = normPhone(b.phone);
+    const email = normEmail(b.email);
+    if (!phone && !email) return bad(res, "Please add a phone number or an email so we can find the booking.");
+    const today = torontoDateKey();
+    const end = new Date(today + "T00:00:00");
+    end.setDate(end.getDate() + 60);
+    const all = await listBookingsRange(today, dateKey(end));
+    const found = all
+      .filter((x) => AGENT_UPCOMING.includes(x.status) && (
+        (phone && (normPhone(x.phone) === phone || normPhone(x.guestPhone) === phone)) ||
+        (email && (normEmail(x.email) === email || normEmail(x.guestEmail) === email))
+      ))
+      .sort((a, c) => ((a.date + " " + (a.time || "")).localeCompare(c.date + " " + (c.time || ""))));
+    return res.status(200).json({ ok: true, bookings: found.map(agentBookingSummary) });
+  } catch (err) {
+    if (!err.status || err.status >= 500) console.error("[book:agent-lookup]", err);
+    return res.status(err.status || 500).json({ error: err.message });
+  }
+}
+
+// POST /api/book { via: "agent", action: "move", bookingId, date, time, type? } —
+// same mechanics as the admin move, plus the fresh-booking window the
+// agent books under: tomorrow through 60 days out (the admin move allows
+// today; the agent does not). Private Hours ("after") is by request only —
+// the agent takes a message instead, same as the hold path.
+async function handleAgentMove(req, res, b) {
+  if (!requireAgentKey(req, res)) return;
+  try {
+    const booking = await getBooking(b.bookingId);
+    if (!booking) return res.status(404).json({ error: "Booking not found." });
+    if (!AGENT_UPCOMING.includes(booking.status)) return bad(res, "Only an upcoming booking can be moved.");
+    if (b.type === "after") return bad(res, "Early mornings and evenings are by request — please take the caller's message and the studio will call them back.");
+    const d = parseDateLocal(b.date);
+    if (!d) return bad(res, "Please choose a day.");
+    const today = torontoDateKey();
+    const tomorrow = new Date(today + "T00:00:00");
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const maxDay = new Date(today + "T00:00:00");
+    maxDay.setDate(maxDay.getDate() + 60);
+    if (b.date < dateKey(tomorrow)) return bad(res, "Bookings start from tomorrow — please choose a later day.");
+    if (b.date > dateKey(maxDay)) return bad(res, "Bookings open up to 60 days ahead — please choose an earlier day.");
+    const { bufferMins, blocks } = await studioForDate(b.date);
+    const newType = b.type === "regular" ? "regular" : booking.type;
+    const { booking: updated, emailed } = await moveBooking(booking, {
+      date: b.date, time: b.time, type: newType, bufferMins, blocks,
+    });
+    return res.status(200).json({ ok: true, booking: agentBookingSummary(updated), emailed });
+  } catch (err) {
+    if (!err.status || err.status >= 500) console.error("[book:agent-move]", err);
+    return res.status(err.status || 500).json({ error: err.message });
+  }
+}
+
+// POST /api/book { via: "agent", action: "cancel", bookingId, reason? } —
+// same mechanics as the admin cancel: the slot frees immediately and
+// gift/voucher + referral value used by the booking goes back on the
+// code, because the treatment never happened. Never deletes the record.
+async function handleAgentCancel(req, res, b) {
+  if (!requireAgentKey(req, res)) return;
+  try {
+    const booking = await getBooking(b.bookingId);
+    if (!booking) return res.status(404).json({ error: "Booking not found." });
+    if (!AGENT_UPCOMING.includes(booking.status)) return bad(res, "Only an upcoming booking can be cancelled.");
+    const { booking: updated, emailed } = await cancelBooking(booking, b.reason);
+    return res.status(200).json({ ok: true, booking: agentBookingSummary(updated), emailed });
+  } catch (err) {
+    if (!err.status || err.status >= 500) console.error("[book:agent-cancel]", err);
+    return res.status(err.status || 500).json({ error: err.message });
+  }
+}
+
 module.exports = async (req, res) => {
   if (req.method === "GET") {
     // GET ?session_id=... — after Stripe checkout, confirm the booking is
@@ -314,6 +442,13 @@ module.exports = async (req, res) => {
       } catch (err) {
         return res.status(err.status || 500).json({ error: err.message });
       }
+    }
+    // Voice-agent lookup / move / cancel (Retell tools): same key as
+    // holds, same upcoming statuses and move/cancel mechanics as admin.
+    if (b.via === "agent" && (b.action === "lookup" || b.action === "move" || b.action === "cancel")) {
+      if (b.action === "lookup") return handleAgentLookup(req, res, b);
+      if (b.action === "move") return handleAgentMove(req, res, b);
+      return handleAgentCancel(req, res, b);
     }
     // Voice-agent hold: same slot rules, no gift codes, no friend bookings.
     if (b.via === "agent") return handleAgentHold(req, res, b);
