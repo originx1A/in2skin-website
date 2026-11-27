@@ -27,12 +27,12 @@ Set these in the Vercel project settings (Production + Preview). Template:
 | Variable | What provides it | Exists yet? |
 |---|---|---|
 | `STRIPE_SECRET_KEY` | Second In2Skin Stripe account — create it in the Stripe dashboard (a NEW account, separate from any existing one), then copy its secret key. Use test keys first, live keys at go-live. | **NO — account does not exist yet** |
-| `STRIPE_WEBHOOK_SECRET` | In the same Stripe account: Developers → Webhooks → add endpoint `https://boltonfacials.com/api/stripe-webhook`, subscribe to `checkout.session.completed`. Copy the signing secret. | **NO** |
+| `STRIPE_WEBHOOK_SECRET` | In the same Stripe account: Developers → Webhooks → add endpoint `https://www.boltonfacials.com/api/stripe-webhook`, subscribe to `checkout.session.completed`. Copy the signing secret. | **NO** |
 | `KV_REST_API_URL` | Vercel dashboard → Storage → Create Database → KV (Upstash Redis). The dashboard shows the REST URL + token after creation. | **NO — KV not provisioned yet** |
 | `KV_REST_API_TOKEN` | Same as above. | **NO** |
 | `RESEND_API_KEY` | Resend dashboard (free tier) → API Keys → create one. | **NO — key not created yet** |
 | `EMAIL_FROM` | Optional. Default is `In2Skin <bookings@boltonfacials.com>`. | n/a (has default) |
-| `SITE_URL` | Optional. Default is `https://boltonfacials.com`. | n/a (has default) |
+| `SITE_URL` | Optional. Default is `https://www.boltonfacials.com`. | n/a (has default) |
 | `ADMIN_EMAIL` | The studio emails that receive admin magic links — comma-separated list (Tony's + Sarah's). | **NO — value not chosen yet** |
 | `ADMIN_PASSWORD` | Password for admin login (the alternative to magic links). Choose a strong one; store it in the Secure Vault, not in chat. | **NO — value not chosen yet** |
 
@@ -65,7 +65,7 @@ still loads and the booking wizard falls back to showing all times.
    is a later DNS step: verify the domain in Resend and add its DKIM/SPF
    records. Until then, Resend will send from its default domain or fail —
    test email delivery after this step.
-4. Wait for DNS to propagate, then confirm https://boltonfacials.com loads.
+4. Wait for DNS to propagate, then confirm https://www.boltonfacials.com loads.
 
 ## 4. Stripe test pass (before go-live, with test keys)
 

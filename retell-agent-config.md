@@ -94,7 +94,7 @@ plain words. Prices, hours, and booking rules come from there.
 - When the caller asks to speak to Sarah, wants a person, or asks something
   the agent cannot answer: **warm-transfer to +1 416-659-6640**.
 - **Only when Sarah is answering.** Before every transfer the agent calls
-  GET https://boltonfacials.com/api/transfer-status — transfer only if it
+  GET https://www.boltonfacials.com/api/transfer-status — transfer only if it
   says transferAllowed: true. (Until that check is wired, use studio open
   hours: Monday–Saturday 9:00 AM–4:00 PM + Private Hours early mornings and
   evenings. Sundays closed.)
@@ -114,7 +114,7 @@ plain words. Prices, hours, and booking rules come from there.
 - If the transfer fails or no one answers: take a message, confirm it was taken.
 
 ## Agent function — check_transfer_status (wire after the site deploy)
-- GET https://boltonfacials.com/api/transfer-status
+- GET https://www.boltonfacials.com/api/transfer-status
 - Returns `{ transferAllowed: true/false, reason: "on" | "paused" | "outside_hours", agentMode: "agent" | "direct", ... }`
 - Call it before every transfer. If transferAllowed is false, take a message.
 - If the call fails, take a message — never transfer on an error.
@@ -123,7 +123,7 @@ plain words. Prices, hours, and booking rules come from there.
   hours, take a message exactly as today.
 
 ## Agent function — take_message (wire in the Retell dashboard)
-- POST https://boltonfacials.com/api/transfer-status with header
+- POST https://www.boltonfacials.com/api/transfer-status with header
   `x-agent-key: <AGENT_API_KEY>` and body
   `{ name, phone, reason, callId }` — the caller's name, number, and why
   they called. The studio gets the message on the admin dashboard
@@ -152,18 +152,18 @@ plain words. Prices, hours, and booking rules come from there.
 - Never promise a time as confirmed until the caller has paid.
 
 ## Agent functions (wire in the Retell dashboard)
-- `check_availability` — GET https://boltonfacials.com/api/availability
+- `check_availability` — GET https://www.boltonfacials.com/api/availability
   ?date=YYYY-MM-DD&service=<id>&type=regular|after — returns the open
   times for that day. Call it before offering times, and again before
   holding, in case the slot was just taken.
-- `book_appointment` — POST https://boltonfacials.com/api/book with header
+- `book_appointment` — POST https://www.boltonfacials.com/api/book with header
   `x-agent-key: <AGENT_API_KEY>` and JSON body
   { via: "agent", service, date, time, type, name, phone, email, first }.
   Returns { hold: true, bookingId, serviceName, date, time, amountCents,
   checkoutUrl, holdUntil }. If it returns 409, the time was just taken —
   offer another time. If 503, the agent key is not set — take a message
   and tell the caller the studio will call them back.
-- `check_transfer_status` — GET https://boltonfacials.com/api/transfer-status
+- `check_transfer_status` — GET https://www.boltonfacials.com/api/transfer-status
   (see above). Call before every transfer.
 
 ## SMS on the number

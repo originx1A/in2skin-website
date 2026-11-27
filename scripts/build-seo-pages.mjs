@@ -8,7 +8,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const SITE = "https://boltonfacials.com";
+const SITE = "https://www.boltonfacials.com";
 const PHONE_DISPLAY = "(289) 212-4124";
 const PHONE_TEL = "tel:+12892124124";
 

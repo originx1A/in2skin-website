@@ -371,7 +371,7 @@ async function run() {
   // Pay link for a balance due.
   res = await callAdmin({ view: "bookings", action: "pay-link", bookingId: walkIn.id });
   check("pay-link for $15 balance -> 200", res.statusCode, 200);
-  check("pay-link url is the /pay page", String(res.body.url).startsWith("https://boltonfacials.com/pay?id="), true);
+  check("pay-link url is the /pay page", String(res.body.url).startsWith("https://www.boltonfacials.com/pay?id="), true);
   res = await callAdmin({ view: "bookings", action: "pay-link", bookingId: pendingBk.id });
   check("pay-link on pending resends checkout", res.body.url, "https://checkout.stripe.test/pay/cs_test_1");
   check("pay-link on pending flags resent", res.body.resent, true);

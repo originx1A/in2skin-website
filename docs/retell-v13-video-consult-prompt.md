@@ -126,7 +126,7 @@ clients) or another treatment.
 ## Dashboard step — the request needs a function flag
 
 The after-hours request is a different call from a hold: POST
-`https://boltonfacials.com/api/book` with header
+`https://www.boltonfacials.com/api/book` with header
 `x-agent-key: <AGENT_API_KEY>` and JSON body
 `{ consultRequest: true, service: "consultation", format: "video" |
 "in-person", date, time, name, phone, email }`. The live
