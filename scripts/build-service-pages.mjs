@@ -28,7 +28,7 @@ const SERVICE_VIDEOS = extract("SERVICE_VIDEOS");
 const SEO_TITLES = extract("SEO_TITLES");
 const SEO_DESCS = extract("SEO_DESCS");
 
-const SITE = "https://boltonfacials.com";
+const SITE = "https://www.boltonfacials.com";
 const PHONE_DISPLAY = "(289) 212-4124";
 const PHONE_TEL = "tel:+12892124124";
 // Static SEO pages built by scripts/build-seo-pages.mjs — kept in the

@@ -1,7 +1,7 @@
 # In2Skin — boltonfacials.com
 
 Private one-on-one aesthetics studio in Bolton, Ontario. Public brand is
-**In2Skin** only (legal entity: Funderwood). Live site: https://boltonfacials.com
+**In2Skin** only (legal entity: Funderwood). Live site: https://www.boltonfacials.com
 (hosted on Vercel, free Hobby account).
 
 > **Nothing here is deployed yet.** This repo is the complete Vercel-ready
@@ -36,7 +36,7 @@ Private one-on-one aesthetics studio in Bolton, Ontario. Public brand is
   - `GET /api/gift-status?session_id=` / `GET /api/booking-status?session_id=`
     — confirmation pages after Stripe checkout.
   - `POST /api/pay-spot` — studio enters the amount owed (+ optional gift
-    code); returns a Stripe payment link as `https://boltonfacials.com/pay?id=…`.
+    code); returns a Stripe payment link as `https://www.boltonfacials.com/pay?id=…`.
     The client pays on THEIR OWN phone (text / email / QR code). Email
     sending via Resend when the contact is an email. Automatic texting is
     NOT set up (Resend is email-only) — for text, the studio texts the link

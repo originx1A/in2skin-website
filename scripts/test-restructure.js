@@ -54,9 +54,9 @@ lacks(index, 'id="works"', "no Works feature block on the home page");
 lacks(index, "Book The Works", "no Works Book button on the home page");
 has(index, 'href="/the-works/"', "Works page is linked from the home page");
 const works = read("the-works/index.html");
-has(works, "https://boltonfacials.com/the-works/", "Works page canonical");
+has(works, "https://www.boltonfacials.com/the-works/", "Works page canonical");
 const sitemap = read("sitemap.xml");
-has(sitemap, "https://boltonfacials.com/the-works/", "Works page is in the sitemap");
+has(sitemap, "https://www.boltonfacials.com/the-works/", "Works page is in the sitemap");
 
 // (5) Toronto escape section off the homepage, on the Toronto page.
 lacks(index, "drive-panel", "no Toronto drive-panel on the home page");

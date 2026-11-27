@@ -58,7 +58,7 @@ function ok(cond, msg) { n++; assert.ok(cond, msg); }
 
 const PREVIEW = "https://in2skin-website-git-cooper-handof-b20d0a-tony-demilios-projects.vercel.app";
 const PREVIEW_HOST = "in2skin-website-git-cooper-handof-b20d0a-tony-demilios-projects.vercel.app";
-const LIVE = "https://boltonfacials.com";
+const LIVE = "https://www.boltonfacials.com";
 
 // --- (1) siteUrlFor: the request's own origin, live fallback, env wins. ---
 ok(siteUrlFor({ headers: { host: PREVIEW_HOST } }) === PREVIEW, "preview host -> preview origin");
