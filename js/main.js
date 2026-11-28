@@ -30,7 +30,7 @@
      and render() never resets its label mid-flight, or the button looks
      idle while swallowing clicks. */
   var submitting = false;
-  var S = { main: null, variant: null, ans: {}, addonsDone: false, confirmed: false, date: null, time: null, option: null, who: "me", F: { name: "", email: "", phone: "", msg: "", yname: "", yemail: "", yphone: "" }, D: { name: "", email: "", phone: "" }, code: null, referredBy: null, booked: false };
+  var S = { main: null, variant: null, ans: {}, addonsDone: false, confirmed: false, date: null, time: null, option: null, payChoice: "deposit", who: "me", F: { name: "", email: "", phone: "", msg: "", yname: "", yemail: "", yphone: "" }, D: { name: "", email: "", phone: "" }, code: null, referredBy: null, booked: false };
   var I = {}; D.groups.forEach(function (g) { g.items.forEach(function (i) { I[i.id] = i; i.group = g.id; }); });
   var works = I["the-works"];
   /* ?ref=CODE — a referral code from a share link; validated server-side. */
@@ -109,7 +109,8 @@
   function payLines(T) {
     var credit = D.consultDollars, dep = D.depositDollars, cr = creditAmt(T), rem = Math.max(0, T.total - cr), L = [];
     if (cr) L.push(["Gift code " + S.code.code, "−" + money(cr)]);
-    if (S.option === "G" || S.option === "F") { L.push(["Paid today", pr(T, rem)]); L.push(["At the visit", money(0)]); }
+    if (S.option === "G" || S.option === "F" || (S.option === "A" && S.payChoice === "full")) { L.push(["Paid today", pr(T, rem)]); L.push(["At the visit", money(0)]); }
+    else if (S.option === "C") { L.push(["Paid today", money(0)]); L.push(["At the visit", pr(T, rem)]); }
     else if (S.option === "A") { var d = Math.min(dep, rem); L.push(["Due today: deposit", money(d)], ["At your visit", pr(T, Math.max(0, rem - d))]); }
     return L;
   }
@@ -305,7 +306,7 @@
     date: "Pick a day — gold days have times; grey days are full or closed (Sundays).",
     time: "Pick a start time — the studio holds it while you pay.",
     details: "Your name, email and phone — your confirmation goes to your email.",
-    option: "A $30 deposit holds your time, or pay in full now — the rest is due at your visit.",
+    option: "$30 deposit, pay in full now, or pay at the studio.",
     reserve: "Tap Reserve — you pay securely by card, then you are booked in.",
     friend: "Add your friend, then your own details for the receipt."
   };
@@ -373,9 +374,10 @@
       $("#step-details").hidden = fr;
       var gm = $("#gcodeMsg"); if (S.code) { var cr = creditAmt(T), left = Math.max(0, S.code.balance - cr); gm.hidden = false; gm.className = "gcode-msg ok"; gm.textContent = "Code " + S.code.code + " applied, −" + money(cr) + (left > 0 ? " · " + money(left) + " left on the code." : " · Code fully used."); } else if (!gm.classList.contains("bad")) gm.hidden = true;
       $$(".opt-card").forEach(function (c) { c.setAttribute("aria-checked", String(c.getAttribute("data-option") === S.option)); });
+      $$(".opt-pill").forEach(function (p) { p.classList.toggle("sel", p.getAttribute("data-paychoice") === S.payChoice); });
       var parts = [(S.who === "friend" && S.F.name ? "For " + S.F.name + ": " : "") + T.items.map(function (i) { return i.name; }).join(" + ")]; parts.push(hm(T.mins) + " · " + pr(T, netTotal(T))); if (S.date) parts.push(dateLabel()); if (S.time) parts.push(S.time);
       $("#reserveSum").textContent = parts.join(" · ");
-      if (!submitting) $("#reserveBtn").textContent = S.option === "G" ? "Pay " + pr(T, Math.max(0, T.total - creditAmt(T))) + " and book it for " + (S.F.name || "my friend") : S.option === "F" ? "Pay " + pr(T, Math.max(0, T.total - creditAmt(T))) + " in full" : S.option === "A" ? "Pay $" + D.depositDollars + " deposit to hold this time" : "Reserve my time";
+      if (!submitting) $("#reserveBtn").textContent = S.option === "G" ? "Pay " + pr(T, Math.max(0, T.total - creditAmt(T))) + " and book it for " + (S.F.name || "my friend") : S.option === "C" ? "Book it — pay at the studio" : (S.option === "F" || (S.option === "A" && S.payChoice === "full")) ? "Pay " + pr(T, Math.max(0, T.total - creditAmt(T))) + " in full" : S.option === "A" ? "Pay $" + D.depositDollars + " deposit to hold this time" : "Reserve my time";
     }
     // running total: side panel (desktop, picker steps) + dock (phone)
     var tp = $("#totalPanel");
@@ -435,6 +437,9 @@
   /* ---------- interactions (one delegated handler) ---------- */
   function resetFrom(main) { S.ans = {}; S.addonsDone = false; S.confirmed = false; S.time = null; if (main !== "the-works") S.variant = null; }
   document.addEventListener("click", function (e) {
+    /* deposit-or-full inside option A: the two pills in the A card. */
+    var pc = e.target.closest("[data-paychoice]");
+    if (pc) { S.payChoice = pc.getAttribute("data-paychoice"); S.option = "A"; render(); return; }
     var t = e.target.closest("button,summary"); if (!t) return;
     if (t.classList.contains("row") && t.hasAttribute("data-id")) {
       var id = t.getAttribute("data-id");
@@ -470,8 +475,10 @@
   });
   /* friend details missing: back to the first missing field, gold glow, cursor in it. No toast. */
   function guardFriend() { var k = friendNext(); if (!k) return false; render(); var el = $("#" + k); goTo(el, true); setTimeout(function () { try { el.focus({ preventScroll: true }); } catch (e) {} }, RM.matches ? 0 : 350); return true; }
-  /* your details missing: same treatment as friend details. */
-  function guardDetails() { var k = detailsNext(); if (!k) return false; render(); var el = $("#" + k); goTo(el, true); setTimeout(function () { try { el.focus({ preventScroll: true }); } catch (e) {} }, RM.matches ? 0 : 350); return true; }
+  /* your details missing: same treatment as friend details, plus a short
+     message naming the first missing field — otherwise the button feels
+     broken (Tony Nov 27, 2026). The gold glow marks the field; no red. */
+  function guardDetails() { var k = detailsNext(); if (!k) return false; render(); var el = $("#" + k); goTo(el, true); toast(k === "mName" ? "Add your name first" : k === "mEmail" ? "Add your email first" : "Add your phone first"); setTimeout(function () { try { el.focus({ preventScroll: true }); } catch (e) {} }, RM.matches ? 0 : 350); return true; }
   /* gift codes: checked against the real server (GET /api/gift?code=) — the
      balance is validated and deducted server-side, on payment. */
   function applyCode() {
@@ -491,18 +498,20 @@
     if (guardDetails()) return;
     var nx = nextStep(); if (nx !== "reserve") { render(); goTo(stepEl(nx), true); return; }
     /* POST /api/book — the server validates the slot + price, records the
-       booking and answers with a Stripe Checkout link. Deposit ($30) for a
-       booking for yourself; a booking for a friend is paid in full.
-       The confirmation email + studio notification fire on payment. */
+       booking and answers with a Stripe Checkout link. Deposit ($30) or
+       pay in full for a booking for yourself; pay at the studio books it
+       with no payment now; a booking for a friend is paid in full.
+       The confirmation email + studio notification fire on payment — or,
+       for pay at the studio, on booking. */
     var T = totals(), friend = S.who === "friend", F = S.F, when = dateLabel() + " · " + S.time;
     if (submitting) return; /* one click submits — later clicks while the
       request is in flight are ignored, not queued as second bookings */
     submitting = true;
-    var btn = $("#reserveBtn"); btn.disabled = true; btn.textContent = "Taking you to secure payment…";
+    var btn = $("#reserveBtn"); btn.disabled = true; btn.textContent = S.option === "C" ? "Booking your time…" : "Taking you to secure payment…";
     var payload = {
       service: apiService(), addons: apiAddons(), date: S.date, time: S.time, type: "regular",
       name: friend ? F.yname : S.D.name, email: friend ? F.yemail : S.D.email, phone: friend ? F.yphone : S.D.phone,
-      payMode: friend ? "full" : (S.option === "F" ? "full" : "deposit"), who: friend ? "friend" : "me", forWhom: friend ? "friend" : "me",
+      payMode: friend ? "full" : (S.option === "C" ? "studio" : ((S.option === "F" || (S.option === "A" && S.payChoice === "full")) ? "full" : "deposit")), who: friend ? "friend" : "me", forWhom: friend ? "friend" : "me",
       giftCode: S.code ? S.code.code : "",
       website: "", formLoadedAt: String(LOADED_AT),
     };
@@ -519,12 +528,13 @@
     }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); }).then(function (res) {
       if (!res.ok || (!res.j.url && !res.j.paid)) { throw new Error((res.j && res.j.error) || "Booking did not go through."); }
       if (res.j.url) { location.href = res.j.url; return; } /* Stripe Checkout — paying completes the booking */
-      /* Paid in full by a gift code — no checkout needed. The booking is
-         recorded server-side; the confirmation email is on its way. */
+      /* Paid in full by a gift code, or pay at the studio — no checkout
+         needed. The booking is recorded server-side; the confirmation
+         email is on its way. */
       submitting = false; btn.disabled = false;
       S.booked = true; render();
       var done = $("#bookDone"); done.hidden = false;
-      done.textContent = "You're booked in for " + when + " — your confirmation email is on its way.";
+      done.textContent = res.j.payAtStudio ? "You're booked in for " + when + " — pay at the studio. Your confirmation email is on its way." : "You're booked in for " + when + " — your confirmation email is on its way.";
       setTimeout(function () { goTo(done, true); }, RM.matches ? 0 : 140);
     }).catch(function (err) {
       submitting = false; btn.disabled = false; render();

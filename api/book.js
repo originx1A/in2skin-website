@@ -15,7 +15,8 @@ const { studioForDate } = require("../lib/studio");
 const {
   siteUrlFor, newId, saveBooking, listBookingsForDate, listBookingsRange,
   getBooking, finalizePaidBooking, settleBookingPayment, balanceDue,
-  sendHoldEmail, notifyStudioBooking,
+  sendHoldEmail, notifyStudioBooking, sendBookingConfirmation,
+  deductGift, deductReferral,
   buildBooking, createBookingCheckout, createConsultRequest, CONSULT_ID, DEPOSIT_CENTS,
   CONSULT_FORMATS, consultFormatOf, consultName, meetLinkFor,
   cancelBooking, moveBooking,
@@ -470,6 +471,24 @@ module.exports = async (req, res) => {
       await finalizePaidBooking(booking);
       await notifyStudioBooking(booking, "new");
       return res.status(200).json({ paid: true, bookingId: booking.id, consultation: booking.status === "consultation", myReferralCode: booking.myReferralCode });
+    }
+
+    // Pay at the studio (Tony Nov 27, 2026): no online payment — the
+    // booking is confirmed now and the client pays at the visit. The
+    // confirmation email + studio notification fire on booking, so the
+    // studio knows and can call the client back. Gift / referral value
+    // is committed at booking (as with a deposit) and restored on
+    // cancellation; the client-paid marking + referral credit wait
+    // until the balance is settled at the visit.
+    if (booking.payMode === "studio") {
+      booking.status = "unpaid";
+      booking.amountPaidCents = 0;
+      await saveBooking(booking);
+      await deductGift(booking);
+      await deductReferral(booking);
+      await sendBookingConfirmation(booking);
+      await notifyStudioBooking(booking, "new");
+      return res.status(200).json({ paid: true, payAtStudio: true, bookingId: booking.id, myReferralCode: booking.myReferralCode });
     }
 
     await saveBooking(booking);
