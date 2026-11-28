@@ -24,7 +24,7 @@ window.IN2_COMPAT = {
     { a: "chemical-peels", b: "needling",          s: "no",    why: "Not on the same day as a chemical peel" },
     { a: "chemical-peels", b: "microdermabrasion", s: "no",    why: "Not on the same day as a chemical peel" },
     { a: "chemical-peels", b: "light-therapy",     s: "check", why: "Your esthetician confirms light after a peel on the day, depending on the peel's strength" },
-    { a: "needling",       b: "microdermabrasion", s: "check", why: "Your esthetician confirms needling and microdermabrasion together at your visit" }
+    { a: "needling",       b: "microdermabrasion", s: "no",    why: "Not together in one visit" }
   ],
 
   /* One-line "why" for each add-on, per main treatment ("*" = any). */

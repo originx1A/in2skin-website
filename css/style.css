@@ -176,7 +176,7 @@ h2 em{color:var(--gold-text)}
 .glow-pick{animation:glow-pulse 1.6s ease-in-out infinite}
 @keyframes glow-pulse{
   0%,100%{box-shadow:0 0 0 2px rgba(176,141,79,.55),0 0 18px 4px rgba(201,162,75,.35)}
-  50%{box-shadow:0 0 0 3px rgba(176,141,79,.95),0 0 30px 10px rgba(201,162,75,.55)}}
+  50%{box-shadow:0 0 0 3px rgba(176,141,79,.95),0 0 22px 5px rgba(201,162,75,.55)}}
 .nudge{animation:nudge .7s ease 2}
 @keyframes nudge{0%,100%{transform:translateY(0)}25%{transform:translateY(-12px)}50%{transform:translateY(0)}75%{transform:translateY(-6px)}}
 .step.done{opacity:.72}
