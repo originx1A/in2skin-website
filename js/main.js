@@ -419,11 +419,13 @@
 
   /* ---------- guided scrolling ---------- */
   function hdr() { var h = $("header.site"); return h ? h.getBoundingClientRect().height : 72; }
-  function goTo(el, force) {
+  function goTo(el, force, center) {
     if (!el) return;
     var r = el.getBoundingClientRect(), top = hdr() + 12, dock = window.innerWidth < 1024 ? 96 : 16;
     var fits = r.top >= top && r.top < window.innerHeight * 0.45 && r.bottom <= window.innerHeight - dock;
-    if (!fits || force) window.scrollTo({ top: Math.max(0, window.scrollY + r.top - top), behavior: RM.matches ? "auto" : "smooth" });
+    if (center) { /* put the box in the middle of the screen (Tony Nov 27, 2026) */
+      window.scrollTo({ top: Math.max(0, window.scrollY + r.top + r.height / 2 - window.innerHeight / 2), behavior: RM.matches ? "auto" : "smooth" });
+    } else if (!fits || force) window.scrollTo({ top: Math.max(0, window.scrollY + r.top - top), behavior: RM.matches ? "auto" : "smooth" });
     /* restart the gold glow-pulse on the target so it's clear why the screen moved; it keeps pulsing until they choose */
     el.classList.remove("glow-pick"); void el.offsetWidth; el.classList.add("glow-pick");
   }
@@ -478,7 +480,7 @@
   /* your details missing: same treatment as friend details, plus a short
      message naming the first missing field — otherwise the button feels
      broken (Tony Nov 27, 2026). The gold glow marks the field; no red. */
-  function guardDetails() { var k = detailsNext(); if (!k) return false; render(); var el = $("#" + k); goTo(el, true); toast(k === "mName" ? "Add your name first" : k === "mEmail" ? "Add your email first" : "Add your phone first"); setTimeout(function () { try { el.focus({ preventScroll: true }); } catch (e) {} }, RM.matches ? 0 : 350); return true; }
+  function guardDetails() { var k = detailsNext(); if (!k) return false; render(); var el = $("#" + k); goTo(el, true, true); toast(k === "mName" ? "Add your name and details above" : k === "mEmail" ? "Add your email and details above" : "Add your phone and details above"); setTimeout(function () { try { el.focus({ preventScroll: true }); } catch (e) {} }, RM.matches ? 0 : 350); return true; }
   /* gift codes: checked against the real server (GET /api/gift?code=) — the
      balance is validated and deducted server-side, on payment. */
   function applyCode() {
